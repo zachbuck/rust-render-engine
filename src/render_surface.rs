@@ -1,0 +1,50 @@
+
+pub mod image_surface;
+pub use image_surface::ImageSurfaceHandle as ImageSurface;
+use vulkano::{
+	command_buffer::AutoCommandBufferBuilder, 
+	sync::GpuFuture
+};
+
+use crate::{
+	RenderEngine, 
+	render_surface::image_surface::ImageSurfaceInternal, 
+	render_target::RenderCall
+};
+
+pub(crate) enum RenderSurface {
+	Image(ImageSurfaceInternal),
+}
+
+impl RenderSurface {
+	pub(crate) fn process_render_queue(&mut self, render_target: &dyn RenderCall) {
+		match self {
+			RenderSurface::Image(image_surface) => image_surface.process_render_queue(render_target),
+		}
+	}
+}
+
+impl RenderEngine {
+	pub fn push_render_calls(&mut self) {
+		for (_, render_surface) in &mut self.render_surfaces {
+			match render_surface {
+				RenderSurface::Image(image) => {
+					let builder = AutoCommandBufferBuilder::primary(
+						self.command_allocator.clone(), 
+						self.graphics_queue.queue_family_index(), 
+						vulkano::command_buffer::CommandBufferUsage::OneTimeSubmit,
+					).unwrap();
+
+					let buffer = image.build_buffer(builder);
+
+					let gpu_future = self.previous_operation
+						.take().unwrap()
+						.then_execute(self.graphics_queue.clone(), buffer).unwrap()
+						.then_signal_fence_and_flush().unwrap();
+
+					self.previous_operation = Some(gpu_future.boxed());
+				}
+			}
+		}
+	}
+}
