@@ -5,7 +5,6 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer
 use crate::{
 	RenderEngine, 
 	mesh_data::{MeshData, MeshDataInternal}, 
-	render_surface::RenderSurface, 
 	render_target::{RenderCall, RenderTarget}, 
 	shader::{GraphicsProgram, GraphicsProgramInternal}
 };
@@ -15,8 +14,6 @@ pub struct RenderObjectHandle {
 }
 
 pub(crate) struct RenderObjectInternal {
-	uuid: Uuid,
-
 	surfaces: Vec<Uuid>,
 	mesh_data: MeshDataInternal,
 	graphics_program: GraphicsProgramInternal,
@@ -49,7 +46,6 @@ impl RenderEngine {
 		let graphics_program = self.graphics_programs.get(&graphics_program.uuid).unwrap();
 		
 		let internal = RenderObjectInternal {
-			uuid: uuid,
 			surfaces: Vec::new(),
 			mesh_data: mesh_data.clone(),
 			graphics_program: graphics_program.clone()
@@ -59,6 +55,20 @@ impl RenderEngine {
 
 		RenderObjectHandle {
 			uuid: uuid,
+		}
+	}
+
+	pub fn render_render_object(&mut self, handle: RenderObjectHandle) {
+		let render_caller = self.render_targets.get(&handle.uuid).unwrap().to_render_caller();
+		let uuids = render_caller.get_render_surface_uuids();
+		if uuids.len() == 0 {
+			for (_, render_surface) in &mut self.render_surfaces {
+				render_surface.process_render_queue(render_caller);
+			}
+		} else {
+			for uuid in &uuids {
+				self.render_surfaces.get_mut(uuid).unwrap().process_render_queue(render_caller);
+			}
 		}
 	}
 }

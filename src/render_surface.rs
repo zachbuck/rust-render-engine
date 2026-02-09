@@ -37,12 +37,12 @@ impl RenderEngine {
 
 					let buffer = image.build_buffer(builder);
 
-					let gpu_future = self.previous_operation
+					let gpu_future = self.graphics_operation
 						.take().unwrap()
 						.then_execute(self.graphics_queue.clone(), buffer).unwrap()
 						.then_signal_fence_and_flush().unwrap();
 
-					self.previous_operation = Some(gpu_future.boxed());
+					self.graphics_operation = Some(gpu_future.boxed());
 				}
 			}
 		}

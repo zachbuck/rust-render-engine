@@ -1,11 +1,16 @@
 
-use std::{collections::HashMap, sync::Arc};
+use std::{
+	collections::HashMap, 
+	sync::Arc
+};
 
+use shaderc::Compiler;
 use uuid::Uuid;
 use vulkano::{
 	command_buffer::allocator::StandardCommandBufferAllocator, 
 	device::{Device, Queue}, 
-	memory::allocator::StandardMemoryAllocator, sync::GpuFuture
+	memory::allocator::StandardMemoryAllocator, 
+	sync::GpuFuture
 };
 
 use crate::{
@@ -17,6 +22,7 @@ use crate::{
 
 /*	TODO
 	- Add error types to Results
+	- Make it so get_image_surface_data isn't blocking?
  */
 
 pub mod mesh_data;
@@ -32,10 +38,13 @@ pub struct RenderEngine {
 	render_surfaces: HashMap<Uuid, RenderSurface>,
 	render_targets: HashMap<Uuid, RenderTarget>,
 
+	compiler: Compiler,
+
 	device: Arc<Device>,
 	graphics_queue: Arc<Queue>,
 	transfer_queue: Arc<Queue>,
-	previous_operation: Option<Box<dyn GpuFuture>>,
+	graphics_operation: Option<Box<dyn GpuFuture>>,
+	transfer_operation: Option<Box<dyn GpuFuture>>,
 
 	command_allocator: Arc<StandardCommandBufferAllocator>,
 	buffer_allocator: Arc<StandardMemoryAllocator>,
