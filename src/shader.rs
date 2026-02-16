@@ -1,13 +1,34 @@
 
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
+use foldhash::fast::RandomState;
 use shaderc::{CompileOptions, ShaderKind};
 use uuid::Uuid;
 use vulkano::{
-	descriptor_set::layout::DescriptorSetLayout, pipeline::{GraphicsPipeline, PipelineLayout, PipelineShaderStageCreateInfo, graphics::GraphicsPipelineCreateInfo, layout::{PipelineDescriptorSetLayoutCreateInfo, PipelineLayoutCreateInfo}}, shader::{EntryPoint, ShaderModule, ShaderModuleCreateInfo}
+	pipeline::{
+		DynamicState, 
+		GraphicsPipeline, 
+		PipelineLayout, 
+		PipelineShaderStageCreateInfo, 
+		graphics::{
+			GraphicsPipelineCreateInfo, 
+			color_blend::{ColorBlendAttachmentState, ColorBlendState}, 
+			input_assembly::InputAssemblyState, 
+			multisample::MultisampleState, 
+			rasterization::RasterizationState, 
+			subpass::PipelineRenderingCreateInfo, 
+			vertex_input::{
+				Vertex as _, 
+				VertexDefinition
+			}, 
+			viewport::ViewportState
+		}, 
+		layout::PipelineDescriptorSetLayoutCreateInfo
+	}, 
+	shader::{EntryPoint, ShaderModule, ShaderModuleCreateInfo}
 };
 
-use crate::RenderEngine;
+use crate::{RenderEngine, mesh_data::Vertex};
 
 #[derive(Clone)]
 pub struct Shader {
@@ -74,7 +95,7 @@ pub struct GraphicsProgram {
 
 #[derive(Clone)]
 pub(crate) struct GraphicsProgramInternal {
-	pub(crate) shaders: Vec<Shader>,
+	//pub(crate) shaders: Vec<Shader>,
 	pub(crate) pipeline: Arc<GraphicsPipeline>,
 }
 
@@ -82,43 +103,55 @@ impl RenderEngine {
 	pub fn create_graphics_program(&mut self, shaders: Vec<Shader>) -> GraphicsProgram {
 		let uuid = Uuid::now_v7();
 
-		let internal_shaders = shaders.iter()
+		let internal = shaders.iter()
 			.map(|s| self.shaders.get(&s.uuid).unwrap());
 
-		let vertex_shader = internal_shaders.clone()
-			.find(|s| s.shader_type == ShaderType::Vertex)
-			.unwrap();
+		let stages = internal.clone()
+			.map(|s| PipelineShaderStageCreateInfo::new(s.entry_point.clone()));
 
-		let stages = internal_shaders
-			.map(|s| &PipelineShaderStageCreateInfo::new(s.entry_point.clone()));
+		let vertex_shader = internal.clone()
+			.find(|s| s.shader_type == ShaderType::Vertex).unwrap();
 
-		let layout = PipelineLayout::new(
+		let vertex_input_state = Vertex::per_vertex()
+			.definition(&vertex_shader.entry_point).unwrap();
+
+		let mut dynamic_state = HashSet::with_hasher(RandomState::default());
+		dynamic_state.insert(DynamicState::ViewportWithCount);
+
+		let subpass = PipelineRenderingCreateInfo {
+			color_attachment_formats: vec![Some(vulkano::format::Format::R8G8B8A8_UNORM)],
+			..Default::default()
+		};
+
+		let layout= PipelineLayout::new(
 			self.device.clone(),
-			PipelineDescriptorSetLayoutCreateInfo::from_stages(stages.clone())
-				.into_pipeline_layout_create_info(self.device.clone())
-				.unwrap()
+			PipelineDescriptorSetLayoutCreateInfo::from_stages(stages.clone().collect::<Vec<_>>().iter().map(|s| s))
+				.into_pipeline_layout_create_info(self.device.clone()).unwrap()
 		).unwrap();
 
 		let pipeline = GraphicsPipeline::new(
 			self.device.clone(),
 			None,
 			GraphicsPipelineCreateInfo {
-				stages: stages.map(|s| s.clone()).collect(),
-				vertex_input_state: todo!(),
-				input_assembly_state: todo!(),
-				viewport_state: todo!(),
-				rasterization_state: todo!(),
-				multisample_state: todo!(),
-				color_blend_state: todo!(),
-				dynamic_state: todo!(),
-				subpass: todo!(),
+				stages: stages.collect(),
+				vertex_input_state: Some(vertex_input_state),
+				input_assembly_state: Some(InputAssemblyState::default()),
+				viewport_state: Some(ViewportState::default()),
+				rasterization_state: Some(RasterizationState::default()),
+				multisample_state: Some(MultisampleState::default()),
+				color_blend_state: Some(ColorBlendState {
+					attachments: vec![ColorBlendAttachmentState::default()],
+					..Default::default()
+				}),
+				dynamic_state: dynamic_state,
+				subpass: Some(subpass.into()),
 				..GraphicsPipelineCreateInfo::layout(layout)
 			}
 		).unwrap();
 
 		let internal = GraphicsProgramInternal {
-			shaders: todo!(),
-			pipeline: todo!(),
+			//shaders: shaders,
+			pipeline: pipeline,
 		};
 
 		self.graphics_programs.insert(uuid, internal);

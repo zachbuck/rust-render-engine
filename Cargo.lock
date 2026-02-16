@@ -1750,6 +1750,7 @@ dependencies = [
 name = "render-engine"
 version = "0.1.0"
 dependencies = [
+ "foldhash",
  "image",
  "shaderc",
  "uuid",
