@@ -33,6 +33,9 @@ pub mod render_surface;
 pub mod render_target;
 pub mod shader;
 
+#[cfg(test)]
+mod tests;
+
 pub struct RenderEngine {
 	mesh_data: HashMap<Uuid, MeshDataInternal>,
 	shaders: HashMap<Uuid, ShaderInternal>,
@@ -82,8 +85,8 @@ impl RenderEngine {
 			// prioritize physical devices that are typically going to be stronger/faster
 			.min_by_key(|pd| {
 				match pd.properties().device_type {
-						vulkano::device::physical::PhysicalDeviceType::IntegratedGpu => 0,
-						vulkano::device::physical::PhysicalDeviceType::DiscreteGpu => 1,
+						vulkano::device::physical::PhysicalDeviceType::DiscreteGpu => 0,
+						vulkano::device::physical::PhysicalDeviceType::IntegratedGpu => 1,
 						vulkano::device::physical::PhysicalDeviceType::VirtualGpu => 2,
 						vulkano::device::physical::PhysicalDeviceType::Cpu => 3,
 						vulkano::device::physical::PhysicalDeviceType::Other => 4,
@@ -141,7 +144,7 @@ impl RenderEngine {
 		let transfer_queue = queues.next().unwrap_or(graphics_queue.clone());
 
 		let command_allocator = Arc::new(StandardCommandBufferAllocator::new(device.clone(), Default::default()));
-		let buffer_allocator = Arc::new(StandardMemoryAllocator::new(device.clone(), Default::default()));
+		let buffer_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
 
 		let compiler = Compiler::new().unwrap();
 

@@ -32,7 +32,10 @@ impl ImageSurfaceInternal {
 	}
 
 	pub(super) fn build_buffer(&mut self, new_builder: AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Arc<PrimaryAutoCommandBuffer> {
-		let buffer = self.builder.take().unwrap().build().unwrap();
+		let mut builder = self.builder.take().unwrap();
+		builder.end_rendering().unwrap();
+
+		let buffer = builder.build().unwrap();
 
 		self.builder = Some(new_builder);
 		self.builder_initial_commands();
@@ -59,7 +62,7 @@ impl ImageSurfaceInternal {
 			depth_range: 0.0..=1.0,
 		}];
 
-		builder.set_viewport(0, viewports.into()).unwrap();
+		builder.set_viewport_with_count(viewports.into()).unwrap();
 	}
 }
 

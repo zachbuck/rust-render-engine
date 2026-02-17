@@ -61,7 +61,7 @@ impl RenderEngine {
 
 		let mut options = CompileOptions::new().unwrap();
 		options.add_macro_definition("EP", Some("main"));
-		let binary_result = self.compiler.compile_into_spirv_assembly(
+		let binary_result = self.compiler.compile_into_spirv(
 			&source, 
 			shader_type.into(), 
 			&shader_name, 
@@ -136,7 +136,10 @@ impl RenderEngine {
 				stages: stages.collect(),
 				vertex_input_state: Some(vertex_input_state),
 				input_assembly_state: Some(InputAssemblyState::default()),
-				viewport_state: Some(ViewportState::default()),
+				viewport_state: Some(ViewportState {
+					viewports: vec![].into(),
+					..Default::default()
+				}),
 				rasterization_state: Some(RasterizationState::default()),
 				multisample_state: Some(MultisampleState::default()),
 				color_blend_state: Some(ColorBlendState {
