@@ -3,16 +3,24 @@ use std::sync::Arc;
 use image::{ImageBuffer, Rgba};
 use uuid::Uuid;
 use vulkano::{
-	buffer::{Buffer, BufferCreateInfo}, command_buffer::{AutoCommandBufferBuilder, CopyImageToBufferInfo, PrimaryAutoCommandBuffer, RenderingAttachmentInfo, RenderingInfo}, image::{
+	buffer::{Buffer, BufferCreateInfo}, 
+	command_buffer::{AutoCommandBufferBuilder, CopyImageToBufferInfo, PrimaryAutoCommandBuffer, RenderingAttachmentInfo, RenderingInfo}, 
+	image::{
 		Image, 
 		ImageCreateInfo, 
 		ImageUsage, 
 		view::ImageView
-	}, memory::allocator::AllocationCreateInfo, pipeline::graphics::viewport::Viewport, sync::{self, GpuFuture}
+	}, 
+	memory::allocator::AllocationCreateInfo, 
+	pipeline::graphics::viewport::Viewport, 
+	sync::{self, GpuFuture}
 };
 
 use crate::{
-	RenderEngine, render_surface::{RenderCall, RenderSurface}, unwrap_option_or_none, unwrap_result_or_none
+	RenderEngine, 
+	render_surface::{RenderCall, RenderSurface}, 
+	unwrap_option_or_none, 
+	unwrap_result_or_none
 };
 
 pub struct ImageSurfaceHandle {

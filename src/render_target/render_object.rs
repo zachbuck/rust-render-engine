@@ -6,7 +6,7 @@ use crate::{
 	RenderEngine, 
 	mesh_data::{MeshData, MeshDataInternal}, 
 	render_target::{RenderCall, RenderTarget}, 
-	shader::{GraphicsProgram, GraphicsProgramInternal}
+	shader::{GraphicsProgram, GraphicsProgramInternal}, unwrap_option_or_none
 };
 
 pub struct RenderObjectHandle {
@@ -39,11 +39,11 @@ impl RenderCall for RenderObjectInternal {
 }
 
 impl RenderEngine {
-	pub fn create_render_object(&mut self, mesh_data: MeshData, graphics_program: GraphicsProgram) -> RenderObjectHandle{
+	pub fn create_render_object(&mut self, mesh_data: MeshData, graphics_program: GraphicsProgram) -> Result<RenderObjectHandle, ()> {
 		let uuid = Uuid::now_v7();
 
-		let mesh_data = self.mesh_data.get(&mesh_data.uuid).unwrap();
-		let graphics_program = self.graphics_programs.get(&graphics_program.uuid).unwrap();
+		let mesh_data = unwrap_option_or_none!(self.mesh_data.get(&mesh_data.uuid));
+		let graphics_program = unwrap_option_or_none!(self.graphics_programs.get(&graphics_program.uuid));
 		
 		let internal = RenderObjectInternal {
 			surfaces: Vec::new(),
@@ -53,13 +53,13 @@ impl RenderEngine {
 
 		self.render_targets.insert(uuid, RenderTarget::Object(internal));
 
-		RenderObjectHandle {
+		Ok(RenderObjectHandle {
 			uuid: uuid,
-		}
+		})
 	}
 
-	pub fn render_render_object(&mut self, handle: RenderObjectHandle) {
-		let render_caller = self.render_targets.get(&handle.uuid).unwrap().to_render_caller();
+	pub fn render_render_object(&mut self, handle: RenderObjectHandle) -> Result<(), ()> {
+		let render_caller = unwrap_option_or_none!(self.render_targets.get(&handle.uuid)).to_render_caller();
 		let uuids = render_caller.get_render_surface_uuids();
 		if uuids.len() == 0 {
 			for (_, render_surface) in &mut self.render_surfaces {
@@ -67,8 +67,10 @@ impl RenderEngine {
 			}
 		} else {
 			for uuid in &uuids {
-				self.render_surfaces.get_mut(uuid).unwrap().process_render_queue(render_caller);
+				unwrap_option_or_none!(self.render_surfaces.get_mut(uuid)).process_render_queue(render_caller);
 			}
 		}
+
+		Ok(())
 	}
 }

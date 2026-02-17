@@ -28,7 +28,7 @@ use vulkano::{
 	shader::{EntryPoint, ShaderModule, ShaderModuleCreateInfo}
 };
 
-use crate::{RenderEngine, mesh_data::Vertex};
+use crate::{RenderEngine, mesh_data::Vertex, unwrap_result_or_none};
 
 #[derive(Clone)]
 pub struct Shader {
@@ -56,23 +56,23 @@ impl Into<ShaderKind> for ShaderType {
 }
 
 impl RenderEngine {
-	pub fn create_shader(&mut self, source: String, shader_name: String, shader_type: ShaderType) -> Shader {
+	pub fn create_shader(&mut self, source: String, shader_name: String, shader_type: ShaderType) -> Result<Shader, ()> {
 		let uuid = Uuid::now_v7();
 
-		let mut options = CompileOptions::new().unwrap();
+		let mut options = unwrap_result_or_none!(CompileOptions::new());
 		options.add_macro_definition("EP", Some("main"));
-		let binary_result = self.compiler.compile_into_spirv(
+		let binary_result = unwrap_result_or_none!(self.compiler.compile_into_spirv(
 			&source, 
 			shader_type.into(), 
 			&shader_name, 
 			"main", 
 			Some(&options)
-		).unwrap();
+		));
 
-		let module = unsafe { ShaderModule::new(
+		let module = unsafe { unwrap_result_or_none!(ShaderModule::new(
 			self.device.clone(),
 			ShaderModuleCreateInfo::new(binary_result.as_binary())
-		).unwrap() };
+		)) };
 
 		let entry_point = module.entry_point("main").unwrap();
 
@@ -83,9 +83,9 @@ impl RenderEngine {
 
 		self.shaders.insert(uuid, internal);
 
-		Shader {
+		Ok(Shader {
 			uuid: uuid
-		}
+		})
 	}
 }
 

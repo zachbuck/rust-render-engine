@@ -7,7 +7,7 @@ pub use render_object::RenderObjectHandle as RenderObject;
 
 use crate::{
 	RenderEngine, 
-	render_target::render_object::RenderObjectInternal
+	render_target::render_object::RenderObjectInternal, unwrap_option_or_none
 };
 
 pub(crate) enum RenderTarget {
@@ -29,7 +29,7 @@ pub(crate) trait RenderCall {
 }
 
 impl RenderEngine {
-	pub fn render_all_render_targets(&mut self) {
+	pub fn render_all_render_targets(&mut self) -> Result<(), ()> {
 		for (_, render_target) in &self.render_targets {
 			let render_caller = render_target.to_render_caller();
 			let uuids = render_caller.get_render_surface_uuids();
@@ -39,9 +39,11 @@ impl RenderEngine {
 				}
 			} else {
 				for uuid in &uuids {
-					self.render_surfaces.get_mut(uuid).unwrap().process_render_queue(render_caller);
+					unwrap_option_or_none!(self.render_surfaces.get_mut(uuid)).process_render_queue(render_caller);
 				}
 			}
 		}
+
+		Ok(())
 	}
 }

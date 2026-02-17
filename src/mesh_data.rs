@@ -2,7 +2,7 @@
 use uuid::Uuid;
 use vulkano::{buffer::{Buffer, BufferContents, BufferCreateInfo, Subbuffer}, memory::allocator::AllocationCreateInfo};
 
-use crate::RenderEngine;
+use crate::{RenderEngine, unwrap_result_or_none};
 
 #[repr(C)]
 #[derive(BufferContents, vulkano::pipeline::graphics::vertex_input::Vertex)]
@@ -28,10 +28,10 @@ pub(crate) struct MeshDataInternal {
 }
 
 impl RenderEngine {
-	pub fn create_mesh_data(&mut self, vertices: Vec<Vertex>, indices: Vec<u16>) -> MeshData {
+	pub fn create_mesh_data(&mut self, vertices: Vec<Vertex>, indices: Vec<u16>) -> Result<MeshData, ()> {
 		let uuid = Uuid::now_v7();
 
-		let vertices = Buffer::from_iter(
+		let vertices = unwrap_result_or_none!(Buffer::from_iter(
 			self.buffer_allocator.clone(), 
 			BufferCreateInfo {
 				usage: vulkano::buffer::BufferUsage::VERTEX_BUFFER,
@@ -42,9 +42,9 @@ impl RenderEngine {
 				..Default::default()
 			}, 
 			vertices
-		).unwrap();
+		));
 
-		let indices = Buffer::from_iter(
+		let indices = unwrap_result_or_none!(Buffer::from_iter(
 			self.buffer_allocator.clone(),
 			BufferCreateInfo {
 				usage: vulkano::buffer::BufferUsage::INDEX_BUFFER,
@@ -55,7 +55,7 @@ impl RenderEngine {
 				..Default::default()
 			},
 			indices
-		).unwrap();
+		));
 
 		let internal = MeshDataInternal {
 			vertices: vertices,
@@ -64,8 +64,8 @@ impl RenderEngine {
 
 		self.mesh_data.insert(uuid, internal);
 
-		MeshData { 
+		Ok(MeshData { 
 			uuid: uuid
-		}
+		})
 	}
 }

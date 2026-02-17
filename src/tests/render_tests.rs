@@ -33,7 +33,7 @@ fn basic_triangle() {
 
 	let indices = vec![0, 1, 2];
 
-	let mesh_data = renderer.create_mesh_data(vertices, indices);
+	let mesh_data = renderer.create_mesh_data(vertices, indices).unwrap();
 	
 	let vertex_source = "
 		#version 460
@@ -47,7 +47,7 @@ fn basic_triangle() {
 		}
 	";
 
-	let vertex_shader = renderer.create_shader(vertex_source.to_string(), "vertex.glsl".to_string(), ShaderType::Vertex);
+	let vertex_shader = renderer.create_shader(vertex_source.to_string(), "vertex.glsl".to_string(), ShaderType::Vertex).unwrap();
 
 	let fragment_source = "
 		#version 460
@@ -59,14 +59,14 @@ fn basic_triangle() {
 		}
 	";
 
-	let fragment_shader = renderer.create_shader(fragment_source.to_string(), "fragment.glsl".to_string(), ShaderType::Fragment);
+	let fragment_shader = renderer.create_shader(fragment_source.to_string(), "fragment.glsl".to_string(), ShaderType::Fragment).unwrap();
 
 	let graphics_program = renderer.create_graphics_program(vec![vertex_shader, fragment_shader]);
 
-	let _object = renderer.create_render_object(mesh_data, graphics_program);
+	let _object = renderer.create_render_object(mesh_data, graphics_program).unwrap();
 
-	renderer.render_all_render_targets();
-	renderer.push_render_calls();
+	renderer.render_all_render_targets().unwrap();
+	renderer.push_render_calls().unwrap();
 
 	let data = renderer.get_image_surface_data(image).unwrap();
 

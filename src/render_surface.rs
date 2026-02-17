@@ -9,7 +9,7 @@ use vulkano::{
 use crate::{
 	RenderEngine, 
 	render_surface::image_surface::ImageSurfaceInternal, 
-	render_target::RenderCall
+	render_target::RenderCall, unwrap_result_or_none
 };
 
 pub(crate) enum RenderSurface {
@@ -25,15 +25,15 @@ impl RenderSurface {
 }
 
 impl RenderEngine {
-	pub fn push_render_calls(&mut self) {
+	pub fn push_render_calls(&mut self) -> Result<(), ()> {
 		for (_, render_surface) in &mut self.render_surfaces {
 			match render_surface {
 				RenderSurface::Image(image) => {
-					let builder = AutoCommandBufferBuilder::primary(
+					let builder = unwrap_result_or_none!(AutoCommandBufferBuilder::primary(
 						self.command_allocator.clone(), 
 						self.graphics_queue.queue_family_index(), 
 						vulkano::command_buffer::CommandBufferUsage::OneTimeSubmit,
-					).unwrap();
+					));
 
 					let buffer = image.build_buffer(builder);
 
@@ -46,5 +46,7 @@ impl RenderEngine {
 				}
 			}
 		}
+
+		Ok(())
 	}
 }
