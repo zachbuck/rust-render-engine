@@ -11,7 +11,7 @@ use crate::{
 fn basic_triangle() {
 	let mut renderer = RenderEngine::new(RenderEngineCreateInfo::default()).unwrap();
 	
-	let image = renderer.create_image_surface(100, 100);
+	let image = renderer.create_image_surface(100, 100).unwrap();
 
 	let vertices = vec![
 		Vertex {
@@ -68,7 +68,7 @@ fn basic_triangle() {
 	renderer.render_all_render_targets();
 	renderer.push_render_calls();
 
-	let data = renderer.get_image_surface_data(image);
+	let data = renderer.get_image_surface_data(image).unwrap();
 
 	let test = open("tests/render_tests/basic_triangle.png").unwrap().into_rgba8();
 

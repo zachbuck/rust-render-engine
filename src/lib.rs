@@ -35,6 +35,7 @@ pub mod shader;
 
 #[cfg(test)]
 mod tests;
+mod macros;
 
 pub struct RenderEngine {
 	mesh_data: HashMap<Uuid, MeshDataInternal>,

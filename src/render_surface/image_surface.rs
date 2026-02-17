@@ -12,8 +12,7 @@ use vulkano::{
 };
 
 use crate::{
-	RenderEngine, 
-	render_surface::{RenderCall, RenderSurface}
+	RenderEngine, render_surface::{RenderCall, RenderSurface}, unwrap_option_or_none, unwrap_result_or_none
 };
 
 pub struct ImageSurfaceHandle {
@@ -67,16 +66,16 @@ impl ImageSurfaceInternal {
 }
 
 impl RenderEngine {
-	pub fn create_image_surface(&mut self, x_size: u32, y_size: u32) -> ImageSurfaceHandle {
+	pub fn create_image_surface(&mut self, x_size: u32, y_size: u32) -> Result<ImageSurfaceHandle, ()> {
 		let uuid = Uuid::now_v7();
 
-		let builder = AutoCommandBufferBuilder::primary(
-			self.command_allocator.clone(), 
-			self.graphics_queue.queue_family_index(), 
-			vulkano::command_buffer::CommandBufferUsage::OneTimeSubmit,
-		).unwrap();
+		let builder = unwrap_result_or_none!(AutoCommandBufferBuilder::primary(
+				self.command_allocator.clone(), 
+				self.graphics_queue.queue_family_index(), 
+				vulkano::command_buffer::CommandBufferUsage::OneTimeSubmit,
+			));
 
-		let image = Image::new(
+		let image = unwrap_result_or_none!(Image::new(
 			self.buffer_allocator.clone(),
 			ImageCreateInfo {
 				image_type: vulkano::image::ImageType::Dim2d,
@@ -89,9 +88,9 @@ impl RenderEngine {
 				memory_type_filter: vulkano::memory::allocator::MemoryTypeFilter::PREFER_DEVICE,
 				..Default::default()
 			}
-		).unwrap();
+		));
 
-		let image_view = ImageView::new_default(image).unwrap();
+		let image_view = unwrap_result_or_none!(ImageView::new_default(image));
 
 		let mut internal = ImageSurfaceInternal {
 			builder: Some(builder),
@@ -101,18 +100,19 @@ impl RenderEngine {
 
 		self.render_surfaces.insert(uuid, RenderSurface::Image(internal));
 
-		ImageSurfaceHandle { uuid: uuid }
+		Ok(ImageSurfaceHandle { uuid: uuid })
 	}
 
-	pub fn image_surface_push_render_calls(&mut self, handle: ImageSurfaceHandle) {
+	pub fn image_surface_push_render_calls(&mut self, handle: ImageSurfaceHandle) -> Result<(), ()> {
 		let uuid = handle.uuid;
-		let render_surface = self.render_surfaces.get_mut(&uuid).unwrap();
+		let render_surface = unwrap_option_or_none!(self.render_surfaces.get_mut(&uuid));
+
 		let RenderSurface::Image(image) = render_surface; {
-			let builder = AutoCommandBufferBuilder::primary(
+			let builder = unwrap_result_or_none!(AutoCommandBufferBuilder::primary(
 				self.command_allocator.clone(), 
 				self.graphics_queue.queue_family_index(), 
 				vulkano::command_buffer::CommandBufferUsage::OneTimeSubmit
-			).unwrap();
+			));
 
 			let buffer = image.build_buffer(builder);
 
@@ -122,14 +122,16 @@ impl RenderEngine {
 				.then_signal_fence_and_flush().unwrap();
 
 			self.graphics_operation = Some(gpu_future.boxed());
-		}
+		};
+
+		return Ok(());
 	}
 
-	pub fn get_image_surface_data(&mut self, handle: ImageSurfaceHandle) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-		let render_surface = self.render_surfaces.get(&handle.uuid).unwrap();
+	pub fn get_image_surface_data(&mut self, handle: ImageSurfaceHandle) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, ()> {
+		let render_surface = unwrap_option_or_none!(self.render_surfaces.get(&handle.uuid));
 		let RenderSurface::Image(image_surface) = render_surface;
 
-		let buffer = Buffer::from_iter(
+		let buffer = unwrap_result_or_none!(Buffer::from_iter(
 			self.buffer_allocator.clone(), 
 			BufferCreateInfo {
 				usage: vulkano::buffer::BufferUsage::TRANSFER_DST,
@@ -140,17 +142,17 @@ impl RenderEngine {
 				..Default::default()
 			}, 
 			(0..1024 * 1024 * 4).map(|_| 0u8),
-		).unwrap();
+		));
 
-		let mut builder = AutoCommandBufferBuilder::primary(
+		let mut builder = unwrap_result_or_none!(AutoCommandBufferBuilder::primary(
 			self.command_allocator.clone(), 
 			self.transfer_queue.queue_family_index(), 
 			vulkano::command_buffer::CommandBufferUsage::OneTimeSubmit
-		).unwrap();
+		));
 
-		builder.copy_image_to_buffer(CopyImageToBufferInfo::image_buffer(image_surface.image.image().clone(), buffer.clone())).unwrap();
+		unwrap_result_or_none!(builder.copy_image_to_buffer(CopyImageToBufferInfo::image_buffer(image_surface.image.image().clone(), buffer.clone())));
 
-		let command_buffer = builder.build().unwrap();
+		let command_buffer = unwrap_result_or_none!(builder.build());
 
 		let gpu_future = self.transfer_operation
 			.take().unwrap()
@@ -159,15 +161,15 @@ impl RenderEngine {
 
 		gpu_future.wait(None).unwrap();
 
-		let buffer_contents = (buffer.read().unwrap()).to_vec();
-		let image = ImageBuffer::<Rgba<u8>, _>::from_raw(
+		let buffer_contents = (unwrap_result_or_none!(buffer.read())).to_vec();
+		let image = unwrap_option_or_none!(ImageBuffer::<Rgba<u8>, _>::from_raw(
 			image_surface.image.image().extent()[0],
 			image_surface.image.image().extent()[1],
 			buffer_contents
-		).unwrap();
+		));
 
 		self.transfer_operation = Some(sync::now(self.device.clone()).boxed());
 
-		return image;
+		return Ok(image);
 	}
 }
