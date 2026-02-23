@@ -1,2 +1,3 @@
 
-mod render_tests;
+mod test_scenes;
+mod shader;

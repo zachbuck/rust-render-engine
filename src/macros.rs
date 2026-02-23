@@ -12,6 +12,16 @@ macro_rules! unwrap_result_or_none {
 			value.unwrap()
 		}
 	};
+
+	($x:expr, $y:expr) => {
+		{
+			let value = $x;
+
+			if value.is_err() { return Err($y); }
+
+			value.unwrap()
+		}
+	}
 }
 
 #[macro_export]

@@ -1,3 +1,5 @@
+use std::{fs::File, io::Read};
+
 use image::open;
 
 use crate::{
@@ -8,7 +10,7 @@ use crate::{
 };
 
 #[test]
-fn basic_triangle() {
+fn triangle() {
 	let mut renderer = RenderEngine::new(RenderEngineCreateInfo::default()).unwrap();
 	
 	let image = renderer.create_image_surface(100, 100).unwrap();
@@ -35,31 +37,19 @@ fn basic_triangle() {
 
 	let mesh_data = renderer.create_mesh_data(vertices, indices).unwrap();
 	
-	let vertex_source = "
-		#version 460
+	let vertex_path = "tests/test_scenes/triangle/triangle.vert";
+	let mut file = File::open(vertex_path).unwrap();
+	let mut vertex_source = String::new();
+	file.read_to_string(&mut vertex_source).unwrap();
+	let (vertex_binary, _) = renderer.compile_shader(vertex_source, vertex_path.to_string(), ShaderType::Vertex).unwrap();
+	let vertex_shader = renderer.create_shader(vertex_binary).unwrap();
 
-		layout(location = 0) in vec3 position;
-		layout(location = 1) in vec3 normal;
-		layout(location = 2) in vec2 uv;
-
-		void main() {
-			gl_Position = vec4(position, 1.0);
-		}
-	";
-
-	let vertex_shader = renderer.create_shader(vertex_source.to_string(), "vertex.glsl".to_string(), ShaderType::Vertex).unwrap();
-
-	let fragment_source = "
-		#version 460
-
-		layout(location = 0) out vec4 f_color;
-		
-		void main() {
-			f_color = vec4(1.0, 0.0, 0.0, 1.0);
-		}
-	";
-
-	let fragment_shader = renderer.create_shader(fragment_source.to_string(), "fragment.glsl".to_string(), ShaderType::Fragment).unwrap();
+	let fragment_path = "tests/test_scenes/triangle/triangle.frag";
+	let mut file = File::open(fragment_path).unwrap();
+	let mut fragment_source = String::new();
+	file.read_to_string(&mut fragment_source).unwrap();
+	let (fragment_binary, _) = renderer.compile_shader(fragment_source, fragment_path.to_string(), ShaderType::Fragment).unwrap();
+	let fragment_shader = renderer.create_shader(fragment_binary).unwrap();
 
 	let graphics_program = renderer.create_graphics_program(vec![vertex_shader, fragment_shader]);
 
@@ -70,7 +60,7 @@ fn basic_triangle() {
 
 	let data = renderer.get_image_surface_data(image).unwrap();
 
-	let test = open("tests/render_tests/basic_triangle.png").unwrap().into_rgba8();
+	let test = open("tests/test_scenes/triangle/test.png").unwrap().into_rgba8();
 
 	assert!(data.dimensions() == test.dimensions(), "data and test case dimensions do not match");
 

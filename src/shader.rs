@@ -6,11 +6,7 @@ use shaderc::{CompileOptions, ShaderKind};
 use uuid::Uuid;
 use vulkano::{
 	pipeline::{
-		DynamicState, 
-		GraphicsPipeline, 
-		PipelineLayout, 
-		PipelineShaderStageCreateInfo, 
-		graphics::{
+		DynamicState, GraphicsPipeline, PipelineLayout, PipelineShaderStageCreateInfo, graphics::{
 			GraphicsPipelineCreateInfo, 
 			color_blend::{ColorBlendAttachmentState, ColorBlendState}, 
 			input_assembly::InputAssemblyState, 
@@ -22,13 +18,12 @@ use vulkano::{
 				VertexDefinition
 			}, 
 			viewport::ViewportState
-		}, 
-		layout::PipelineDescriptorSetLayoutCreateInfo
+		}, layout::PipelineDescriptorSetLayoutCreateInfo
 	}, 
-	shader::{EntryPoint, ShaderModule, ShaderModuleCreateInfo}
+	shader::{EntryPoint, ShaderModule, ShaderModuleCreateInfo, spirv::ExecutionModel}
 };
 
-use crate::{RenderEngine, mesh_data::Vertex, unwrap_result_or_none};
+use crate::{RenderEngine, mesh_data::Vertex, unwrap_option_or_none, unwrap_result_or_none};
 
 #[derive(Clone)]
 pub struct Shader {
@@ -55,26 +50,56 @@ impl Into<ShaderKind> for ShaderType {
 	}
 }
 
-impl RenderEngine {
-	pub fn create_shader(&mut self, source: String, shader_name: String, shader_type: ShaderType) -> Result<Shader, ()> {
-		let uuid = Uuid::now_v7();
+impl From<ExecutionModel> for ShaderType {
+	fn from(value: ExecutionModel) -> Self {
+		match value {
+			ExecutionModel::Vertex => ShaderType::Vertex,
+			ExecutionModel::Fragment => ShaderType::Fragment,
+			_ => todo!()
+		}
+	}
+}
 
-		let mut options = unwrap_result_or_none!(CompileOptions::new());
+impl RenderEngine {
+	pub fn compile_shader(&self, shader_source: String, shader_name: String, shader_type: ShaderType) -> Result<(Vec<u32>, Option<String>), String> {
+		let mut options = unwrap_result_or_none!(CompileOptions::new(), "".to_string());
 		options.add_macro_definition("EP", Some("main"));
-		let binary_result = unwrap_result_or_none!(self.compiler.compile_into_spirv(
-			&source, 
+
+		let result = self.compiler.compile_into_spirv(
+			&shader_source, 
 			shader_type.into(), 
 			&shader_name, 
 			"main", 
 			Some(&options)
-		));
+		);
+
+		if let Err(e) = result { return Err(e.to_string()); }
+
+		let result = result.unwrap();
+
+		let shader_binary = result.as_binary().to_vec();
+		let warnings;
+		if result.get_num_warnings() != 0 {
+			warnings = Some(result.get_warning_messages())
+		} else {
+			warnings = None;
+		}
+
+		return Ok((shader_binary, warnings))
+	}
+
+	pub fn create_shader(&mut self, shader_binary: Vec<u32>) -> Result<Shader, ()> {
+		let uuid = Uuid::now_v7();
 
 		let module = unsafe { unwrap_result_or_none!(ShaderModule::new(
-			self.device.clone(),
-			ShaderModuleCreateInfo::new(binary_result.as_binary())
-		)) };
+				self.device.clone(),
+				ShaderModuleCreateInfo::new(shader_binary.as_slice())
+			))
+		};
 
-		let entry_point = module.entry_point("main").unwrap();
+		let entry_point = unwrap_option_or_none!(module.entry_point("main"));
+
+		let shader_type = entry_point.info().execution_model.into();
 
 		let internal = ShaderInternal {
 			entry_point: entry_point,
@@ -83,9 +108,7 @@ impl RenderEngine {
 
 		self.shaders.insert(uuid, internal);
 
-		Ok(Shader {
-			uuid: uuid
-		})
+		Ok(Shader { uuid: uuid })
 	}
 }
 

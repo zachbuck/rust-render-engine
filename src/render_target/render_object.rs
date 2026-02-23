@@ -44,11 +44,11 @@ impl RenderEngine {
 
 		let mesh_data = unwrap_option_or_none!(self.mesh_data.get(&mesh_data.uuid));
 		let graphics_program = unwrap_option_or_none!(self.graphics_programs.get(&graphics_program.uuid));
-		
+
 		let internal = RenderObjectInternal {
 			surfaces: Vec::new(),
 			mesh_data: mesh_data.clone(),
-			graphics_program: graphics_program.clone()
+			graphics_program: graphics_program.clone(),
 		};
 
 		self.render_targets.insert(uuid, RenderTarget::Object(internal));

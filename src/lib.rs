@@ -1,7 +1,7 @@
 
 use std::{
 	collections::HashMap, 
-	sync::Arc
+	sync::Arc,
 };
 
 use shaderc::Compiler;
