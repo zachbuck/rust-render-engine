@@ -38,6 +38,19 @@ mod compile_shader {
 			assert!(bytes[3] == test_binary[4*x+3]);
 		}
 	}
+
+	#[test]
+	fn incorrect_shader_source() {
+		let renderer = RenderEngine::new(RenderEngineCreateInfo::default()).unwrap();
+
+		let shader_path = "tests/shader/incorrect_compile_test.vert";
+		let mut file = File::open(shader_path).unwrap();
+		let mut shader_source = String::new();
+		file.read_to_string(&mut shader_source).unwrap();
+		let result = renderer.compile_shader(shader_source, shader_path.to_string(), ShaderType::Vertex);
+		
+		assert!(result.is_err());
+	}
 }
 
 mod create_shader {
