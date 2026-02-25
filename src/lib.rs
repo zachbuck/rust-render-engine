@@ -210,7 +210,11 @@ impl Default for RenderEngineCreateInfo {
 			app_name: None,
 			app_version: None,
 			instance_extensions: InstanceExtensions::empty(),
-			device_extensions: DeviceExtensions::empty(),
+			device_extensions: DeviceExtensions {
+				khr_dynamic_rendering: true,
+				khr_push_descriptor: true,
+				..DeviceExtensions::empty()
+			},
 			device_features: DeviceFeatures {
 				dynamic_rendering: true,
 				..Default::default()

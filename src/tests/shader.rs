@@ -59,7 +59,11 @@ mod create_shader {
 		io::Read
 	};
 
-    use crate::{RenderEngine, RenderEngineCreateInfo, shader::ShaderType};
+    use crate::{
+		RenderEngine, 
+		RenderEngineCreateInfo, 
+		shader::ShaderType
+	};
 
 	#[test]
 	fn create_shader() {
