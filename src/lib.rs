@@ -23,11 +23,6 @@ use crate::{
 	shader::{GraphicsProgramInternal, ShaderInternal}
 };
 
-/*	TODO
-	- Add error types to Results
-	- Make it so get_image_surface_data isn't blocking?
- */
-
 pub mod mesh_data;
 pub mod render_surface;
 pub mod render_target;
@@ -211,8 +206,8 @@ impl Default for RenderEngineCreateInfo {
 			app_version: None,
 			instance_extensions: InstanceExtensions::empty(),
 			device_extensions: DeviceExtensions {
-				khr_dynamic_rendering: true,
 				khr_push_descriptor: true,
+				khr_dynamic_rendering: true,
 				..DeviceExtensions::empty()
 			},
 			device_features: DeviceFeatures {

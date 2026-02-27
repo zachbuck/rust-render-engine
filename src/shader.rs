@@ -1,11 +1,11 @@
 
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::{BTreeMap, HashSet}, sync::Arc};
 
 use foldhash::fast::RandomState;
 use shaderc::{CompileOptions, ShaderKind};
 use uuid::Uuid;
 use vulkano::{
-	pipeline::{
+	descriptor_set::layout::{DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateFlags, DescriptorSetLayoutCreateInfo}, pipeline::{
 		DynamicState, GraphicsPipeline, PipelineLayout, PipelineShaderStageCreateInfo, graphics::{
 			GraphicsPipelineCreateInfo, 
 			color_blend::{ColorBlendAttachmentState, ColorBlendState}, 
@@ -18,9 +18,8 @@ use vulkano::{
 				VertexDefinition
 			}, 
 			viewport::ViewportState
-		}, layout::PipelineDescriptorSetLayoutCreateInfo
-	}, 
-	shader::{EntryPoint, ShaderModule, ShaderModuleCreateInfo, spirv::ExecutionModel}
+		}, layout::{PipelineDescriptorSetLayoutCreateInfo, PipelineLayoutCreateInfo}
+	}, shader::{DescriptorBindingRequirements, EntryPoint, ShaderModule, ShaderModuleCreateInfo, ShaderStages, spirv::ExecutionModel}
 };
 
 use crate::{RenderEngine, mesh_data::Vertex, unwrap_option_or_none, unwrap_result_or_none};
@@ -33,6 +32,8 @@ pub struct Shader {
 pub(crate) struct ShaderInternal {
 	entry_point: EntryPoint,
 	shader_type: ShaderType,
+
+	descriptors: Vec<Descriptor>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -58,6 +59,86 @@ impl From<ExecutionModel> for ShaderType {
 			_ => todo!()
 		}
 	}
+}
+
+impl Into<ShaderStages> for ShaderType {
+	fn into(self) -> ShaderStages {
+		match self {
+			ShaderType::Vertex => ShaderStages::VERTEX,
+			ShaderType::Fragment => ShaderStages::FRAGMENT,
+		}
+	}
+}
+
+#[derive(Clone)]
+#[derive(Debug)]
+pub struct Descriptor {
+	set: u32,
+	binding: u32,
+
+	descriptor_type: DescriptorType,
+}
+
+impl Descriptor {
+	pub fn uniform_buffer(set: u32, binding: u32, uniforms: &[UniformType]) -> Self {
+		return Descriptor {
+			set: set,
+			binding: binding,
+			descriptor_type: DescriptorType::UniformBuffer(uniforms.to_vec()),
+		};
+	}
+
+	fn is_compatable_with_requirements(&self, requirements: &DescriptorBindingRequirements) -> bool {
+		match self.descriptor_type {
+			DescriptorType::UniformBuffer(_) => requirements.descriptor_types.contains(&vulkano::descriptor_set::layout::DescriptorType::UniformBuffer),
+			DescriptorType::Unknown => true,
+		}
+	}
+
+	fn is_compatable_with_descriptor(&self, other: &Descriptor) -> bool {
+		if self.descriptor_type != other.descriptor_type { return false; }
+		return true;
+	}
+
+	fn from_requirements(set: u32, binding: u32, requirements: &DescriptorBindingRequirements) -> Self {
+		if requirements.descriptor_types.contains(&vulkano::descriptor_set::layout::DescriptorType::UniformBuffer) {
+			return Descriptor {
+				set: set,
+				binding: binding,
+				descriptor_type: DescriptorType::UniformBuffer(Vec::new()),
+			};
+		} else {
+			return Descriptor {
+				set: set,
+				binding: binding,
+				descriptor_type: DescriptorType::Unknown,
+			}
+		}
+	}
+}
+
+#[derive(Clone)]
+#[derive(Debug)]
+#[derive(PartialEq, Eq)]
+enum DescriptorType {
+	UniformBuffer(Vec<UniformType>),
+	Unknown,
+}
+
+impl Into<vulkano::descriptor_set::layout::DescriptorType> for DescriptorType {
+	fn into(self) -> vulkano::descriptor_set::layout::DescriptorType {
+		match self {
+			DescriptorType::UniformBuffer(_) => vulkano::descriptor_set::layout::DescriptorType::UniformBuffer,
+			DescriptorType::Unknown => unimplemented!(),
+		}
+	}
+}
+
+#[derive(Clone)]
+#[derive(Debug)]
+#[derive(PartialEq, Eq)]
+pub enum UniformType {
+	Mat4
 }
 
 impl RenderEngine {
@@ -88,7 +169,7 @@ impl RenderEngine {
 		return Ok((shader_binary, warnings))
 	}
 
-	pub fn create_shader(&mut self, shader_binary: Vec<u32>) -> Result<Shader, ()> {
+	pub fn create_shader(&mut self, shader_binary: Vec<u32>, descriptor_info: &[Descriptor]) -> Result<Shader, ()> {
 		let uuid = Uuid::now_v7();
 
 		let module = unsafe { unwrap_result_or_none!(ShaderModule::new(
@@ -101,9 +182,29 @@ impl RenderEngine {
 
 		let shader_type = entry_point.info().execution_model.into();
 
+		let mut descriptors = Vec::new();
+
+		for ((set, binding), requirements) in &entry_point.info().descriptor_binding_requirements {
+			let descriptor = descriptor_info.iter().find(|d| d.set == *set && d.binding == *binding);
+			if descriptor.is_some_and(|d| d.is_compatable_with_requirements(requirements)) {
+				descriptors.push(descriptor.unwrap().clone());
+			} else {
+				descriptors.push(Descriptor::from_requirements(*set, *binding, requirements))
+			}
+		}
+
+		descriptors.sort_by(|a, b| {
+			if a.set != b.set {
+				return a.set.cmp(&b.set);
+			} else {
+				return a.binding.cmp(&b.binding);
+			}
+		});
+
 		let internal = ShaderInternal {
 			entry_point: entry_point,
 			shader_type: shader_type,
+			descriptors: descriptors,
 		};
 
 		self.shaders.insert(uuid, internal);
@@ -120,10 +221,11 @@ pub struct GraphicsProgram {
 pub(crate) struct GraphicsProgramInternal {
 	//pub(crate) shaders: Vec<Shader>,
 	pub(crate) pipeline: Arc<GraphicsPipeline>,
+	descriptors: Vec<Descriptor>,
 }
 
 impl RenderEngine {
-	pub fn create_graphics_program(&mut self, shaders: Vec<Shader>) -> GraphicsProgram {
+	pub fn create_graphics_program(&mut self, shaders: Vec<Shader>) -> Result<GraphicsProgram, ()> {
 		let uuid = Uuid::now_v7();
 
 		let internal = shaders.iter()
@@ -145,6 +247,54 @@ impl RenderEngine {
 			color_attachment_formats: vec![Some(vulkano::format::Format::R8G8B8A8_UNORM)],
 			..Default::default()
 		};
+
+		let mut program_descriptors: Vec<(ShaderStages, Descriptor)> = Vec::new();
+		for shader in internal {
+			for descriptor in &shader.descriptors {
+				let compare = program_descriptors.iter_mut().find(|(_, d)| d.set == descriptor.set && d.binding == descriptor.binding);
+				if compare.is_none() {
+					program_descriptors.push((shader.shader_type.into(), descriptor.clone()))
+				} else {
+					let compare = compare.unwrap();
+					if !compare.1.is_compatable_with_descriptor(descriptor) {
+						return Err(());
+					} else {
+						compare.0 = compare.0.union(shader.shader_type.into());
+					}
+				}
+			}
+		}
+
+		println!("{:?}", program_descriptors);
+
+		let descriptor_sets = program_descriptors.chunk_by(|(_, a), (_, b)| a.set == b.set);
+		let mut set_layouts = Vec::new();
+		for set in descriptor_sets {
+			let bindings = BTreeMap::new();
+
+			for (stages, descriptor) in set {
+				DescriptorSetLayoutBinding {
+					..DescriptorSetLayoutBinding::descriptor_type(descriptor.descriptor_type.into())
+				}
+			}
+			
+			let set_layout = DescriptorSetLayout::new(
+				self.device.clone(),
+				DescriptorSetLayoutCreateInfo {
+					flags: DescriptorSetLayoutCreateFlags::PUSH_DESCRIPTOR,
+					bindings: bindings,
+					..Default::default()
+				}
+			).unwrap();
+		}
+
+		let layout = PipelineLayout::new(
+			self.device.clone(),
+			PipelineLayoutCreateInfo {
+				set_layouts: set_layouts,
+				..Default::default()
+			}
+		).unwrap();
 
 		let layout= PipelineLayout::new(
 			self.device.clone(),
@@ -178,12 +328,13 @@ impl RenderEngine {
 		let internal = GraphicsProgramInternal {
 			//shaders: shaders,
 			pipeline: pipeline,
+			descriptors: program_descriptors.iter().map(|(_, d)| d.clone()).collect(),
 		};
 
 		self.graphics_programs.insert(uuid, internal);
 
-		GraphicsProgram {
+		Ok(GraphicsProgram {
 			uuid: uuid,
-		}
+		})
 	}
 }
