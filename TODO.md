@@ -2,7 +2,6 @@
 
 ## Larger TODO Tasks
 
-- Uniforms
 - Textures
 - Windows
 - Particles
@@ -12,6 +11,7 @@
 - Cameras, Projection
 - push constants
 - several frames in flight / several queues per type of task
+- Some matrix tools?
 
 ## Smaller TODO Tasks
 
@@ -22,5 +22,8 @@
 - Add docs for things
 - Maybe have engine defer creation of spir-v compiler / make it seperate class
 - have transfer queue prioritize queue families that don't support non-transfer operations
+- boolean uniforms
+- let mesh_data have several different vertex buffers
 
 ## In Progress
+- Uniforms
