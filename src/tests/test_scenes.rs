@@ -42,16 +42,16 @@ fn triangle() {
 	let mut vertex_source = String::new();
 	file.read_to_string(&mut vertex_source).unwrap();
 	let (vertex_binary, _) = renderer.compile_shader(vertex_source, vertex_path.to_string(), ShaderType::Vertex).unwrap();
-	let vertex_shader = renderer.create_shader(vertex_binary).unwrap();
+	let vertex_shader = renderer.create_shader(vertex_binary, &Vec::new()).unwrap();
 
 	let fragment_path = "tests/test_scenes/triangle/triangle.frag";
 	let mut file = File::open(fragment_path).unwrap();
 	let mut fragment_source = String::new();
 	file.read_to_string(&mut fragment_source).unwrap();
 	let (fragment_binary, _) = renderer.compile_shader(fragment_source, fragment_path.to_string(), ShaderType::Fragment).unwrap();
-	let fragment_shader = renderer.create_shader(fragment_binary).unwrap();
+	let fragment_shader = renderer.create_shader(fragment_binary, &Vec::new()).unwrap();
 
-	let graphics_program = renderer.create_graphics_program(vec![vertex_shader, fragment_shader]);
+	let graphics_program = renderer.create_graphics_program(vec![vertex_shader, fragment_shader]).unwrap();
 
 	let _object = renderer.create_render_object(mesh_data, graphics_program).unwrap();
 

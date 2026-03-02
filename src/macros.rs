@@ -1,6 +1,4 @@
 
-// this file exists entirely to avoid copy pasting this macro over and over and over and over and over again while not publically exposing it
-
 #[macro_export]
 macro_rules! unwrap_result_or_none {
 	($x:expr) => {

@@ -75,6 +75,6 @@ mod create_shader {
 		file.read_to_string(&mut shader_source).unwrap();
 
 		let (shader_binary, _) = renderer.compile_shader(shader_source, shader_path.to_string(), ShaderType::Vertex).unwrap();
-		let _shader = renderer.create_shader(shader_binary).unwrap();
+		let _shader = renderer.create_shader(shader_binary, &Vec::new()).unwrap();
 	}
 }

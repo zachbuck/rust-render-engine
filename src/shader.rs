@@ -1,12 +1,20 @@
 
-use std::{collections::{BTreeMap, HashSet}, sync::Arc};
+use std::{
+	collections::{BTreeMap, HashSet}, 
+	sync::Arc
+};
 
 use foldhash::fast::RandomState;
 use shaderc::{CompileOptions, ShaderKind};
 use uuid::Uuid;
 use vulkano::{
-	descriptor_set::layout::{DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateFlags, DescriptorSetLayoutCreateInfo}, pipeline::{
-		DynamicState, GraphicsPipeline, PipelineLayout, PipelineShaderStageCreateInfo, graphics::{
+	descriptor_set::layout::{DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateFlags, DescriptorSetLayoutCreateInfo}, 
+	pipeline::{
+		DynamicState, 
+		GraphicsPipeline, 
+		PipelineLayout, 
+		PipelineShaderStageCreateInfo, 
+		graphics::{
 			GraphicsPipelineCreateInfo, 
 			color_blend::{ColorBlendAttachmentState, ColorBlendState}, 
 			input_assembly::InputAssemblyState, 
@@ -18,11 +26,25 @@ use vulkano::{
 				VertexDefinition
 			}, 
 			viewport::ViewportState
-		}, layout::{PipelineDescriptorSetLayoutCreateInfo, PipelineLayoutCreateInfo}
-	}, shader::{DescriptorBindingRequirements, EntryPoint, ShaderModule, ShaderModuleCreateInfo, ShaderStages, spirv::ExecutionModel}
+		}, 
+		layout::PipelineLayoutCreateInfo,
+	}, 
+	shader::{
+		DescriptorBindingRequirements, 
+		EntryPoint, 
+		ShaderModule, 
+		ShaderModuleCreateInfo, 
+		ShaderStages, 
+		spirv::ExecutionModel
+	}
 };
 
-use crate::{RenderEngine, mesh_data::Vertex, unwrap_option_or_none, unwrap_result_or_none};
+use crate::{
+	RenderEngine, 
+	mesh_data::Vertex, 
+	unwrap_option_or_none, 
+	unwrap_result_or_none
+};
 
 #[derive(Clone)]
 pub struct Shader {
@@ -73,10 +95,11 @@ impl Into<ShaderStages> for ShaderType {
 #[derive(Clone)]
 #[derive(Debug)]
 pub struct Descriptor {
-	set: u32,
-	binding: u32,
+	pub(crate) set: u32,
+	pub(crate) binding: u32,
+	count: u32,
 
-	descriptor_type: DescriptorType,
+	pub(crate) descriptor_type: DescriptorType,
 }
 
 impl Descriptor {
@@ -84,6 +107,7 @@ impl Descriptor {
 		return Descriptor {
 			set: set,
 			binding: binding,
+			count: 1,
 			descriptor_type: DescriptorType::UniformBuffer(uniforms.to_vec()),
 		};
 	}
@@ -97,6 +121,7 @@ impl Descriptor {
 
 	fn is_compatable_with_descriptor(&self, other: &Descriptor) -> bool {
 		if self.descriptor_type != other.descriptor_type { return false; }
+		if self.count != other.count { return false; }
 		return true;
 	}
 
@@ -105,12 +130,14 @@ impl Descriptor {
 			return Descriptor {
 				set: set,
 				binding: binding,
+				count: 0,
 				descriptor_type: DescriptorType::UniformBuffer(Vec::new()),
 			};
 		} else {
 			return Descriptor {
 				set: set,
 				binding: binding,
+				count: 0,
 				descriptor_type: DescriptorType::Unknown,
 			}
 		}
@@ -120,12 +147,12 @@ impl Descriptor {
 #[derive(Clone)]
 #[derive(Debug)]
 #[derive(PartialEq, Eq)]
-enum DescriptorType {
+pub(crate) enum DescriptorType {
 	UniformBuffer(Vec<UniformType>),
 	Unknown,
 }
 
-impl Into<vulkano::descriptor_set::layout::DescriptorType> for DescriptorType {
+impl Into<vulkano::descriptor_set::layout::DescriptorType> for &DescriptorType {
 	fn into(self) -> vulkano::descriptor_set::layout::DescriptorType {
 		match self {
 			DescriptorType::UniformBuffer(_) => vulkano::descriptor_set::layout::DescriptorType::UniformBuffer,
@@ -138,7 +165,61 @@ impl Into<vulkano::descriptor_set::layout::DescriptorType> for DescriptorType {
 #[derive(Debug)]
 #[derive(PartialEq, Eq)]
 pub enum UniformType {
-	Mat4
+	Float,
+	Vec2,
+	Vec3,
+	Vec4,
+	Mat2,
+	Mat2x3,
+	Mat2x4,
+	Mat3,
+	Mat3x2,
+	Mat3x4,
+	Mat4,
+	Mat4x2,
+	Mat4x3,
+
+	Double,
+	DVec2,
+	DVec3,
+	DVec4,
+	DMat2,
+	DMat2x3,
+	DMat2x4,
+	DMat3,
+	DMat3x2,
+	DMat3x4,
+	DMat4,
+	DMat4x2,
+	DMat4x3,
+
+	Int,
+	IVec2,
+	IVec3,
+	IVec4,
+	IMat2,
+	IMat2x3,
+	IMat2x4,
+	IMat3,
+	IMat3x2,
+	IMat3x4,
+	IMat4,
+	IMat4x2,
+	IMat4x3,
+
+	UInt,
+	UVec2,
+	UVec3,
+	UVec4,
+	UMat2,
+	UMat2x3,
+	UMat2x4,
+	UMat3,
+	UMat3x2,
+	UMat3x4,
+	UMat4,
+	UMat4x2,
+	UMat4x3,
 }
 
 impl RenderEngine {
@@ -193,6 +274,11 @@ impl RenderEngine {
 			}
 		}
 
+		for ((set, binding), requirements) in &entry_point.info().descriptor_binding_requirements {
+			let descriptor = descriptors.iter_mut().find(|d| d.set == *set && d.binding == *binding).unwrap();
+			descriptor.count = requirements.descriptor_count.unwrap();
+		}
+
 		descriptors.sort_by(|a, b| {
 			if a.set != b.set {
 				return a.set.cmp(&b.set);
@@ -221,7 +307,7 @@ pub struct GraphicsProgram {
 pub(crate) struct GraphicsProgramInternal {
 	//pub(crate) shaders: Vec<Shader>,
 	pub(crate) pipeline: Arc<GraphicsPipeline>,
-	descriptors: Vec<Descriptor>,
+	pub(crate) descriptors: Vec<Descriptor>,
 }
 
 impl RenderEngine {
@@ -265,17 +351,19 @@ impl RenderEngine {
 			}
 		}
 
-		println!("{:?}", program_descriptors);
-
 		let descriptor_sets = program_descriptors.chunk_by(|(_, a), (_, b)| a.set == b.set);
 		let mut set_layouts = Vec::new();
 		for set in descriptor_sets {
-			let bindings = BTreeMap::new();
-
+			let mut bindings = BTreeMap::new();
+			
 			for (stages, descriptor) in set {
-				DescriptorSetLayoutBinding {
-					..DescriptorSetLayoutBinding::descriptor_type(descriptor.descriptor_type.into())
-				}
+				let binding_layout = DescriptorSetLayoutBinding {
+					stages: *stages,
+					descriptor_count: descriptor.count,
+					..DescriptorSetLayoutBinding::descriptor_type((&descriptor.descriptor_type).into())
+				};
+
+				bindings.insert(descriptor.binding, binding_layout);
 			}
 			
 			let set_layout = DescriptorSetLayout::new(
@@ -286,6 +374,8 @@ impl RenderEngine {
 					..Default::default()
 				}
 			).unwrap();
+
+			set_layouts.push(set_layout);
 		}
 
 		let layout = PipelineLayout::new(
@@ -294,12 +384,6 @@ impl RenderEngine {
 				set_layouts: set_layouts,
 				..Default::default()
 			}
-		).unwrap();
-
-		let layout= PipelineLayout::new(
-			self.device.clone(),
-			PipelineDescriptorSetLayoutCreateInfo::from_stages(stages.clone().collect::<Vec<_>>().iter().map(|s| s))
-				.into_pipeline_layout_create_info(self.device.clone()).unwrap()
 		).unwrap();
 
 		let pipeline = GraphicsPipeline::new(
