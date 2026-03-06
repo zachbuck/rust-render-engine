@@ -30,7 +30,6 @@ use vulkano::{
 		layout::PipelineLayoutCreateInfo,
 	}, 
 	shader::{
-		DescriptorBindingRequirements, 
 		EntryPoint, 
 		ShaderModule, 
 		ShaderModuleCreateInfo, 
@@ -42,9 +41,12 @@ use vulkano::{
 use crate::{
 	RenderEngine, 
 	mesh_data::Vertex, 
+	shader::descriptor::Descriptor, 
 	unwrap_option_or_none, 
 	unwrap_result_or_none
 };
+
+pub mod descriptor;
 
 #[derive(Clone)]
 pub struct Shader {
@@ -90,136 +92,6 @@ impl Into<ShaderStages> for ShaderType {
 			ShaderType::Fragment => ShaderStages::FRAGMENT,
 		}
 	}
-}
-
-#[derive(Clone)]
-#[derive(Debug)]
-pub struct Descriptor {
-	pub(crate) set: u32,
-	pub(crate) binding: u32,
-	count: u32,
-
-	pub(crate) descriptor_type: DescriptorType,
-}
-
-impl Descriptor {
-	pub fn uniform_buffer(set: u32, binding: u32, uniforms: &[UniformType]) -> Self {
-		return Descriptor {
-			set: set,
-			binding: binding,
-			count: 1,
-			descriptor_type: DescriptorType::UniformBuffer(uniforms.to_vec()),
-		};
-	}
-
-	fn is_compatable_with_requirements(&self, requirements: &DescriptorBindingRequirements) -> bool {
-		match self.descriptor_type {
-			DescriptorType::UniformBuffer(_) => requirements.descriptor_types.contains(&vulkano::descriptor_set::layout::DescriptorType::UniformBuffer),
-			DescriptorType::Unknown => true,
-		}
-	}
-
-	fn is_compatable_with_descriptor(&self, other: &Descriptor) -> bool {
-		if self.descriptor_type != other.descriptor_type { return false; }
-		if self.count != other.count { return false; }
-		return true;
-	}
-
-	fn from_requirements(set: u32, binding: u32, requirements: &DescriptorBindingRequirements) -> Self {
-		if requirements.descriptor_types.contains(&vulkano::descriptor_set::layout::DescriptorType::UniformBuffer) {
-			return Descriptor {
-				set: set,
-				binding: binding,
-				count: 0,
-				descriptor_type: DescriptorType::UniformBuffer(Vec::new()),
-			};
-		} else {
-			return Descriptor {
-				set: set,
-				binding: binding,
-				count: 0,
-				descriptor_type: DescriptorType::Unknown,
-			}
-		}
-	}
-}
-
-#[derive(Clone)]
-#[derive(Debug)]
-#[derive(PartialEq, Eq)]
-pub(crate) enum DescriptorType {
-	UniformBuffer(Vec<UniformType>),
-	Unknown,
-}
-
-impl Into<vulkano::descriptor_set::layout::DescriptorType> for &DescriptorType {
-	fn into(self) -> vulkano::descriptor_set::layout::DescriptorType {
-		match self {
-			DescriptorType::UniformBuffer(_) => vulkano::descriptor_set::layout::DescriptorType::UniformBuffer,
-			DescriptorType::Unknown => unimplemented!(),
-		}
-	}
-}
-
-#[derive(Clone)]
-#[derive(Debug)]
-#[derive(PartialEq, Eq)]
-pub enum UniformType {
-	Float,
-	Vec2,
-	Vec3,
-	Vec4,
-	Mat2,
-	Mat2x3,
-	Mat2x4,
-	Mat3,
-	Mat3x2,
-	Mat3x4,
-	Mat4,
-	Mat4x2,
-	Mat4x3,
-
-	Double,
-	DVec2,
-	DVec3,
-	DVec4,
-	DMat2,
-	DMat2x3,
-	DMat2x4,
-	DMat3,
-	DMat3x2,
-	DMat3x4,
-	DMat4,
-	DMat4x2,
-	DMat4x3,
-
-	Int,
-	IVec2,
-	IVec3,
-	IVec4,
-	IMat2,
-	IMat2x3,
-	IMat2x4,
-	IMat3,
-	IMat3x2,
-	IMat3x4,
-	IMat4,
-	IMat4x2,
-	IMat4x3,
-
-	UInt,
-	UVec2,
-	UVec3,
-	UVec4,
-	UMat2,
-	UMat2x3,
-	UMat2x4,
-	UMat3,
-	UMat3x2,
-	UMat3x4,
-	UMat4,
-	UMat4x2,
-	UMat4x3,
 }
 
 impl RenderEngine {
