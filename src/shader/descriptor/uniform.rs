@@ -68,6 +68,43 @@ pub enum Uniform {
 	BVec4	(glam::BVec4),
 }
 
+impl Into<UniformType> for &Uniform {
+	fn into(self) -> UniformType {
+		match self {
+			Uniform::Float(_) => 	UniformType::Float,
+			Uniform::Vec2(_) => 	UniformType::Vec2,
+			Uniform::Vec3(_) => 	UniformType::Vec3,
+			Uniform::Vec4(_) => 	UniformType::Vec4,
+			Uniform::Mat2(_) => 	UniformType::Mat2,
+			Uniform::Mat3(_) => 	UniformType::Mat3,
+			Uniform::Mat4(_) => 	UniformType::Mat4,
+
+			Uniform::Double(_) => 	UniformType::Double,
+			Uniform::DVec2(_) => 	UniformType::DVec2,
+			Uniform::DVec3(_) => 	UniformType::DVec3,
+			Uniform::DVec4(_) => 	UniformType::DVec4,
+			Uniform::DMat2(_) => 	UniformType::DMat2,
+			Uniform::DMat3(_) => 	UniformType::DMat3,
+			Uniform::DMat4(_) => 	UniformType::DMat4,
+
+			Uniform::Int(_) => 		UniformType::Int,
+			Uniform::IVec2(_) => 	UniformType::IVec2,
+			Uniform::IVec3(_) => 	UniformType::IVec3,
+			Uniform::IVec4(_) => 	UniformType::IVec4,
+
+			Uniform::UInt(_) => 	UniformType::UInt,
+			Uniform::UVec2(_) => 	UniformType::UVec2,
+			Uniform::UVec3(_) => 	UniformType::UVec3,
+			Uniform::UVec4(_) => 	UniformType::UVec4,
+
+			Uniform::Bool(_) => 	UniformType::Bool,
+			Uniform::BVec2(_) => 	UniformType::BVec2,
+			Uniform::BVec3(_) => 	UniformType::BVec3,
+			Uniform::BVec4(_) => 	UniformType::BVec4,
+		}
+	}
+}
+
 impl Uniform {
 	pub(crate) fn from_type(uniform_type: &UniformType) -> Self {
 		match uniform_type {
@@ -109,36 +146,36 @@ impl Uniform {
 
 		for uniform in uniforms {
 			match uniform {
-				Uniform::Float(value) 	=> binary.append(&mut value.to_le_bytes().to_vec()),
-				Uniform::Vec2(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::Vec3(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::Vec4(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::Mat2(value) 	=> value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::Mat3(value) 	=> value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::Mat4(value) 	=> value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::Float(value) => 		binary.append(&mut value.to_le_bytes().to_vec()),
+				Uniform::Vec2(value) => 		value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::Vec3(value) => 		value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::Vec4(value) => 		value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::Mat2(value) => 		value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::Mat3(value) => 		value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::Mat4(value) => 		value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
 
-				Uniform::Double(value) 	=> binary.append(&mut value.to_le_bytes().to_vec()),
-				Uniform::DVec2(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::DVec3(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::DVec4(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::DMat2(value) 	=> value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::DMat3(value) 	=> value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::DMat4(value) 	=> value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::Double(value) => 	binary.append(&mut value.to_le_bytes().to_vec()),
+				Uniform::DVec2(value) => 	value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::DVec3(value) => 	value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::DVec4(value) => 	value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::DMat2(value) => 	value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::DMat3(value) => 	value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::DMat4(value) => 	value.to_cols_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
 
-				Uniform::Int(value) 		=> binary.append(&mut value.to_le_bytes().to_vec()),
-				Uniform::IVec2(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::IVec3(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::IVec4(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::Int(value) => 		binary.append(&mut value.to_le_bytes().to_vec()),
+				Uniform::IVec2(value) => 	value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::IVec3(value) => 	value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::IVec4(value) => 	value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
 
-				Uniform::UInt(value) 		=> binary.append(&mut value.to_le_bytes().to_vec()),
-				Uniform::UVec2(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::UVec3(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
-				Uniform::UVec4(value) 	=> value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::UInt(value) => 		binary.append(&mut value.to_le_bytes().to_vec()),
+				Uniform::UVec2(value) => 	value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::UVec3(value) => 	value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
+				Uniform::UVec4(value) => 	value.to_array().iter().for_each(|f| binary.append(&mut f.to_le_bytes().to_vec())),
 
-				Uniform::Bool(_value) 	=> todo!(),
-				Uniform::BVec2(_value) 	=> todo!(),
-				Uniform::BVec3(_value) 	=> todo!(),
-				Uniform::BVec4(_value) 	=> todo!(),
+				Uniform::Bool(_value) => 	todo!(),
+				Uniform::BVec2(_value) => 	todo!(),
+				Uniform::BVec3(_value) => 	todo!(),
+				Uniform::BVec4(_value) => 	todo!(),
 			}
 		}
 
