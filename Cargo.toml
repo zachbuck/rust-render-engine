@@ -2,3 +2,7 @@
 [workspace]
 resolver = "3"
 members = ["render-engine"]
+
+[profile.samply]
+inherits = "release"
+debug = true

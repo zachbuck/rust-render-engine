@@ -1,15 +1,19 @@
 use std::{
-    sync::{
+    collections::HashMap, 
+	sync::{
         Arc, 
         mpsc::{Receiver, Sender, TryRecvError, channel},
     }, 
-    thread::Builder as ThreadBuilder
+	thread::Builder as ThreadBuilder
 };
 
+use uuid::Uuid;
 use vulkano::{
     Version, 
-    VulkanLibrary, 
-    device::{
+	VulkanLibrary, 
+	command_buffer::allocator::StandardCommandBufferAllocator, 
+	descriptor_set::allocator::StandardDescriptorSetAllocator, 
+	device::{
         Device, 
         DeviceCreateInfo, 
         DeviceExtensions, 
@@ -19,11 +23,12 @@ use vulkano::{
         QueueFlags, 
         physical::PhysicalDeviceType
     }, 
-    instance::{Instance, InstanceCreateInfo, InstanceExtensions}, 
-    sync::{self, GpuFuture}
+	instance::{Instance, InstanceCreateInfo, InstanceExtensions}, 
+	memory::allocator::StandardMemoryAllocator, 
+	sync::{self, GpuFuture}
 };
 
-use crate::mesh_data::MeshDataCommand;
+use crate::mesh_data::{MeshDataCommand, MeshDataInternal};
 
 pub struct RenderEngine {
     pub(crate) command_channel: Sender<RenderEngineCommand>,
@@ -75,11 +80,17 @@ impl Drop for RenderEngine {
 pub(crate) struct RenderThread {
     command_channel: Receiver<RenderEngineCommand>,
 
+	pub(crate) mesh_data: HashMap<Uuid, MeshDataInternal>,
+
     device: Arc<Device>,
     graphics_queue: Arc<Queue>,
     graphics_future: Option<Box<dyn GpuFuture>>, 
     transfer_queue: Arc<Queue>,
     transfer_future: Option<Box<dyn GpuFuture>>,
+
+	pub(crate) buffer_allocator: Arc<StandardMemoryAllocator>,
+	pub(crate) command_allocator: Arc<StandardCommandBufferAllocator>,
+	pub(crate) descriptor_allocator: Arc<StandardDescriptorSetAllocator>,
 
     should_close: bool,
 }
@@ -164,16 +175,26 @@ impl RenderThread {
         let graphics_queue = queues.next().unwrap();
         let transfer_queue = queues.next().unwrap_or(graphics_queue.clone());
 
+		let buffer_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
+		let command_allocator = Arc::new(StandardCommandBufferAllocator::new(device.clone(), Default::default()));
+		let descriptor_allocator = Arc::new(StandardDescriptorSetAllocator::new(device.clone(), Default::default()));
+
         Ok(RenderThread {
-            command_channel:    command_channel,
+            command_channel:    	command_channel,
 
-            device:             device.clone(),
-            graphics_queue:     graphics_queue,
-            graphics_future:    Some(sync::now(device.clone()).boxed()),
-            transfer_queue:     transfer_queue,
-            transfer_future:    Some(sync::now(device.clone()).boxed()),
+			mesh_data:				HashMap::new(),
 
-            should_close:       false,
+            device:             	device.clone(),
+            graphics_queue:     	graphics_queue,
+            graphics_future:    	Some(sync::now(device.clone()).boxed()),
+            transfer_queue:     	transfer_queue,
+            transfer_future:    	Some(sync::now(device.clone()).boxed()),
+
+			buffer_allocator: 		buffer_allocator,
+			command_allocator: 		command_allocator,
+			descriptor_allocator: 	descriptor_allocator,
+			
+            should_close:       	false,
         })
     }
 
