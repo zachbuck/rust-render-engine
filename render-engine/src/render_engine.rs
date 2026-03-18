@@ -1,8 +1,9 @@
 use std::{
     sync::{
         Arc, 
-        mpsc::{Receiver, Sender, channel},
-    }, thread::Builder as ThreadBuilder
+        mpsc::{Receiver, Sender, TryRecvError, channel},
+    }, 
+    thread::Builder as ThreadBuilder
 };
 
 use vulkano::{
@@ -22,22 +23,27 @@ use vulkano::{
     sync::{self, GpuFuture}
 };
 
+use crate::mesh_data::MeshDataCommand;
+
 pub struct RenderEngine {
-    command_channel: Sender<()>,
-    response_channel: Receiver<()>,
+    pub(crate) command_channel: Sender<RenderEngineCommand>,
 }
 
 macro_rules! run_render_thread {
-    ($create_info: ident, $command_channel: ident, $response_channel: ident, $init_channel: ident) => {
+    ($create_info: ident, $command_channel: ident, $init_channel: ident) => {
         move || {
-            let result = RenderThread::new($create_info, $command_channel, $response_channel);
+            let result = RenderThread::new($create_info, $command_channel);
             if result.is_err() {
                 $init_channel.send(Err(unsafe { result.unwrap_err_unchecked() })).unwrap();
                 return
             }
             $init_channel.send(Ok(())).unwrap();
 
-            let _internal = result.unwrap();
+            let mut internal = result.unwrap();
+
+            while !internal.should_close {
+                internal.process_command();
+            }
         }
     };
 }
@@ -45,36 +51,41 @@ macro_rules! run_render_thread {
 impl RenderEngine {
     pub fn new(create_info: RenderEngineCreateInfo) -> Result<Arc<Self>, ()> {
         let (command_s, command_r) = channel();
-        let (response_s, response_r) = channel();
         let (init_s, init_r) = channel();
 
         ThreadBuilder::new()
             .name("Render Thread".to_string())
-            .spawn(run_render_thread!(create_info, command_r, response_s, init_s))
+            .spawn(run_render_thread!(create_info, command_r, init_s))
             .map_err(|_| ())?;
 
         init_r.recv().unwrap()?;
 
         Ok(Arc::new(RenderEngine {
             command_channel: command_s,
-            response_channel: response_r,
         }))
     }
 }
 
-struct RenderThread {
-    command_channel: Receiver<()>,
-    response_channel: Sender<()>,
+impl Drop for RenderEngine {
+    fn drop(&mut self) {
+        self.command_channel.send(RenderEngineCommand::Exit).unwrap();
+    }
+}
+
+pub(crate) struct RenderThread {
+    command_channel: Receiver<RenderEngineCommand>,
 
     device: Arc<Device>,
     graphics_queue: Arc<Queue>,
     graphics_future: Option<Box<dyn GpuFuture>>, 
     transfer_queue: Arc<Queue>,
     transfer_future: Option<Box<dyn GpuFuture>>,
+
+    should_close: bool,
 }
 
 impl RenderThread {
-    fn new(create_info: RenderEngineCreateInfo, command_channel: Receiver<()>, response_channel: Sender<()>) -> Result<Self, ()> {
+    fn new(create_info: RenderEngineCreateInfo, command_channel: Receiver<RenderEngineCommand>) -> Result<Self, ()> {
         let library = VulkanLibrary::new().map_err(|_| ())?;
 
         let instance = Instance::new(
@@ -155,13 +166,34 @@ impl RenderThread {
 
         Ok(RenderThread {
             command_channel:    command_channel,
-            response_channel:   response_channel,
+
             device:             device.clone(),
             graphics_queue:     graphics_queue,
             graphics_future:    Some(sync::now(device.clone()).boxed()),
             transfer_queue:     transfer_queue,
-            transfer_future:    Some(sync::now(device.clone()).boxed())
+            transfer_future:    Some(sync::now(device.clone()).boxed()),
+
+            should_close:       false,
         })
+    }
+
+    fn process_command(&mut self) {
+        let result = self.command_channel.try_recv();
+        let command;
+        match result {
+            Ok(rec) => command = rec,
+            Err(TryRecvError::Empty) => return,
+            Err(TryRecvError::Disconnected) => {self.process_exit(); return},
+        }
+
+        match command {
+            RenderEngineCommand::Exit => self.process_exit(),
+            RenderEngineCommand::MeshDataCommand(command) => self.process_mesh_data_command(command),
+        }
+    }
+
+    fn process_exit(&mut self) {
+
     }
 }
 
@@ -193,4 +225,20 @@ impl RenderEngineCreateInfo {
     fn get_eng_vers() -> Version { Self::get_version(env!("CARGO_PKG_VERSION_MAJOR").parse().unwrap(), env!("CARGO_PKG_VERSION_MINOR").parse().unwrap(), env!("CARGO_PKG_VERSION_PATCH").parse().unwrap()) }
 
     fn get_version(major: u32, minor: u32, patch: u32) -> Version { Version { major, minor, patch } }
+}
+
+pub(crate) enum RenderEngineCommand {
+    Exit,
+    MeshDataCommand(MeshDataCommand),
+}
+
+pub struct EngineFuture<T> {
+    channel: Receiver<T>,
+}
+
+impl<T> EngineFuture<T> {
+    pub fn try_unwrap(self) -> Result<T, ()> { self.channel.try_recv().map_err(|_| ()) }
+    pub fn unwrap(self) -> T { self.channel.recv().unwrap() }
+
+    pub(crate) fn new(channel: Receiver<T>) -> Self { EngineFuture { channel } }
 }
