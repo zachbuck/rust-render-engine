@@ -4,7 +4,10 @@ use std::sync::{
 };
 
 use uuid::Uuid;
-use vulkano::{buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer}, memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}};
+use vulkano::{
+	buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer}, 
+	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}
+};
 
 use crate::render_engine::{EngineFuture, RenderEngine, RenderEngineCommand, RenderThread};
 
@@ -33,6 +36,12 @@ impl MeshData {
 	}
 }
 
+impl Drop for MeshData {
+	fn drop(&mut self) {
+		self.render_engine.command_channel.send(RenderEngineCommand::MeshDataCommand(MeshDataCommand::DropMeshData { uuid: self.uuid })).unwrap();
+	}
+}
+
 pub(crate) enum MeshDataCommand {
 	CreateMeshData {
 		sender: 	Sender<Result<Arc<MeshData>, ()>>,
@@ -41,12 +50,16 @@ pub(crate) enum MeshDataCommand {
 		indices:	Box<[u16]>,
 		engine: 	Arc<RenderEngine>,
 	},
+	DropMeshData {
+		uuid:		Uuid,
+	}
 }
 
 impl RenderThread {
 	pub(crate) fn process_mesh_data_command(&mut self, command: MeshDataCommand) {
 		match command {
 			MeshDataCommand::CreateMeshData { sender, vertices, indices, engine } => sender.send(self.create_mesh_data(&vertices, &indices, engine)).unwrap(),
+			MeshDataCommand::DropMeshData { uuid } => self.drop_mesh_data(uuid),
 		}
 	}
 
@@ -83,6 +96,10 @@ impl RenderThread {
 		self.mesh_data.insert(uuid, internal);
 
 		return Ok(Arc::new(MeshData { uuid, render_engine: engine }))
+	}
+
+	fn drop_mesh_data(&mut self, uuid: Uuid) {
+		self.mesh_data.remove(&uuid);
 	}
 }
 
