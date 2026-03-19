@@ -7,11 +7,12 @@ use std::sync::{
 use uuid::Uuid;
 use vulkano::{
 	buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer}, 
-	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}
+	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}, pipeline::graphics::vertex_input::Vertex
 };
 
 use crate::render_engine::{EngineFuture, RenderEngine, RenderEngineCommand, RenderThread};
 
+#[derive(Debug)]
 pub struct MeshData {
 	uuid: Uuid,
 	render_engine: Arc<RenderEngine>,
@@ -49,6 +50,7 @@ impl Drop for MeshData {
 	}
 }
 
+#[derive(Debug)]
 pub(crate) enum MeshDataCommand {
 	CreateMeshData {
 		sender: 	SyncSender<Result<Arc<MeshData>, ()>>,
@@ -110,16 +112,28 @@ impl RenderThread {
 	}
 }
 
+impl RenderThread {
+	#[inline]
+	pub(crate) fn get_mesh_data_internal(&self, reference: Arc<MeshData>) -> Option<&MeshDataInternal> { self.mesh_data.get(&reference.uuid) }
+	#[inline]
+	pub(crate) fn get_mut_mesh_data_internal(&mut self, reference: Arc<MeshData>) -> Option<&mut MeshDataInternal> { self.mesh_data.get_mut(&reference.uuid) }
+}
+
+#[derive(Debug)]
 pub(crate) struct MeshDataInternal {
 	vertices: Subbuffer<[Vertex3D]>,
 	indices: Subbuffer<[u16]>,
 }
 
 #[repr(C)]
-#[derive(BufferContents)]
+#[derive(BufferContents, Vertex)]
 #[derive(Clone, Copy)]
+#[derive(Debug)]
 pub struct Vertex3D {
-	pub pos: [f32; 3],
-	pub norm: [f32; 3],
+	#[format(R32G32B32_SFLOAT)]
+	pub position: [f32; 3],
+	#[format(R32G32B32_SFLOAT)]
+	pub normal: [f32; 3],
+	#[format(R32G32_SFLOAT)]
 	pub uv: [f32; 2],
 }

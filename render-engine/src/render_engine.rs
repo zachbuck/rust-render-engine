@@ -2,7 +2,7 @@ use std::{
     collections::HashMap, 
 	sync::{
         Arc, 
-        mpsc::{Receiver, Sender, TryRecvError, channel},
+        mpsc::{Receiver, Sender, TryRecvError, channel, sync_channel},
     }, 
 	thread::Builder as ThreadBuilder
 };
@@ -31,9 +31,11 @@ use vulkano::{
 
 use crate::{
     mesh_data::{MeshDataCommand, MeshDataInternal}, 
-    shader::{ShaderCommand, ShaderInternal}
+	pipeline::{PipelineCommand, PipelineInternal}, 
+	shader::{ShaderCommand, ShaderInternal}
 };
 
+#[derive(Debug)]
 pub struct RenderEngine {
     pub(crate) command_channel: Sender<RenderEngineCommand>,
     pub(crate) spirv_compiler: Option<Compiler>,
@@ -61,7 +63,7 @@ macro_rules! run_render_thread {
 impl RenderEngine {
     pub fn new(create_info: RenderEngineCreateInfo) -> Result<Arc<Self>, ()> {
         let (command_s, command_r) = channel();
-        let (init_s, init_r) = channel();
+        let (init_s, init_r) = sync_channel(1);
 
         let flags = create_info.flags;
 
@@ -97,6 +99,7 @@ pub(crate) struct RenderThread {
 
 	pub(crate) mesh_data: HashMap<Uuid, MeshDataInternal>,
     pub(crate) shaders: HashMap<Uuid, ShaderInternal>,
+	pub(crate) pipelines: HashMap<Uuid, PipelineInternal>,
 
     pub(crate) device: Arc<Device>,
     pub(crate) graphics_queue: Arc<Queue>,
@@ -200,6 +203,7 @@ impl RenderThread {
 
 			mesh_data:				HashMap::new(),
             shaders:                HashMap::new(),
+			pipelines:				HashMap::new(),
 
             device:             	device.clone(),
             graphics_queue:     	graphics_queue,
@@ -228,6 +232,7 @@ impl RenderThread {
             RenderEngineCommand::Exit => self.process_exit(),
             RenderEngineCommand::MeshDataCommand(command) => self.process_mesh_data_command(command),
             RenderEngineCommand::ShaderCommand(command) => self.process_shader_command(command),
+			RenderEngineCommand::PipelineCommand(command) => self.process_pipeline_command(command),
         }
     }
 
@@ -236,6 +241,7 @@ impl RenderThread {
     }
 }
 
+#[derive(Debug)]
 pub struct RenderEngineCreateInfo {
     app_name: Option<String>,
     app_vers: Version,
@@ -253,9 +259,16 @@ impl RenderEngineCreateInfo {
             app_name: None,
             app_vers: Version { major: 0, minor: 1, patch: 0 },
 
-            instance_extensions: InstanceExtensions::empty(),
-            device_extensions: DeviceExtensions::empty(),
-            device_features: DeviceFeatures::empty(),
+            instance_extensions: InstanceExtensions {
+				..InstanceExtensions::empty()
+			},
+            device_extensions: DeviceExtensions {
+				..DeviceExtensions::empty()
+			},
+            device_features: DeviceFeatures {
+				dynamic_rendering: true,
+				..DeviceFeatures::empty()
+			},
 
             flags: 0x0000_0000 
         }
@@ -273,16 +286,20 @@ impl RenderEngineCreateInfo {
 }
 
 #[repr(u64)]
+#[derive(Debug)]
 enum RenderEngineCreateInfoFlags {
     InitSpirvCompiler = 0x0000_0001,
 }
 
+#[derive(Debug)]
 pub(crate) enum RenderEngineCommand {
     Exit,
     MeshDataCommand(MeshDataCommand),
-    ShaderCommand(ShaderCommand)
+    ShaderCommand(ShaderCommand),
+	PipelineCommand(PipelineCommand),
 }
 
+#[derive(Debug)]
 pub struct EngineFuture<T> {
     channel: Receiver<T>,
 }
@@ -292,4 +309,9 @@ impl<T> EngineFuture<T> {
     pub fn unwrap(self) -> T { self.channel.recv().unwrap() }
 
     pub(crate) fn new(channel: Receiver<T>) -> Self { EngineFuture { channel } }
+	pub(crate) fn new_immediate(value: T) -> Self { 
+		let (send, recv) = sync_channel(1);
+		send.send(value).unwrap();
+		EngineFuture { channel: recv }
+	}
 }

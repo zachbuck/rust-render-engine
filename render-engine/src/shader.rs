@@ -10,6 +10,7 @@ use vulkano::shader::{EntryPoint, ShaderModule, ShaderModuleCreateInfo, spirv::E
 
 use crate::render_engine::{EngineFuture, RenderEngine, RenderEngineCommand, RenderThread};
 
+#[derive(Debug)]
 pub struct Shader {
 	uuid: Uuid,
 	render_engine: Arc<RenderEngine>,
@@ -61,6 +62,10 @@ impl Drop for Shader {
 	}
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Hash)]
+#[derive(Clone, Copy)]
+#[derive(Debug)]
 pub enum ShaderType {
 	Vertex,
 	Fragment,
@@ -85,6 +90,7 @@ impl From<ExecutionModel> for ShaderType {
 	}
 }
 
+#[derive(Debug)]
 pub(crate) enum ShaderCommand {
 	CreateShader {
 		sender: SyncSender<Result<Arc<Shader>, ()>>,
@@ -97,8 +103,9 @@ pub(crate) enum ShaderCommand {
 	},
 }
 
+#[derive(Debug)]
 pub(crate) struct ShaderInternal {
-	entry_point: EntryPoint,
+	pub(crate) entry_point: EntryPoint,
 }
 
 impl ShaderInternal {
@@ -137,4 +144,11 @@ impl RenderThread {
 	fn drop_shader(&mut self, uuid: Uuid) {
 		self.shaders.remove(&uuid);
 	}
+}
+
+impl RenderThread {
+	#[inline]
+	pub(crate) fn get_shader_internal(&self, reference: Arc<Shader>) -> Option<&ShaderInternal> { self.shaders.get(&reference.uuid) }
+	#[inline]
+	pub(crate) fn get_mut_shader_internal(&mut self, reference: Arc<Shader>) -> Option<&mut ShaderInternal> { self.shaders.get_mut(&reference.uuid) }
 }
