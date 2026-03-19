@@ -15,7 +15,14 @@ use vulkano::{
 		PipelineLayout, 
 		PipelineShaderStageCreateInfo, 
 		graphics::{
-			GraphicsPipelineCreateInfo, color_blend::ColorBlendState, input_assembly::InputAssemblyState, multisample::MultisampleState, rasterization::RasterizationState, subpass::PipelineRenderingCreateInfo, vertex_input::{Vertex, VertexDefinition}, viewport::{Viewport, ViewportState}
+			GraphicsPipelineCreateInfo, 
+			color_blend::ColorBlendState, 
+			input_assembly::InputAssemblyState, 
+			multisample::MultisampleState, 
+			rasterization::RasterizationState, 
+			subpass::PipelineRenderingCreateInfo, 
+			vertex_input::{Vertex, VertexDefinition}, 
+			viewport::{Viewport, ViewportState}
 		}, 
 		layout::PipelineDescriptorSetLayoutCreateInfo
 	}

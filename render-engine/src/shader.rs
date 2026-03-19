@@ -6,7 +6,12 @@ use std::sync::{
 
 use shaderc::ShaderKind;
 use uuid::Uuid;
-use vulkano::shader::{EntryPoint, ShaderModule, ShaderModuleCreateInfo, spirv::ExecutionModel};
+use vulkano::shader::{
+	EntryPoint, 
+	ShaderModule, 
+	ShaderModuleCreateInfo, 
+	spirv::ExecutionModel
+};
 
 use crate::render_engine::{EngineFuture, RenderEngine, RenderEngineCommand, RenderThread};
 

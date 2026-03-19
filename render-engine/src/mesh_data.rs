@@ -7,7 +7,8 @@ use std::sync::{
 use uuid::Uuid;
 use vulkano::{
 	buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer}, 
-	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}, pipeline::graphics::vertex_input::Vertex
+	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}, 
+	pipeline::graphics::vertex_input::Vertex
 };
 
 use crate::render_engine::{EngineFuture, RenderEngine, RenderEngineCommand, RenderThread};
