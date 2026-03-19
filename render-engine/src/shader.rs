@@ -4,7 +4,7 @@ use std::sync::{
 	mpsc::{SyncSender, sync_channel}
 };
 
-use shaderc::{CompileOptions, ShaderKind};
+use shaderc::ShaderKind;
 use uuid::Uuid;
 use vulkano::shader::{EntryPoint, ShaderModule, ShaderModuleCreateInfo, spirv::ExecutionModel};
 
@@ -49,6 +49,18 @@ impl Shader {
 	}
 }
 
+impl Drop for Shader {
+	fn drop(&mut self) {
+		self.render_engine.command_channel.send(
+			RenderEngineCommand::ShaderCommand(
+				ShaderCommand::DropShader { 
+					uuid: self.uuid,
+				}
+			)
+		).unwrap();
+	}
+}
+
 pub enum ShaderType {
 	Vertex,
 	Fragment,
@@ -79,7 +91,10 @@ pub(crate) enum ShaderCommand {
 
 		binary: Box<[u32]>,
 		engine: Arc<RenderEngine>,
-	}
+	},
+	DropShader {
+		uuid: Uuid,
+	},
 }
 
 pub(crate) struct ShaderInternal {
@@ -94,6 +109,7 @@ impl RenderThread {
 	pub(crate) fn process_shader_command(&mut self, command: ShaderCommand) {
 		match command {
 			ShaderCommand::CreateShader { sender, binary , engine} => sender.send(self.create_shader(binary.as_ref(), engine)).unwrap(),
+			ShaderCommand::DropShader { uuid } => self.drop_shader(uuid),
 		}
 	}
 
@@ -116,5 +132,9 @@ impl RenderThread {
 		self.shaders.insert(uuid, internal);
 
 		Ok(Arc::new(Shader { uuid, render_engine: engine, shader_type: shader_type }))
+	}
+
+	fn drop_shader(&mut self, uuid: Uuid) {
+		self.shaders.remove(&uuid);
 	}
 }
