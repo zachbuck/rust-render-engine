@@ -7,6 +7,7 @@ use std::{
 	thread::Builder as ThreadBuilder
 };
 
+use shaderc::Compiler;
 use uuid::Uuid;
 use vulkano::{
     Version, 
@@ -28,10 +29,14 @@ use vulkano::{
 	sync::{self, GpuFuture}
 };
 
-use crate::mesh_data::{MeshDataCommand, MeshDataInternal};
+use crate::{
+    mesh_data::{MeshDataCommand, MeshDataInternal}, 
+    shader::{ShaderCommand, ShaderInternal}
+};
 
 pub struct RenderEngine {
     pub(crate) command_channel: Sender<RenderEngineCommand>,
+    pub(crate) spirv_compiler: Option<Compiler>,
 }
 
 macro_rules! run_render_thread {
@@ -58,6 +63,8 @@ impl RenderEngine {
         let (command_s, command_r) = channel();
         let (init_s, init_r) = channel();
 
+        let flags = create_info.flags;
+
         ThreadBuilder::new()
             .name("Render Thread".to_string())
             .spawn(run_render_thread!(create_info, command_r, init_s))
@@ -65,8 +72,16 @@ impl RenderEngine {
 
         init_r.recv().unwrap()?;
 
+        let compiler;
+        if flags & RenderEngineCreateInfoFlags::InitSpirvCompiler as u64 != 0 {
+            compiler = Some(Compiler::new().map_err(|_| ())?)
+        } else {
+            compiler = None;
+        }
+
         Ok(Arc::new(RenderEngine {
             command_channel: command_s,
+            spirv_compiler: compiler,
         }))
     }
 }
@@ -81,12 +96,13 @@ pub(crate) struct RenderThread {
     command_channel: Receiver<RenderEngineCommand>,
 
 	pub(crate) mesh_data: HashMap<Uuid, MeshDataInternal>,
+    pub(crate) shaders: HashMap<Uuid, ShaderInternal>,
 
-    device: Arc<Device>,
-    graphics_queue: Arc<Queue>,
-    graphics_future: Option<Box<dyn GpuFuture>>, 
-    transfer_queue: Arc<Queue>,
-    transfer_future: Option<Box<dyn GpuFuture>>,
+    pub(crate) device: Arc<Device>,
+    pub(crate) graphics_queue: Arc<Queue>,
+    pub(crate) graphics_future: Option<Box<dyn GpuFuture>>, 
+    pub(crate) transfer_queue: Arc<Queue>,
+    pub(crate) transfer_future: Option<Box<dyn GpuFuture>>,
 
 	pub(crate) buffer_allocator: Arc<StandardMemoryAllocator>,
 	pub(crate) command_allocator: Arc<StandardCommandBufferAllocator>,
@@ -183,6 +199,7 @@ impl RenderThread {
             command_channel:    	command_channel,
 
 			mesh_data:				HashMap::new(),
+            shaders:                HashMap::new(),
 
             device:             	device.clone(),
             graphics_queue:     	graphics_queue,
@@ -210,11 +227,12 @@ impl RenderThread {
         match command {
             RenderEngineCommand::Exit => self.process_exit(),
             RenderEngineCommand::MeshDataCommand(command) => self.process_mesh_data_command(command),
+            RenderEngineCommand::ShaderCommand(command) => self.process_shader_command(command),
         }
     }
 
     fn process_exit(&mut self) {
-
+        self.should_close = true;
     }
 }
 
@@ -225,6 +243,8 @@ pub struct RenderEngineCreateInfo {
     instance_extensions: InstanceExtensions,
     device_extensions: DeviceExtensions,
     device_features: DeviceFeatures,
+
+    flags: u64,
 }
 
 impl RenderEngineCreateInfo {
@@ -236,11 +256,15 @@ impl RenderEngineCreateInfo {
             instance_extensions: InstanceExtensions::empty(),
             device_extensions: DeviceExtensions::empty(),
             device_features: DeviceFeatures::empty(),
+
+            flags: 0x0000_0000 
         }
     }
 
     pub fn with_app_name(mut self, app_name: String) -> Self { self.app_name = Some(app_name); self }
     pub fn with_app_vers(mut self, major: u32, minor: u32, patch: u32) -> Self { self.app_vers = Self::get_version(major, minor, patch); self }
+
+    pub fn with_spirv_compiler(mut self) -> Self { self.flags |= RenderEngineCreateInfoFlags::InitSpirvCompiler as u64; self }
 
     fn get_eng_name() -> Option<String> { Some(env!("CARGO_PKG_NAME").to_string()) }
     fn get_eng_vers() -> Version { Self::get_version(env!("CARGO_PKG_VERSION_MAJOR").parse().unwrap(), env!("CARGO_PKG_VERSION_MINOR").parse().unwrap(), env!("CARGO_PKG_VERSION_PATCH").parse().unwrap()) }
@@ -248,9 +272,15 @@ impl RenderEngineCreateInfo {
     fn get_version(major: u32, minor: u32, patch: u32) -> Version { Version { major, minor, patch } }
 }
 
+#[repr(u64)]
+enum RenderEngineCreateInfoFlags {
+    InitSpirvCompiler = 0x0000_0001,
+}
+
 pub(crate) enum RenderEngineCommand {
     Exit,
     MeshDataCommand(MeshDataCommand),
+    ShaderCommand(ShaderCommand)
 }
 
 pub struct EngineFuture<T> {

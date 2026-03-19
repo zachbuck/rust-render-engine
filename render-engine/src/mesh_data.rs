@@ -1,6 +1,7 @@
+
 use std::sync::{
 	Arc, 
-	mpsc::{Sender, channel}
+	mpsc::{SyncSender, sync_channel}
 };
 
 use uuid::Uuid;
@@ -18,7 +19,7 @@ pub struct MeshData {
 
 impl MeshData {
 	pub fn new(render_engine: Arc<RenderEngine>, vertices: Vec<Vertex3D>, indices: Vec<u16>) -> EngineFuture<Result<Arc<Self>, ()>> {
-		let (send, recv) = channel();
+		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
 			RenderEngineCommand::MeshDataCommand(
@@ -38,13 +39,19 @@ impl MeshData {
 
 impl Drop for MeshData {
 	fn drop(&mut self) {
-		self.render_engine.command_channel.send(RenderEngineCommand::MeshDataCommand(MeshDataCommand::DropMeshData { uuid: self.uuid })).unwrap();
+		self.render_engine.command_channel.send(
+			RenderEngineCommand::MeshDataCommand(
+				MeshDataCommand::DropMeshData { 
+					uuid: self.uuid 
+				}
+			)
+		).unwrap();
 	}
 }
 
 pub(crate) enum MeshDataCommand {
 	CreateMeshData {
-		sender: 	Sender<Result<Arc<MeshData>, ()>>,
+		sender: 	SyncSender<Result<Arc<MeshData>, ()>>,
 
 		vertices:	Box<[Vertex3D]>,
 		indices:	Box<[u16]>,
