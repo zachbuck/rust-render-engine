@@ -9,8 +9,7 @@ use vulkano::shader::{ShaderModule, ShaderModuleCreateInfo};
 
 use crate::{
 	render_engine::{
-		RenderEngine, 
-		render_thread::RenderThread
+		RenderEngine, render_command::RenderEngineCommand, render_thread::RenderThread
 	}, 
 	shader::{
 		Shader, 
@@ -29,6 +28,12 @@ pub(crate) enum ShaderCommand {
 	DropShader {
 		uuid: Uuid,
 	},
+}
+
+impl Into<RenderEngineCommand> for ShaderCommand {
+	fn into(self) -> RenderEngineCommand {
+		RenderEngineCommand::ShaderCommand(self)
+	}
 }
 
 impl RenderThread {

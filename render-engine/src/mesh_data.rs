@@ -46,15 +46,13 @@ impl MeshData {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
-			RenderEngineCommand::MeshDataCommand(
-				MeshDataCommand::CreateMeshData {
-					sender: send,
+			MeshDataCommand::CreateMeshData {
+				sender: send,
 
-					vertices: vertices.into_boxed_slice(),
-					indices: indices.into_boxed_slice(),
-					engine: render_engine.clone(),
-				}
-			)
+				vertices: vertices.into_boxed_slice(),
+				indices: indices.into_boxed_slice(),
+				engine: render_engine.clone(),
+			}.into()
 		).unwrap();
 
 		return EngineFuture::new_single(recv);
@@ -64,11 +62,9 @@ impl MeshData {
 impl Drop for MeshData {
 	fn drop(&mut self) {
 		self.render_engine.command_channel.send(
-			RenderEngineCommand::MeshDataCommand(
-				MeshDataCommand::DropMeshData { 
-					uuid: self.uuid 
-				}
-			)
+			MeshDataCommand::DropMeshData { 
+				uuid: self.uuid 
+			}.into()
 		).unwrap();
 	}
 }

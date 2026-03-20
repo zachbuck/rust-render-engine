@@ -27,7 +27,7 @@ pub struct Pipeline {
 	uuid: Uuid,
 	render_engine: Arc<RenderEngine>,
 
-	shaders: Box<[Arc<Shader>]>,
+	pub shaders: Box<[Arc<Shader>]>,
 }
 
 impl Pipeline {
@@ -55,13 +55,11 @@ impl Pipeline {
 		let shaders = shaders.to_owned().into_boxed_slice();
 
 		render_engine.command_channel.send(
-			RenderEngineCommand::PipelineCommand(
-				PipelineCommand::CreatePipeline { 
-					sender: send, 
-					shaders: shaders,
-					engine: render_engine.clone(),
-				}
-			)
+			PipelineCommand::CreatePipeline { 
+				sender: send, 
+				shaders: shaders,
+				engine: render_engine.clone(),
+			}.into()
 		).unwrap();
 
 		return EngineFuture::new_single(recv);
@@ -71,11 +69,9 @@ impl Pipeline {
 impl Drop for Pipeline {
 	fn drop(&mut self) {
 		self.render_engine.command_channel.send(
-			RenderEngineCommand::PipelineCommand(
-				PipelineCommand::DropPipeline { 
-					uuid: self.uuid 
-				}
-			)
+			PipelineCommand::DropPipeline { 
+				uuid: self.uuid 
+			}.into()
 		).unwrap()
 	}
 }

@@ -32,8 +32,7 @@ use crate::{
 		pipeline_internal::PipelineInternal
 	}, 
 	render_engine::{
-		RenderEngine, 
-		render_thread::RenderThread
+		RenderEngine, render_command::RenderEngineCommand, render_thread::RenderThread
 	}, 
 	shader::{Shader, ShaderType}
 };
@@ -48,6 +47,12 @@ pub(crate) enum PipelineCommand {
 	},
 	DropPipeline {
 		uuid: Uuid,
+	}
+}
+
+impl Into<RenderEngineCommand> for PipelineCommand {
+	fn into(self) -> RenderEngineCommand {
+		RenderEngineCommand::PipelineCommand(self)
 	}
 }
 

@@ -18,6 +18,7 @@ use crate::{
 	}, 
 	render_engine::{
 		RenderEngine, 
+		render_command::RenderEngineCommand, 
 		render_thread::RenderThread
 	}
 };
@@ -33,6 +34,12 @@ pub(crate) enum MeshDataCommand {
 	},
 	DropMeshData {
 		uuid:		Uuid,
+	}
+}
+
+impl Into<RenderEngineCommand> for MeshDataCommand {
+	fn into(self) -> RenderEngineCommand {
+		RenderEngineCommand::MeshDataCommand(self)
 	}
 }
 

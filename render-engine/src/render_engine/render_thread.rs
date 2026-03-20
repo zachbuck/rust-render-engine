@@ -29,6 +29,7 @@ use crate::{
         RenderEngineCreateInfo, 
         render_command::RenderEngineCommand
     }, 
+    renderable::Renderable, 
     shader::shader_internal::ShaderInternal
 };
 
@@ -38,6 +39,7 @@ pub(crate) struct RenderThread {
 	pub(crate) mesh_data: HashMap<Uuid, MeshDataInternal>,
     pub(crate) shaders: HashMap<Uuid, ShaderInternal>,
 	pub(crate) pipelines: HashMap<Uuid, PipelineInternal>,
+    pub(crate) renderables: HashMap<Uuid, Box<dyn Renderable>>,
 
     pub(crate) device: Arc<Device>,
     pub(crate) graphics_queue: Arc<Queue>,
@@ -142,6 +144,7 @@ impl RenderThread {
 			mesh_data:				HashMap::new(),
             shaders:                HashMap::new(),
 			pipelines:				HashMap::new(),
+            renderables:            HashMap::new(),
 
             device:             	device.clone(),
             graphics_queue:     	graphics_queue,

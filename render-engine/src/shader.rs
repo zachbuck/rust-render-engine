@@ -58,13 +58,11 @@ impl Shader {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
-			RenderEngineCommand::ShaderCommand(
-				ShaderCommand::CreateShader { 
-					sender: send, 
-					binary, 
-					engine: render_engine.clone(), 
-				}
-			)
+			ShaderCommand::CreateShader { 
+				sender: send, 
+				binary, 
+				engine: render_engine.clone(), 
+			}.into()
 		).unwrap();
 
 		return EngineFuture::new_single(recv);
@@ -74,11 +72,9 @@ impl Shader {
 impl Drop for Shader {
 	fn drop(&mut self) {
 		self.render_engine.command_channel.send(
-			RenderEngineCommand::ShaderCommand(
-				ShaderCommand::DropShader { 
-					uuid: self.uuid,
-				}
-			)
+			ShaderCommand::DropShader { 
+				uuid: self.uuid,
+			}.into()
 		).unwrap();
 	}
 }
