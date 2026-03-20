@@ -1,39 +1,26 @@
+
 use std::{
-    collections::HashMap, 
 	sync::{
         Arc, 
-        mpsc::{Receiver, Sender, TryRecvError, channel, sync_channel},
+        mpsc::{Sender, channel, sync_channel},
     }, 
 	thread::Builder as ThreadBuilder
 };
 
 use shaderc::Compiler;
-use uuid::Uuid;
-use vulkano::{
-    Version, 
-	VulkanLibrary, 
-	command_buffer::allocator::StandardCommandBufferAllocator, 
-	descriptor_set::allocator::StandardDescriptorSetAllocator, 
-	device::{
-        Device, 
-        DeviceCreateInfo, 
-        DeviceExtensions, 
-        DeviceFeatures, 
-        Queue, 
-        QueueCreateInfo, 
-        QueueFlags, 
-        physical::PhysicalDeviceType
-    }, 
-	instance::{Instance, InstanceCreateInfo, InstanceExtensions}, 
-	memory::allocator::StandardMemoryAllocator, 
-	sync::{self, GpuFuture}
+
+use crate::render_engine::{
+    create_info::RenderEngineCreateInfoFlags, 
+    render_command::RenderEngineCommand, 
+    render_thread::RenderThread
 };
 
-use crate::{
-    mesh_data::{MeshDataCommand, MeshDataInternal}, 
-	pipeline::{PipelineCommand, PipelineInternal}, 
-	shader::{ShaderCommand, ShaderInternal}
-};
+pub use create_info::RenderEngineCreateInfo as RenderEngineCreateInfo;
+
+pub mod engine_future;
+pub(crate) mod render_command;
+pub(crate) mod render_thread;
+mod create_info;
 
 #[derive(Debug)]
 pub struct RenderEngine {
@@ -92,226 +79,4 @@ impl Drop for RenderEngine {
     fn drop(&mut self) {
         self.command_channel.send(RenderEngineCommand::Exit).unwrap();
     }
-}
-
-pub(crate) struct RenderThread {
-    command_channel: Receiver<RenderEngineCommand>,
-
-	pub(crate) mesh_data: HashMap<Uuid, MeshDataInternal>,
-    pub(crate) shaders: HashMap<Uuid, ShaderInternal>,
-	pub(crate) pipelines: HashMap<Uuid, PipelineInternal>,
-
-    pub(crate) device: Arc<Device>,
-    pub(crate) graphics_queue: Arc<Queue>,
-    pub(crate) graphics_future: Option<Box<dyn GpuFuture>>, 
-    pub(crate) transfer_queue: Arc<Queue>,
-    pub(crate) transfer_future: Option<Box<dyn GpuFuture>>,
-
-	pub(crate) buffer_allocator: Arc<StandardMemoryAllocator>,
-	pub(crate) command_allocator: Arc<StandardCommandBufferAllocator>,
-	pub(crate) descriptor_allocator: Arc<StandardDescriptorSetAllocator>,
-
-    should_close: bool,
-}
-
-impl RenderThread {
-    fn new(create_info: RenderEngineCreateInfo, command_channel: Receiver<RenderEngineCommand>) -> Result<Self, ()> {
-        let library = VulkanLibrary::new().map_err(|_| ())?;
-
-        let instance = Instance::new(
-            library,
-            InstanceCreateInfo {
-                enabled_extensions: create_info.instance_extensions,
-
-                application_name: create_info.app_name,
-                application_version: create_info.app_vers,
-
-                engine_name: RenderEngineCreateInfo::get_eng_name(),
-                engine_version: RenderEngineCreateInfo::get_eng_vers(),
-
-                ..Default::default()
-            }
-        ).map_err(|_| ())?;
-
-        let physical_device = instance.enumerate_physical_devices().map_err(|_| ())?
-            // Filter for devices that support requested device extensions
-            .filter(|pd| pd.supported_extensions().contains(&create_info.device_extensions))
-            // Filter for devices that support graphics operations
-            .filter(|pd| pd.queue_family_properties().iter().find(|qf| qf.queue_flags.intersects(QueueFlags::GRAPHICS)).is_some())
-            // Prioritize physical devices that are typically stronger
-            .min_by_key(|pd| {
-                match pd.properties().device_type {
-                    PhysicalDeviceType::DiscreteGpu => 0,
-                    PhysicalDeviceType::IntegratedGpu => 1,
-                    PhysicalDeviceType::VirtualGpu => 2,
-                    PhysicalDeviceType::Cpu => 3,
-                    PhysicalDeviceType::Other => 4,
-                    _ => 5,
-                }
-            }).ok_or(())?;
-
-        let graphics_qf_index = physical_device.queue_family_properties().iter().enumerate()
-            // Filter by queue families which support graphics operations
-            .filter(|(_, qf)| qf.queue_flags.intersects(QueueFlags::GRAPHICS))
-            // Select the one with the most available queues
-            .max_by_key(|(_, qf)| qf.queue_count)
-            .map(|(i, _)| i as u32).unwrap();
-
-        let transfer_qf_index = physical_device.queue_family_properties().iter().enumerate()
-            // Filter out the render queue index
-            .filter(|(i, _)| *i as u32 != graphics_qf_index)
-            // Filter by queue families which support transfer operations
-            .filter(|(_, qf)| qf.queue_flags.intersects(QueueFlags::TRANSFER))
-            // Select the one with the most available queues
-            .max_by_key(|(_, qf)| qf.queue_count)
-            .map(|(i, _)| i as u32)
-            .unwrap_or(graphics_qf_index);
-
-        let mut queue_create_infos = Vec::new();
-
-        queue_create_infos.push(QueueCreateInfo {
-            queue_family_index: graphics_qf_index,
-            ..Default::default()
-        });
-
-        if transfer_qf_index != graphics_qf_index {
-            queue_create_infos.push(QueueCreateInfo {
-                queue_family_index: transfer_qf_index,
-                ..Default::default()
-            });
-        }
-
-        let (device, mut queues) = Device::new(
-            physical_device,
-            DeviceCreateInfo {
-                queue_create_infos: queue_create_infos,
-                enabled_extensions: create_info.device_extensions,
-                enabled_features: create_info.device_features,
-                ..Default::default()
-            }
-        ).map_err(|_| ())?;
-
-        let graphics_queue = queues.next().unwrap();
-        let transfer_queue = queues.next().unwrap_or(graphics_queue.clone());
-
-		let buffer_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
-		let command_allocator = Arc::new(StandardCommandBufferAllocator::new(device.clone(), Default::default()));
-		let descriptor_allocator = Arc::new(StandardDescriptorSetAllocator::new(device.clone(), Default::default()));
-
-        Ok(RenderThread {
-            command_channel:    	command_channel,
-
-			mesh_data:				HashMap::new(),
-            shaders:                HashMap::new(),
-			pipelines:				HashMap::new(),
-
-            device:             	device.clone(),
-            graphics_queue:     	graphics_queue,
-            graphics_future:    	Some(sync::now(device.clone()).boxed()),
-            transfer_queue:     	transfer_queue,
-            transfer_future:    	Some(sync::now(device.clone()).boxed()),
-
-			buffer_allocator: 		buffer_allocator,
-			command_allocator: 		command_allocator,
-			descriptor_allocator: 	descriptor_allocator,
-			
-            should_close:       	false,
-        })
-    }
-
-    fn process_command(&mut self) {
-        let result = self.command_channel.try_recv();
-        let command;
-        match result {
-            Ok(rec) => command = rec,
-            Err(TryRecvError::Empty) => return,
-            Err(TryRecvError::Disconnected) => {self.process_exit(); return},
-        }
-
-        match command {
-            RenderEngineCommand::Exit => self.process_exit(),
-            RenderEngineCommand::MeshDataCommand(command) => self.process_mesh_data_command(command),
-            RenderEngineCommand::ShaderCommand(command) => self.process_shader_command(command),
-			RenderEngineCommand::PipelineCommand(command) => self.process_pipeline_command(command),
-        }
-    }
-
-    fn process_exit(&mut self) {
-        self.should_close = true;
-    }
-}
-
-#[derive(Debug)]
-pub struct RenderEngineCreateInfo {
-    app_name: Option<String>,
-    app_vers: Version,
-
-    instance_extensions: InstanceExtensions,
-    device_extensions: DeviceExtensions,
-    device_features: DeviceFeatures,
-
-    flags: u64,
-}
-
-impl RenderEngineCreateInfo {
-    pub fn new() -> Self {
-        RenderEngineCreateInfo {
-            app_name: None,
-            app_vers: Version { major: 0, minor: 1, patch: 0 },
-
-            instance_extensions: InstanceExtensions {
-				..InstanceExtensions::empty()
-			},
-            device_extensions: DeviceExtensions {
-				..DeviceExtensions::empty()
-			},
-            device_features: DeviceFeatures {
-				dynamic_rendering: true,
-				..DeviceFeatures::empty()
-			},
-
-            flags: 0x0000_0000 
-        }
-    }
-
-    pub fn with_app_name(mut self, app_name: String) -> Self { self.app_name = Some(app_name); self }
-    pub fn with_app_vers(mut self, major: u32, minor: u32, patch: u32) -> Self { self.app_vers = Self::get_version(major, minor, patch); self }
-
-    pub fn with_spirv_compiler(mut self) -> Self { self.flags |= RenderEngineCreateInfoFlags::InitSpirvCompiler as u64; self }
-
-    fn get_eng_name() -> Option<String> { Some(env!("CARGO_PKG_NAME").to_string()) }
-    fn get_eng_vers() -> Version { Self::get_version(env!("CARGO_PKG_VERSION_MAJOR").parse().unwrap(), env!("CARGO_PKG_VERSION_MINOR").parse().unwrap(), env!("CARGO_PKG_VERSION_PATCH").parse().unwrap()) }
-
-    fn get_version(major: u32, minor: u32, patch: u32) -> Version { Version { major, minor, patch } }
-}
-
-#[repr(u64)]
-#[derive(Debug)]
-enum RenderEngineCreateInfoFlags {
-    InitSpirvCompiler = 0x0000_0001,
-}
-
-#[derive(Debug)]
-pub(crate) enum RenderEngineCommand {
-    Exit,
-    MeshDataCommand(MeshDataCommand),
-    ShaderCommand(ShaderCommand),
-	PipelineCommand(PipelineCommand),
-}
-
-#[derive(Debug)]
-pub struct EngineFuture<T> {
-    channel: Receiver<T>,
-}
-
-impl<T> EngineFuture<T> {
-    pub fn try_unwrap(self) -> Result<T, ()> { self.channel.try_recv().map_err(|_| ()) }
-    pub fn unwrap(self) -> T { self.channel.recv().unwrap() }
-
-    pub(crate) fn new(channel: Receiver<T>) -> Self { EngineFuture { channel } }
-	pub(crate) fn new_immediate(value: T) -> Self { 
-		let (send, recv) = sync_channel(1);
-		send.send(value).unwrap();
-		EngineFuture { channel: recv }
-	}
 }

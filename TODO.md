@@ -9,5 +9,6 @@
 ## Smaller Tasks
 
 - copy old todo list into here
+- Fix that dropping an EngineFuture crashes the entire program ? possibly just by blocking tbh
 
 ## In Progress
