@@ -34,7 +34,7 @@ pub(crate) enum ShaderCommand {
 impl RenderThread {
 	pub(crate) fn process_shader_command(&mut self, command: ShaderCommand) {
 		match command {
-			ShaderCommand::CreateShader { sender, binary , engine} => sender.send(self.create_shader(binary.as_ref(), engine)).unwrap(),
+			ShaderCommand::CreateShader { sender, binary , engine} => { let _ = sender.send(self.create_shader(binary.as_ref(), engine)); },
 			ShaderCommand::DropShader { uuid } => self.drop_shader(uuid),
 		}
 	}

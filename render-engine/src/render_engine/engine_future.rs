@@ -1,10 +1,13 @@
 
 use std::sync::mpsc::Receiver;
 
+#[derive(Debug)]
+#[must_use]
 pub struct EngineFuture<T> {
 	future_type: EngineFutureType<T>,
 }
 
+#[derive(Debug)]
 enum EngineFutureType<T> {
 	Immediate(T),
 	Single(Receiver<T>),

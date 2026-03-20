@@ -54,7 +54,7 @@ pub(crate) enum PipelineCommand {
 impl RenderThread {
 	pub(crate) fn process_pipeline_command(&mut self, command: PipelineCommand) {
 		match command {
-			PipelineCommand::CreatePipeline { sender, shaders , engine} => sender.send(self.create_pipeline(shaders, engine)).unwrap(),
+			PipelineCommand::CreatePipeline { sender, shaders , engine} => { let _ = sender.send(self.create_pipeline(shaders, engine)); },
 			PipelineCommand::DropPipeline { uuid } => self.drop_pipeline(uuid),
 		}
 	}

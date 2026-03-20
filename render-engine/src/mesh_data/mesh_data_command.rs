@@ -39,7 +39,7 @@ pub(crate) enum MeshDataCommand {
 impl RenderThread {
 	pub(crate) fn process_mesh_data_command(&mut self, command: MeshDataCommand) {
 		match command {
-			MeshDataCommand::CreateMeshData { sender, vertices, indices, engine } => sender.send(self.create_mesh_data(&vertices, &indices, engine)).unwrap(),
+			MeshDataCommand::CreateMeshData { sender, vertices, indices, engine } => { let _ = sender.send(self.create_mesh_data(&vertices, &indices, engine)); },
 			MeshDataCommand::DropMeshData { uuid } => self.drop_mesh_data(uuid),
 		}
 	}

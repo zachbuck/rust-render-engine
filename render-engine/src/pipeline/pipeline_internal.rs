@@ -9,6 +9,7 @@ use crate::{
 	shader::Shader
 };
 
+#[derive(Debug)]
 pub(crate) struct PipelineInternal {
 	pub(crate) pipeline: Arc<GraphicsPipeline>,
 	pub(crate) shaders: Box<[Arc<Shader>]>,
