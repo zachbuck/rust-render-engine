@@ -13,8 +13,7 @@ use crate::{
 	pipeline::pipeline_command::PipelineCommand, 
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture, 
-		render_command::RenderEngineCommand
+		engine_future::EngineFuture
 	}, 
 	shader::{Shader, ShaderType}
 };

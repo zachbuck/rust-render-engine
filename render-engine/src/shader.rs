@@ -13,8 +13,7 @@ use vulkano::shader::{
 use crate::{
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture, 
-		render_command::RenderEngineCommand
+		engine_future::EngineFuture
 	}, 
 	shader::shader_command::ShaderCommand
 };
