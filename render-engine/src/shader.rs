@@ -67,7 +67,7 @@ impl Shader {
 			)
 		).unwrap();
 
-		return EngineFuture::new(recv);
+		return EngineFuture::new_single(recv);
 	}
 }
 
