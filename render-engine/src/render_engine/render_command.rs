@@ -5,6 +5,7 @@ use crate::{
     mesh_data::mesh_data_command::MeshDataCommand, 
     pipeline::pipeline_command::PipelineCommand, 
     render_engine::render_thread::RenderThread, 
+    render_surface::image_surface::image_surface_commands::ImageSurfaceCommand, 
     renderable::render_object::render_object_command::RenderObjectCommand, 
     shader::shader_command::ShaderCommand
 };
@@ -16,6 +17,7 @@ pub(crate) enum RenderEngineCommand {
     ShaderCommand(ShaderCommand),
 	PipelineCommand(PipelineCommand),
     RenderObjectCommand(RenderObjectCommand),
+    ImageSurfaceCommand(ImageSurfaceCommand)
 }
 
 impl RenderThread {
@@ -34,6 +36,7 @@ impl RenderThread {
             RenderEngineCommand::ShaderCommand(command) => self.process_shader_command(command),
 			RenderEngineCommand::PipelineCommand(command) => self.process_pipeline_command(command),
             RenderEngineCommand::RenderObjectCommand(command) => self.process_render_object_command(command),
+            RenderEngineCommand::ImageSurfaceCommand(command) => self.process_image_surface_command(command),
         }
     }
 
