@@ -23,7 +23,7 @@ pub(crate) mod pipeline_internal;
 
 #[derive(Debug)]
 pub struct Pipeline {
-	uuid: Uuid,
+	pub(crate) uuid: Uuid,
 	render_engine: Arc<RenderEngine>,
 
 	pub shaders: Box<[Arc<Shader>]>,

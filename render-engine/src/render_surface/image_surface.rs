@@ -6,10 +6,16 @@ use std::sync::{
 
 use uuid::Uuid;
 
-use crate::{render_engine::{
-	RenderEngine, 
-	engine_future::EngineFuture
-}, render_surface::image_surface::image_surface_commands::ImageSurfaceCommand};
+use crate::{
+	render_engine::{
+		RenderEngine, 
+		engine_future::EngineFuture
+	}, 
+	render_surface::{
+		image_surface::image_surface_commands::ImageSurfaceCommand, 
+		render_surface_command::RenderSurfaceCommand
+	}
+};
 
 pub(crate) mod image_surface_commands;
 pub(crate) mod image_surface_internal;
@@ -42,6 +48,19 @@ impl ImageSurface {
 				x_size: x_size, 
 				y_size: y_size, 
 				render_engine: render_engine.clone() 
+			}.into()
+		).unwrap();
+
+		EngineFuture::new_single(recv)
+	}
+
+	pub fn render_all(&self) -> EngineFuture<Result<(), ()>> {
+		let (send, recv) = sync_channel(1);
+
+		self.render_engine.command_channel.send(
+			RenderSurfaceCommand::RenderRenderSurface { 
+				sender: send, 
+				uuid: self.uuid, 
 			}.into()
 		).unwrap();
 

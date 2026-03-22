@@ -1,7 +1,10 @@
 
 use std::sync::Arc;
 
-use vulkano::pipeline::GraphicsPipeline;
+use vulkano::{
+	command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer}, 
+	pipeline::GraphicsPipeline
+};
 
 use crate::{
 	pipeline::Pipeline, 
@@ -13,6 +16,15 @@ use crate::{
 pub(crate) struct PipelineInternal {
 	pub(crate) pipeline: Arc<GraphicsPipeline>,
 	pub(crate) shaders: Box<[Arc<Shader>]>,
+}
+
+impl PipelineInternal {
+	pub(crate) fn bind<'a>(&self, builder: &'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<&'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, ()> {
+		builder
+			.bind_pipeline_graphics(self.pipeline.clone()).map_err(|_| ())?;
+
+		return Ok(builder);
+	}
 }
 
 impl RenderThread {

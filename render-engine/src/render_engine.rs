@@ -19,6 +19,7 @@ pub use create_info::RenderEngineCreateInfo as RenderEngineCreateInfo;
 
 pub mod engine_future;
 pub(crate) mod render_command;
+pub(crate) mod render_resources;
 pub(crate) mod render_thread;
 mod create_info;
 

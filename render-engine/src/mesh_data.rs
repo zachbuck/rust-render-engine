@@ -23,7 +23,7 @@ pub(crate) mod mesh_data_internal;
 
 #[derive(Debug)]
 pub struct MeshData {
-	uuid: Uuid,
+	pub(crate) uuid: Uuid,
 	render_engine: Arc<RenderEngine>,
 }
 

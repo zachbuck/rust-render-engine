@@ -162,4 +162,9 @@ impl RenderThread {
             should_close:       	false,
         })
     }
+
+    // boilerplate for later when multiple queues potentially exist
+    pub(crate) fn get_graphics_queue(&mut self) -> Arc<Queue> {
+        return self.graphics_queue.clone()
+    }
 }
