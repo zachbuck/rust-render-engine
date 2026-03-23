@@ -66,4 +66,8 @@ impl ImageSurface {
 
 		EngineFuture::new_single(recv)
 	}
+
+	pub fn get_image_surface_data(&self) -> EngineFuture<Result<(), ()>> {
+		todo!()
+	}
 }

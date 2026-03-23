@@ -2,7 +2,10 @@
 use std::sync::mpsc::SyncSender;
 
 use uuid::Uuid;
-use vulkano::{command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage}, sync::{self, GpuFuture}};
+use vulkano::{
+	command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage}, 
+	sync::{self, GpuFuture}
+};
 
 use crate::render_engine::{
 	render_command::RenderEngineCommand, 
@@ -48,18 +51,22 @@ impl RenderThread {
 			render_surface.render_renderable(&mut builder, renderable, &render_resources)?;
 		}
 
-		let buffer = render_surface.end_rendering(builder)?;
+		let future = self.graphics_future.take().unwrap();
+		let queue = self.get_graphics_queue();
 
-		let mut future = self.graphics_future.take().unwrap();
+		let render_surface = self.render_surfaces.get_mut(&uuid).ok_or(())?;
 
-		future.cleanup_finished();
+		let result = render_surface.end_rendering(builder, future, queue);
 
-		future = future
-			.then_execute(self.get_graphics_queue(), buffer).map_err(|_| {self.graphics_future = Some(sync::now(self.device.clone()).boxed()); ()})?
-			.then_signal_fence_and_flush().map_err(|_| {self.graphics_future = Some(sync::now(self.device.clone()).boxed()); ()})?.boxed();
+		if result.is_err() {
+			self.graphics_future = Some(sync::now(self.device.clone()).boxed());
+			
+			return Err(())
+		} else {
+			let new_future = result.unwrap();
+			self.graphics_future = Some(new_future);
 
-		self.graphics_future = Some(future);
-
-		Ok(())
+			return Ok(())
+		}
 	}
 }

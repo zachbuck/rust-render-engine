@@ -119,7 +119,6 @@ impl RenderThread {
 
 		let internal = PipelineInternal {
 			pipeline: pipeline,
-			shaders: shaders.clone(),
 		};
 
 		self.pipelines.insert(uuid, internal);

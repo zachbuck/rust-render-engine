@@ -78,7 +78,8 @@ impl RenderThread {
 		let image_view = ImageView::new_default(image).map_err(|_| ())?;
 
 		let internal = Box::new(ImageSurfaceInternal {
-			image: image_view
+			image: image_view,
+			operation_future: None,
 		});
 
 		self.render_surfaces.insert(uuid, internal);

@@ -1,7 +1,10 @@
 
 use std::{
     collections::HashMap, 
-    sync::{Arc, mpsc::Receiver}
+    sync::{
+        Arc, 
+        mpsc::Receiver
+    }
 };
 
 use uuid::Uuid;
@@ -19,7 +22,10 @@ use vulkano::{
     }, 
     instance::{Instance, InstanceCreateInfo}, 
     memory::allocator::StandardMemoryAllocator, 
-    sync::{self, GpuFuture}
+    sync::{
+        self,
+        GpuFuture, 
+    }
 };
 
 use crate::{
@@ -46,11 +52,14 @@ pub(crate) struct RenderThread {
     pub(crate) device: Arc<Device>,
     pub(crate) graphics_queue: Arc<Queue>,
     pub(crate) graphics_future: Option<Box<dyn GpuFuture>>, 
+    #[expect(dead_code)]
     pub(crate) transfer_queue: Arc<Queue>,
+    #[expect(dead_code)]
     pub(crate) transfer_future: Option<Box<dyn GpuFuture>>,
 
 	pub(crate) buffer_allocator: Arc<StandardMemoryAllocator>,
 	pub(crate) command_allocator: Arc<StandardCommandBufferAllocator>,
+    #[expect(dead_code)]
 	pub(crate) descriptor_allocator: Arc<StandardDescriptorSetAllocator>,
 
     pub(super) should_close: bool,

@@ -3,21 +3,35 @@ use std::sync::Arc;
 
 use vulkano::{
 	command_buffer::{
-		AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, RenderingAttachmentInfo, RenderingInfo
+		AutoCommandBufferBuilder, 
+		PrimaryAutoCommandBuffer, 
+		RenderingAttachmentInfo, 
+		RenderingInfo
 	}, 
-	image::view::ImageView, render_pass::{AttachmentLoadOp, AttachmentStoreOp}
+	device::Queue, 
+	image::view::ImageView, 
+	render_pass::{AttachmentLoadOp, AttachmentStoreOp}, 
+	sync::{
+		GpuFuture, 
+		future::FenceSignalFuture
+	}
 };
 
 use crate::{
-	render_engine::{render_resources::RenderResources, render_thread::RenderThread}, 
+	render_engine::{
+		render_resources::RenderResources, 
+		render_thread::RenderThread
+	}, 
 	render_surface::{
 		RenderSurface, 
 		image_surface::ImageSurface
-	}, renderable::Renderable
+	}, 
+	renderable::Renderable
 };
 
 pub(crate) struct ImageSurfaceInternal {
 	pub(crate) image: Arc<ImageView>,
+	pub(super) operation_future: Option<Arc<FenceSignalFuture<Box<dyn GpuFuture>>>>,
 }
 
 impl RenderSurface for ImageSurfaceInternal {
@@ -45,12 +59,18 @@ impl RenderSurface for ImageSurfaceInternal {
 		Ok(builder)
 	}
 
-	fn end_rendering(&self, mut builder: AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<Arc<PrimaryAutoCommandBuffer>, ()> {
+	fn end_rendering(&mut self, mut builder: AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, future: Box<dyn GpuFuture>, queue: Arc<Queue>) -> Result<Box<dyn GpuFuture>, ()> {
 		builder.end_rendering().map_err(|_| ())?;
-
 		let buffer = builder.build().map_err(|_| ())?;
 
-		Ok(buffer)
+		let future = future
+			.then_execute(queue.clone(), buffer).map_err(|_| ())?.boxed()
+			.then_signal_fence_and_flush().map_err(|_| ())?;
+
+		let future = Arc::new(future);
+		self.operation_future = Some(future.clone());
+
+		return Ok(future.boxed());
 	}
 
 	fn as_any(&self) -> &dyn std::any::Any { self }

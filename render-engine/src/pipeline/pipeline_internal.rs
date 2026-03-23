@@ -8,14 +8,12 @@ use vulkano::{
 
 use crate::{
 	pipeline::Pipeline, 
-	render_engine::render_thread::RenderThread, 
-	shader::Shader
+	render_engine::render_thread::RenderThread
 };
 
 #[derive(Debug)]
 pub(crate) struct PipelineInternal {
 	pub(crate) pipeline: Arc<GraphicsPipeline>,
-	pub(crate) shaders: Box<[Arc<Shader>]>,
 }
 
 impl PipelineInternal {
