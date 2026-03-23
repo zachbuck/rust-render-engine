@@ -89,3 +89,34 @@ fn drop_pipeline() {
 
 	assert!(pipeline_list.len() == 0);
 }
+
+#[test]
+fn duplicate_shader_error() {
+	let create_info = RenderEngineCreateInfo::new()
+		.with_spirv_compiler();
+	let engine = RenderEngine::new(create_info).unwrap();
+
+	let vertex_binary = Shader::compile(engine.clone(), "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
+	let vertex_shader = Shader::new(engine.clone(), vertex_binary).unwrap().unwrap();
+
+	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
+	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
+
+	let result = Pipeline::new(engine.clone(), &vec![vertex_shader.clone(), vertex_shader, fragment_shader]).unwrap();
+
+	assert!(result.is_err())
+}
+
+#[test]
+fn invalid_shader_set() {
+	let create_info = RenderEngineCreateInfo::new()
+		.with_spirv_compiler();
+	let engine = RenderEngine::new(create_info).unwrap();
+
+	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
+	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
+
+	let result = Pipeline::new(engine.clone(), &vec![fragment_shader]).unwrap();
+
+	assert!(result.is_err())
+}
