@@ -1,13 +1,19 @@
 
+use std::sync::Weak;
+
 use vulkano::{
 	buffer::Subbuffer, 
 	command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer}
 };
 
-use crate::mesh_data::Vertex3D;
+use crate::{
+	mesh_data::{MeshData, Vertex3D}, 
+};
 
 #[derive(Debug)]
 pub(crate) struct MeshDataInternal {
+	pub(crate) reference: Weak<MeshData>,
+
 	pub(crate) vertices: Subbuffer<[Vertex3D]>,
 	pub(crate) indices: Subbuffer<[u16]>,
 }

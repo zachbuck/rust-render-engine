@@ -56,6 +56,18 @@ impl MeshData {
 
 		return EngineFuture::new_single(recv);
 	}
+
+	pub fn get_all(render_engine: Arc<RenderEngine>) -> EngineFuture<Result<Box<[Arc<MeshData>]>, ()>> {
+		let (send, recv) = sync_channel(1);
+
+		render_engine.command_channel.send(
+			MeshDataCommand::GetMeshData { 
+				sender: send
+			}.into()
+		).unwrap();
+
+		EngineFuture::new_single(recv)
+	}
 }
 
 impl Drop for MeshData {

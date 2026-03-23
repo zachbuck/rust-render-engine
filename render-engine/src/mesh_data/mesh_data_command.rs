@@ -32,6 +32,9 @@ pub(crate) enum MeshDataCommand {
 		indices:	Box<[u16]>,
 		engine: 	Arc<RenderEngine>,
 	},
+	GetMeshData {
+		sender: SyncSender<Result<Box<[Arc<MeshData>]>, ()>>,
+	},
 	DropMeshData {
 		uuid:		Uuid,
 	}
@@ -47,6 +50,7 @@ impl RenderThread {
 	pub(crate) fn process_mesh_data_command(&mut self, command: MeshDataCommand) {
 		match command {
 			MeshDataCommand::CreateMeshData { sender, vertices, indices, engine } => { let _ = sender.send(self.create_mesh_data(&vertices, &indices, engine)); },
+			MeshDataCommand::GetMeshData { sender } => { let _ = sender.send(self.get_all_mesh_data()); },
 			MeshDataCommand::DropMeshData { uuid } => self.drop_mesh_data(uuid),
 		}
 	}
@@ -80,10 +84,16 @@ impl RenderThread {
 			indices.iter().map(|i| *i)
 		).map_err(|_| ())?;
 
-		let internal = MeshDataInternal { vertices, indices };
+		let reference = Arc::new(MeshData { uuid, render_engine: engine });
+
+		let internal = MeshDataInternal { reference: Arc::downgrade(&reference), vertices, indices };
 		self.mesh_data.insert(uuid, internal);
 
-		return Ok(Arc::new(MeshData { uuid, render_engine: engine }))
+		return Ok(reference);
+	}
+
+	fn get_all_mesh_data(&mut self) -> Result<Box<[Arc<MeshData>]>, ()> {
+		Ok(self.mesh_data.values().filter_map(|i| i.reference.upgrade()).collect())
 	}
 
 	fn drop_mesh_data(&mut self, uuid: Uuid) {
