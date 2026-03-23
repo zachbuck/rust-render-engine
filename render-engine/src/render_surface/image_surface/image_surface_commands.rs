@@ -140,7 +140,8 @@ impl RenderThread {
 		let result = builder.build();
 		if result.is_err() { return Box::new(|| Err(())) }
 
-		let future = self.transfer_future.take().unwrap();
+		let mut future = self.transfer_future.take().unwrap();
+		future.cleanup_finished();
 
 		let result = future.then_execute(self.transfer_queue.clone(), result.unwrap()).map(|f| f.boxed_send());
 		if result.is_err() { return Box::new(|| Err(())) }
@@ -149,7 +150,7 @@ impl RenderThread {
 		if result.is_err() { return Box::new(|| Err(())) }
 		let future = result.unwrap();
 
-		fut_send.send(future.clone()).unwrap();
+		let _ = fut_send.send(future.clone());
 
 		self.transfer_future = Some(future.boxed_send());
 
