@@ -51,11 +51,9 @@ pub(crate) struct RenderThread {
 
     pub(crate) device: Arc<Device>,
     pub(crate) graphics_queue: Arc<Queue>,
-    pub(crate) graphics_future: Option<Box<dyn GpuFuture>>, 
-    #[expect(dead_code)]
+    pub(crate) graphics_future: Option<Box<dyn GpuFuture + Send>>, 
     pub(crate) transfer_queue: Arc<Queue>,
-    #[expect(dead_code)]
-    pub(crate) transfer_future: Option<Box<dyn GpuFuture>>,
+    pub(crate) transfer_future: Option<Box<dyn GpuFuture + Send>>,
 
 	pub(crate) buffer_allocator: Arc<StandardMemoryAllocator>,
 	pub(crate) command_allocator: Arc<StandardCommandBufferAllocator>,
@@ -160,9 +158,9 @@ impl RenderThread {
 
             device:             	device.clone(),
             graphics_queue:     	graphics_queue,
-            graphics_future:    	Some(sync::now(device.clone()).boxed()),
+            graphics_future:    	Some(sync::now(device.clone()).boxed_send()),
             transfer_queue:     	transfer_queue,
-            transfer_future:    	Some(sync::now(device.clone()).boxed()),
+            transfer_future:    	Some(sync::now(device.clone()).boxed_send()),
 
 			buffer_allocator: 		buffer_allocator,
 			command_allocator: 		command_allocator,

@@ -67,7 +67,20 @@ impl ImageSurface {
 		EngineFuture::new_single(recv)
 	}
 
-	pub fn get_image_surface_data(&self) -> EngineFuture<Result<(), ()>> {
-		todo!()
+	pub fn get_image_surface_data(&self) -> EngineFuture<Result<Box<[u8]>, ()>> {
+		let (func_send, func_recv) = sync_channel(1);
+		let (send, recv) = sync_channel(1);
+
+		self.render_engine.command_channel.send(
+			ImageSurfaceCommand::ReadImageSurfaceData { 
+				uuid: self.uuid,
+
+				func_send: func_send,
+				fut_send: send,
+			}.into()
+		).unwrap();
+
+		return EngineFuture::new_function(func_recv)
+			.with_wait_condition(recv.into());
 	}
 }

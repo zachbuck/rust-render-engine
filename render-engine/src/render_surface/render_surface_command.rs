@@ -59,7 +59,7 @@ impl RenderThread {
 		let result = render_surface.end_rendering(builder, future, queue);
 
 		if result.is_err() {
-			self.graphics_future = Some(sync::now(self.device.clone()).boxed());
+			self.graphics_future = Some(sync::now(self.device.clone()).boxed_send());
 			
 			return Err(())
 		} else {

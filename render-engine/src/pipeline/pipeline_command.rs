@@ -1,13 +1,15 @@
 
-use std::sync::{
+use std::{collections::HashSet, sync::{
 	Arc, 
 	mpsc::SyncSender
-};
+}};
 
+use foldhash::fast::RandomState;
 use uuid::Uuid;
 use vulkano::{
 	format::Format, 
 	pipeline::{
+		DynamicState, 
 		GraphicsPipeline, 
 		PipelineLayout, 
 		PipelineShaderStageCreateInfo, 
@@ -19,7 +21,7 @@ use vulkano::{
 			rasterization::RasterizationState, 
 			subpass::PipelineRenderingCreateInfo, 
 			vertex_input::{Vertex, VertexDefinition}, 
-			viewport::{Viewport, ViewportState}
+			viewport::ViewportState
 		}, 
 		layout::PipelineDescriptorSetLayoutCreateInfo
 	}
@@ -95,6 +97,10 @@ impl RenderThread {
 			).into_pipeline_layout_create_info(self.device.clone()).map_err(|_| ())?
 		).map_err(|_| ())?;
 
+		let mut dynamic_state = HashSet::with_hasher(RandomState::default());
+		dynamic_state.insert(DynamicState::ViewportWithCount);
+		dynamic_state.insert(DynamicState::ScissorWithCount);
+
 		let pipeline = GraphicsPipeline::new(
 			self.device.clone(), 
 			None, 
@@ -103,7 +109,8 @@ impl RenderThread {
 				vertex_input_state: Some(vertex_input_state),
 				input_assembly_state: Some(InputAssemblyState::default()),
 				viewport_state: Some(ViewportState {
-					viewports: vec![Viewport::default()].into(),
+					viewports: vec![].into(),
+					scissors: vec![].into(),
 					..Default::default()
 				}),
 				rasterization_state: Some(RasterizationState::default()),
@@ -112,6 +119,7 @@ impl RenderThread {
 					attachments: vec![Default::default()],
 					..Default::default()
 				}),
+				dynamic_state: dynamic_state,
 				subpass: Some(subpass),
 				..GraphicsPipelineCreateInfo::layout(layout)
 			}

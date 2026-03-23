@@ -6,6 +6,8 @@ use std::sync::{
 
 use uuid::Uuid;
 use vulkano::{
+	buffer::{Buffer, BufferCreateInfo, BufferUsage}, 
+	command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, CopyImageToBufferInfo}, 
 	format::Format, 
 	image::{
 		Image, 
@@ -14,7 +16,8 @@ use vulkano::{
 		ImageUsage, 
 		view::ImageView
 	}, 
-	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}
+	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}, 
+	sync::{GpuFuture, future::FenceSignalFuture}
 };
 
 use crate::{
@@ -41,6 +44,13 @@ pub(crate) enum ImageSurfaceCommand {
 	DropImageSurface {
 		uuid: Uuid
 	},
+
+	ReadImageSurfaceData {
+		uuid: Uuid,
+
+		func_send: SyncSender<Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send>>,
+		fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>,
+	}
 }
 
 impl Into<RenderEngineCommand> for ImageSurfaceCommand {
@@ -54,6 +64,7 @@ impl RenderThread {
 		match command {
 			ImageSurfaceCommand::CreateImageSurface { channel, x_size, y_size, render_engine } => { let _ = channel.send(self.create_image_surface(x_size, y_size, render_engine)); },
 			ImageSurfaceCommand::DropImageSurface { uuid } => self.drop_image_surface(uuid),
+			ImageSurfaceCommand::ReadImageSurfaceData { uuid, func_send, fut_send } => { let _ = func_send.send(self.read_image_surface_data(uuid, fut_send)) ;},
 		}
 	}
 
@@ -94,5 +105,56 @@ impl RenderThread {
 
 	fn drop_image_surface(&mut self, uuid: Uuid) {
 		self.render_surfaces.remove(&uuid);
+	}
+
+	fn read_image_surface_data(&mut self, uuid: Uuid, fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>) ->  Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send>{
+		let image_surface: &ImageSurfaceInternal = self.render_surfaces.get(&uuid).unwrap().as_any().downcast_ref().unwrap();
+
+		let result = Buffer::from_iter(
+			self.buffer_allocator.clone(),
+			BufferCreateInfo {
+				usage: BufferUsage::TRANSFER_DST,
+				..Default::default()
+			},
+			AllocationCreateInfo {
+				memory_type_filter: MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_RANDOM_ACCESS,
+				..Default::default()
+			},
+			(0..image_surface.image.image().extent()[0] * image_surface.image.image().extent()[1] * 4).map(|_| 0u8),
+		);
+		if let Err(_) = result { return Box::new(|| Err(())); } 
+
+		let buffer = result.unwrap();
+
+		let result = AutoCommandBufferBuilder::primary(
+			self.command_allocator.clone(), 
+			self.transfer_queue.queue_family_index(), 
+			CommandBufferUsage::OneTimeSubmit	
+		);
+		if let Err(_) = result { return Box::new(|| Err(())); }
+
+		let mut builder = result.unwrap();
+
+		let result = builder.copy_image_to_buffer(CopyImageToBufferInfo::image_buffer(image_surface.image.image().clone(), buffer.clone()));
+		if result.is_err() { return Box::new(|| Err(())) }
+		let result = builder.build();
+		if result.is_err() { return Box::new(|| Err(())) }
+
+		let future = self.transfer_future.take().unwrap();
+
+		let result = future.then_execute(self.transfer_queue.clone(), result.unwrap()).map(|f| f.boxed_send());
+		if result.is_err() { return Box::new(|| Err(())) }
+		let future = result.unwrap();
+		let result = future.then_signal_fence_and_flush().map(|f| Arc::new(f));
+		if result.is_err() { return Box::new(|| Err(())) }
+		let future = result.unwrap();
+
+		fut_send.send(future.clone()).unwrap();
+
+		self.transfer_future = Some(future.boxed_send());
+
+		return Box::new(move || {
+			Ok(buffer.read().unwrap().to_owned().into_boxed_slice())
+		})
 	}
 }
