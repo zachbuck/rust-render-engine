@@ -8,24 +8,24 @@ use crate::{
 	render_engine::{RenderEngine, RenderEngineCreateInfo}
 };
 
+const VERTICES: [Vertex3D; 4] = [
+	Vertex3D { position: [ 0.5, 0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // bottom right
+	Vertex3D { position: [-0.5, 0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // bottom left
+	Vertex3D { position: [-0.5,-0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // top left
+	Vertex3D { position: [ 0.5,-0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }  // top right
+];
+
+const INDICES: [u16; 6] = [
+	0, 2, 1,
+	0, 3, 2
+];
+
 #[test]
 fn new_mesh_data() {
 	let create_info = RenderEngineCreateInfo::new();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let vertices = vec![
-		Vertex3D { position: [ 0.5, 0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // bottom right
-		Vertex3D { position: [-0.5, 0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // bottom left
-		Vertex3D { position: [-0.5,-0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // top left
-		Vertex3D { position: [ 0.5,-0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }  // top right
-	];
-
-	let indices = vec![
-		0, 2, 1,
-		0, 3, 2
-	];
-
-	let _mesh_data = MeshData::new(engine.clone(), vertices, indices).unwrap().unwrap();
+	let _mesh_data = MeshData::new(engine.clone(), VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 }
 
 #[test]
@@ -33,19 +33,7 @@ fn get_all() {
 	let create_info = RenderEngineCreateInfo::new();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let vertices = vec![
-		Vertex3D { position: [ 0.5, 0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // bottom right
-		Vertex3D { position: [-0.5, 0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // bottom left
-		Vertex3D { position: [-0.5,-0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // top left
-		Vertex3D { position: [ 0.5,-0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }  // top right
-	];
-
-	let indices = vec![
-		0, 2, 1,
-		0, 3, 2
-	];
-
-	let mesh_data = MeshData::new(engine.clone(), vertices, indices).unwrap().unwrap();
+	let mesh_data = MeshData::new(engine.clone(), VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 
 	let mesh_data_list = MeshData::get_all(engine.clone()).unwrap().unwrap();
 
@@ -58,19 +46,7 @@ fn drop_mesh_data() {
 	let create_info = RenderEngineCreateInfo::new();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let vertices = vec![
-		Vertex3D { position: [ 0.5, 0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // bottom right
-		Vertex3D { position: [-0.5, 0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // bottom left
-		Vertex3D { position: [-0.5,-0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }, // top left
-		Vertex3D { position: [ 0.5,-0.5, 0.5], normal: [0.0; 3], uv: [0.0; 2] }  // top right
-	];
-
-	let indices = vec![
-		0, 2, 1,
-		0, 3, 2
-	];
-
-	let mesh_data = MeshData::new(engine.clone(), vertices, indices).unwrap().unwrap();
+	let mesh_data = MeshData::new(engine.clone(), VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 
 	drop(mesh_data);
 
