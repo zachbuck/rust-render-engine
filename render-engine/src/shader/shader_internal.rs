@@ -21,9 +21,5 @@ impl ShaderInternal {
 impl RenderThread {
 	#[inline]
 	pub(crate) fn get_shader_internal(&self, reference: Arc<Shader>) -> Option<&ShaderInternal> { self.shaders.get(&reference.uuid) }
-	
-	#[inline]
-	#[expect(dead_code)]
-	pub(crate) fn get_mut_shader_internal(&mut self, reference: Arc<Shader>) -> Option<&mut ShaderInternal> { self.shaders.get_mut(&reference.uuid) }
 }
 

@@ -1,13 +1,19 @@
 
 use std::sync::Arc;
 
+use uuid::Uuid;
 use vulkano::{
 	command_buffer::{
 		AutoCommandBufferBuilder, 
 		PrimaryAutoCommandBuffer, 
 		RenderingAttachmentInfo, 
 		RenderingInfo
-	}, device::Queue, image::view::ImageView, pipeline::graphics::viewport::{Scissor, Viewport}, render_pass::{AttachmentLoadOp, AttachmentStoreOp}, sync::{
+	}, 
+	device::Queue, 
+	image::view::ImageView, 
+	pipeline::graphics::viewport::{Scissor, Viewport}, 
+	render_pass::{AttachmentLoadOp, AttachmentStoreOp}, 
+	sync::{
 		GpuFuture, 
 		future::FenceSignalFuture
 	}
@@ -18,10 +24,7 @@ use crate::{
 		render_resources::RenderResources, 
 		render_thread::RenderThread
 	}, 
-	render_surface::{
-		RenderSurface, 
-		image_surface::ImageSurface
-	}, 
+	render_surface::RenderSurface,
 	renderable::Renderable
 };
 
@@ -79,14 +82,7 @@ impl RenderSurface for ImageSurfaceInternal {
 
 impl RenderThread {
 	#[inline]
-	#[expect(dead_code)]
-	pub(crate) fn get_image_surface(&self, reference: Arc<ImageSurface>) -> Option<&ImageSurfaceInternal> {
-		self.render_surfaces.get(&reference.uuid)?.as_any().downcast_ref()
-	}
-
-	#[inline]
-	#[expect(dead_code)]
-	pub(crate) fn get_mut_image_surface(&mut self, reference: Arc<ImageSurface>) -> Option<&mut ImageSurfaceInternal> {
-		self.render_surfaces.get_mut(&reference.uuid)?.as_mut_any().downcast_mut()
+	pub(crate) fn get_image_surface(&self, uuid: &Uuid) -> Option<&ImageSurfaceInternal> {
+		self.get_render_surface(uuid)?.as_any().downcast_ref()
 	}
 }

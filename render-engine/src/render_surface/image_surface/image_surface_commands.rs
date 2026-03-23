@@ -17,7 +17,10 @@ use vulkano::{
 		view::ImageView
 	}, 
 	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}, 
-	sync::{GpuFuture, future::FenceSignalFuture}
+	sync::{
+		GpuFuture, 
+		future::FenceSignalFuture
+	}
 };
 
 use crate::{
@@ -108,7 +111,7 @@ impl RenderThread {
 	}
 
 	fn read_image_surface_data(&mut self, uuid: Uuid, fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>) ->  Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send>{
-		let image_surface: &ImageSurfaceInternal = self.render_surfaces.get(&uuid).unwrap().as_any().downcast_ref().unwrap();
+		let image_surface = self.get_image_surface(&uuid).unwrap();
 
 		let result = Buffer::from_iter(
 			self.buffer_allocator.clone(),

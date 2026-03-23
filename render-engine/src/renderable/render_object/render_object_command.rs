@@ -1,5 +1,8 @@
 
-use std::sync::{Arc, mpsc::SyncSender};
+use std::sync::{
+	Arc, 
+	mpsc::SyncSender
+};
 
 use uuid::Uuid;
 

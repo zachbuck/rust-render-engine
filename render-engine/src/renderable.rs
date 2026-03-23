@@ -13,6 +13,8 @@ pub mod render_object;
 pub(crate) trait Renderable: Any {
 	fn draw<'a>(&self, builder: &'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, resources: &RenderResources) -> Result<&'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, ()>;
 
+	#[expect(unused)]
 	fn as_any(&self) -> &dyn Any;
+	#[expect(unused)]
 	fn as_mut_any(&mut self) -> &mut dyn Any;
 }

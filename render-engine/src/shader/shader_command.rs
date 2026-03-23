@@ -9,7 +9,9 @@ use vulkano::shader::{ShaderModule, ShaderModuleCreateInfo};
 
 use crate::{
 	render_engine::{
-		RenderEngine, render_command::RenderEngineCommand, render_thread::RenderThread
+		RenderEngine, 
+		render_command::RenderEngineCommand, 
+		render_thread::RenderThread
 	}, 
 	shader::{
 		Shader, 

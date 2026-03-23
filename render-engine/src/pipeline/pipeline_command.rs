@@ -1,8 +1,11 @@
 
-use std::{collections::HashSet, sync::{
-	Arc, 
-	mpsc::SyncSender
-}};
+use std::{
+	collections::HashSet, 
+	sync::{
+		Arc, 
+		mpsc::SyncSender
+	}
+};
 
 use foldhash::fast::RandomState;
 use uuid::Uuid;
@@ -34,7 +37,9 @@ use crate::{
 		pipeline_internal::PipelineInternal
 	}, 
 	render_engine::{
-		RenderEngine, render_command::RenderEngineCommand, render_thread::RenderThread
+		RenderEngine, 
+		render_command::RenderEngineCommand, 
+		render_thread::RenderThread
 	}, 
 	shader::{Shader, ShaderType}
 };
