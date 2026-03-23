@@ -52,6 +52,9 @@ pub(crate) enum PipelineCommand {
 		shaders: Box<[Arc<Shader>]>,
 		engine: Arc<RenderEngine>,
 	},
+	GetPipelines {
+		sender: SyncSender<Result<Box<[Arc<Pipeline>]>, ()>>,
+	},
 	DropPipeline {
 		uuid: Uuid,
 	}
@@ -67,6 +70,7 @@ impl RenderThread {
 	pub(crate) fn process_pipeline_command(&mut self, command: PipelineCommand) {
 		match command {
 			PipelineCommand::CreatePipeline { sender, shaders , engine} => { let _ = sender.send(self.create_pipeline(shaders, engine)); },
+			PipelineCommand::GetPipelines { sender } => { let _ = sender.send(self.get_pipelines()); },
 			PipelineCommand::DropPipeline { uuid } => self.drop_pipeline(uuid),
 		}
 	}
@@ -130,17 +134,24 @@ impl RenderThread {
 			}
 		).map_err(|_| ())?;
 
+		let reference = Arc::new(Pipeline {
+			uuid: uuid,
+			render_engine: engine,
+			shaders: shaders.clone(),
+		});
+
 		let internal = PipelineInternal {
+			reference: Arc::downgrade(&reference),
 			pipeline: pipeline,
 		};
 
 		self.pipelines.insert(uuid, internal);
 
-		return Ok(Arc::new(Pipeline {
-			uuid: uuid,
-			render_engine: engine,
-			shaders: shaders.clone(),
-		}));
+		return Ok(reference)
+	}
+
+	fn get_pipelines(&mut self) -> Result<Box<[Arc<Pipeline>]>, ()> {
+		Ok(self.pipelines.values().filter_map(|p| p.reference.upgrade()).collect())
 	}
 
 	fn drop_pipeline(&mut self, uuid: Uuid) {

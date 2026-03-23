@@ -1,13 +1,17 @@
 
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use vulkano::{
 	command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer}, 
 	pipeline::GraphicsPipeline
 };
 
+use crate::pipeline::Pipeline;
+
 #[derive(Debug)]
 pub(crate) struct PipelineInternal {
+	pub(crate) reference: Weak<Pipeline>,
+
 	pub(crate) pipeline: Arc<GraphicsPipeline>,
 }
 
