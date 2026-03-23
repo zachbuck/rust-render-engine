@@ -1,8 +1,14 @@
 
-use std::{sync::Arc, thread::sleep, time::Duration};
+use std::{
+	sync::Arc, 
+	thread::sleep, 
+	time::Duration,
+};
 
 use crate::{
-	pipeline::Pipeline, render_engine::{RenderEngine, RenderEngineCreateInfo}, shader::{Shader, ShaderType}
+	pipeline::Pipeline, 
+	render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+	shader::{Shader, ShaderType},
 };
 
 const VERTEX_SOURCE: &str = "
