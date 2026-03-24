@@ -10,20 +10,23 @@ use crate::{
         render_surface_command::RenderSurfaceCommand
     }, 
     renderable::render_object::render_object_command::RenderObjectCommand, 
-    shader::shader_command::ShaderCommand
+    shader::shader_command::ShaderCommand, 
+    texture::texture_command::TextureCommand
 };
 
 #[derive(Debug)]
 pub(crate) enum RenderEngineCommand {
     Exit,
+
     MeshDataCommand(MeshDataCommand),
     ShaderCommand(ShaderCommand),
 	PipelineCommand(PipelineCommand),
+    TextureCommand(TextureCommand),
 
     RenderObjectCommand(RenderObjectCommand),
 
     RenderSurfaceCommand(RenderSurfaceCommand),
-    ImageSurfaceCommand(ImageSurfaceCommand)
+    ImageSurfaceCommand(ImageSurfaceCommand),
 }
 
 impl RenderThread {
@@ -38,9 +41,11 @@ impl RenderThread {
 
         match command {
             RenderEngineCommand::Exit => self.process_exit(),
+
             RenderEngineCommand::MeshDataCommand(command) => self.process_mesh_data_command(command),
             RenderEngineCommand::ShaderCommand(command) => self.process_shader_command(command),
 			RenderEngineCommand::PipelineCommand(command) => self.process_pipeline_command(command),
+            RenderEngineCommand::TextureCommand(command) => self.process_texture_command(command),
 
             RenderEngineCommand::RenderObjectCommand(command) => self.process_render_object_command(command),
 

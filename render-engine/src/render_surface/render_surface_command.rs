@@ -35,11 +35,13 @@ impl RenderThread {
 	}
 
 	fn render_render_surface(&mut self, uuid: Uuid) -> Result<(), ()> {
+		let queue = self.get_graphics_queue();
+
 		let render_surface = self.get_render_surface(&uuid).ok_or(())?;
 
 		let mut builder = AutoCommandBufferBuilder::primary(
 			self.command_allocator.clone(), 
-			self.graphics_queue.queue_family_index(), 
+			queue.queue_family_index(), 
 			CommandBufferUsage::OneTimeSubmit,
 		).map_err(|_| ())?;
 
@@ -52,7 +54,6 @@ impl RenderThread {
 		}
 
 		let future = self.graphics_future.take().unwrap();
-		let queue = self.get_graphics_queue();
 
 		let render_surface = self.get_mut_render_surface(&uuid).ok_or(())?;
 

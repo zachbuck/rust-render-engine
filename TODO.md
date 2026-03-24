@@ -27,5 +27,6 @@
 - Add documentations
 - better transfer queue selection
 - let mesh_data have several buffers for vertices
+- seperate samplers from textures?
 
 ## In Progress

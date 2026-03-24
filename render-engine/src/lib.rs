@@ -5,6 +5,7 @@ pub mod renderable;
 pub mod render_engine;
 pub mod render_surface;
 pub mod shader;
+pub mod texture;
 
 #[cfg(test)]
 mod tests;

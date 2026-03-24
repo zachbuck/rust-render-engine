@@ -37,7 +37,7 @@ use crate::{
     }, 
     render_surface::RenderSurface, 
     renderable::Renderable, 
-    shader::shader_internal::ShaderInternal
+    shader::shader_internal::ShaderInternal, texture::texture_internal::TextureInternal
 };
 
 pub(crate) struct RenderThread {
@@ -46,7 +46,10 @@ pub(crate) struct RenderThread {
 	pub(crate) mesh_data: HashMap<Uuid, MeshDataInternal>,
     pub(crate) shaders: HashMap<Uuid, ShaderInternal>,
 	pub(crate) pipelines: HashMap<Uuid, PipelineInternal>,
+    pub(crate) textures: HashMap<Uuid, TextureInternal>,
+
     pub(crate) renderables: HashMap<Uuid, Box<dyn Renderable>>,
+
     pub(crate) render_surfaces: HashMap<Uuid, Box<dyn RenderSurface>>,
 
     pub(crate) device: Arc<Device>,
@@ -153,7 +156,10 @@ impl RenderThread {
 			mesh_data:				HashMap::new(),
             shaders:                HashMap::new(),
 			pipelines:				HashMap::new(),
+            textures:               HashMap::new(),
+
             renderables:            HashMap::new(),
+
             render_surfaces:        HashMap::new(),
 
             device:             	device.clone(),
@@ -173,5 +179,9 @@ impl RenderThread {
     // boilerplate for later when multiple queues potentially exist
     pub(crate) fn get_graphics_queue(&mut self) -> Arc<Queue> {
         return self.graphics_queue.clone()
+    }
+
+    pub(crate) fn get_transfer_queue(&mut self) -> Arc<Queue> {
+        return self.transfer_queue.clone()
     }
 }

@@ -18,8 +18,7 @@ use vulkano::{
 	}, 
 	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}, 
 	sync::{
-		GpuFuture, 
-		future::FenceSignalFuture
+		self, GpuFuture, future::FenceSignalFuture
 	}
 };
 
@@ -110,7 +109,9 @@ impl RenderThread {
 		self.render_surfaces.remove(&uuid);
 	}
 
-	fn read_image_surface_data(&mut self, uuid: Uuid, fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>) ->  Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send>{
+	fn read_image_surface_data(&mut self, uuid: Uuid, fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>) ->  Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send> {
+		let queue = self.get_transfer_queue();
+		
 		let image_surface = self.get_image_surface(&uuid).unwrap();
 
 		let result = Buffer::from_iter(
@@ -125,16 +126,16 @@ impl RenderThread {
 			},
 			(0..image_surface.image.image().extent()[0] * image_surface.image.image().extent()[1] * 4).map(|_| 0u8),
 		);
-		if let Err(_) = result { return Box::new(|| Err(())); } 
+		if result.is_err() { return Box::new(|| Err(())); } 
 
 		let buffer = result.unwrap();
 
 		let result = AutoCommandBufferBuilder::primary(
 			self.command_allocator.clone(), 
-			self.transfer_queue.queue_family_index(), 
+			queue.queue_family_index(), 
 			CommandBufferUsage::OneTimeSubmit	
 		);
-		if let Err(_) = result { return Box::new(|| Err(())); }
+		if result.is_err() { return Box::new(|| Err(())); }
 
 		let mut builder = result.unwrap();
 
@@ -146,11 +147,11 @@ impl RenderThread {
 		let mut future = self.transfer_future.take().unwrap();
 		future.cleanup_finished();
 
-		let result = future.then_execute(self.transfer_queue.clone(), result.unwrap()).map(|f| f.boxed_send());
-		if result.is_err() { return Box::new(|| Err(())) }
+		let result = future.then_execute(queue.clone(), result.unwrap()).map(|f| f.boxed_send());
+		if result.is_err() { self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); return Box::new(|| Err(())) }
 		let future = result.unwrap();
 		let result = future.then_signal_fence_and_flush().map(|f| Arc::new(f));
-		if result.is_err() { return Box::new(|| Err(())) }
+		if result.is_err() {  self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); return Box::new(|| Err(())) }
 		let future = result.unwrap();
 
 		let _ = fut_send.send(future.clone());
