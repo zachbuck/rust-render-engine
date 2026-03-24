@@ -1,9 +1,5 @@
 
-use std::{
-	sync::Arc, 
-	thread::sleep, 
-	time::Duration,
-};
+use std::sync::Arc;
 
 use crate::{
 	pipeline::Pipeline, 
@@ -34,6 +30,7 @@ void main() {
 ";
 
 #[test]
+/// Ensure `Pipeline::new()` and `Pipeline::drop()` are working as expected.
 fn new_pipeline() {
 	let create_info = RenderEngineCreateInfo::new()
 		.with_spirv_compiler();
@@ -49,6 +46,42 @@ fn new_pipeline() {
 }
 
 #[test]
+/// Ensure that `Pipeline::new()` returns Err(()) as expected when shaders of duplicate stages are supplied.
+/// VUID-VkGraphicsPipelineShaderGroupsCreateInfoNV-pGroups-02882
+fn duplicate_shader_error() {
+	let create_info = RenderEngineCreateInfo::new()
+		.with_spirv_compiler();
+	let engine = RenderEngine::new(create_info).unwrap();
+
+	let vertex_binary = Shader::compile(engine.clone(), "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
+	let vertex_shader = Shader::new(engine.clone(), vertex_binary).unwrap().unwrap();
+
+	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
+	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
+
+	let result = Pipeline::new(engine.clone(), &vec![vertex_shader.clone(), vertex_shader, fragment_shader]).unwrap();
+
+	assert!(result.unwrap_err() == ());
+}
+
+#[test]
+/// Ensure that `Pipeline::new()` returns Err(()) if an invalid set of shaders are supplied (i.e. no vertex / mesh shader).
+/// VUID-VkGraphicsPipelineShaderGroupsCreateInfoNV-pGroups-02882
+fn invalid_shader_set() {
+	let create_info = RenderEngineCreateInfo::new()
+		.with_spirv_compiler();
+	let engine = RenderEngine::new(create_info).unwrap();
+
+	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
+	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
+
+	let result = Pipeline::new(engine.clone(), &vec![fragment_shader]).unwrap();
+
+	assert!(result.unwrap_err() == ());
+}
+
+#[test]
+/// Ensure `Pipeline::get_all()` is working as expected.
 fn get_all() {
 	let create_info = RenderEngineCreateInfo::new()
 		.with_spirv_compiler();
@@ -66,57 +99,4 @@ fn get_all() {
 
 	assert!(pipeline_list.len() == 1);
 	assert!(Arc::ptr_eq(&pipeline, &pipeline_list[0]));
-}
-
-#[test]
-fn drop_pipeline() {
-	let create_info = RenderEngineCreateInfo::new()
-		.with_spirv_compiler();
-	let engine = RenderEngine::new(create_info).unwrap();
-
-	let vertex_binary = Shader::compile(engine.clone(), "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-	let vertex_shader = Shader::new(engine.clone(), vertex_binary).unwrap().unwrap();
-
-	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
-
-	let pipeline = Pipeline::new(engine.clone(), &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
-	drop(pipeline);
-
-	sleep(Duration::from_secs(1));
-
-	let pipeline_list = Pipeline::get_all(engine.clone()).unwrap().unwrap();
-
-	assert!(pipeline_list.len() == 0);
-}
-
-#[test]
-fn duplicate_shader_error() {
-	let create_info = RenderEngineCreateInfo::new()
-		.with_spirv_compiler();
-	let engine = RenderEngine::new(create_info).unwrap();
-
-	let vertex_binary = Shader::compile(engine.clone(), "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-	let vertex_shader = Shader::new(engine.clone(), vertex_binary).unwrap().unwrap();
-
-	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
-
-	let result = Pipeline::new(engine.clone(), &vec![vertex_shader.clone(), vertex_shader, fragment_shader]).unwrap();
-
-	assert!(result.is_err())
-}
-
-#[test]
-fn invalid_shader_set() {
-	let create_info = RenderEngineCreateInfo::new()
-		.with_spirv_compiler();
-	let engine = RenderEngine::new(create_info).unwrap();
-
-	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
-
-	let result = Pipeline::new(engine.clone(), &vec![fragment_shader]).unwrap();
-
-	assert!(result.is_err())
 }

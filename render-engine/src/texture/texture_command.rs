@@ -48,10 +48,10 @@ pub(crate) enum TextureCommand {
 		engine: Arc<RenderEngine>,
 	},
 	GetTextures {
-
+		send: SyncSender<Result<Box<[Arc<Texture>]>, ()>>,
 	},
 	DropTexture {
-
+		uuid: Uuid,
 	}
 }
 
@@ -65,8 +65,8 @@ impl RenderThread {
 	pub(crate) fn process_texture_command(&mut self, command: TextureCommand) {
 		match command {
 			TextureCommand::CreateTexture { send, fut_send, x_size, y_size, data, engine } => { let _ = send.send(self.create_texture(fut_send, x_size, y_size, data, engine)); },
-			TextureCommand::GetTextures {  } => todo!(),
-			TextureCommand::DropTexture {  } => todo!(),
+			TextureCommand::GetTextures { send } => { let _ = send.send(self.get_textures()); },
+			TextureCommand::DropTexture { uuid } => self.drop_texture(uuid),
 		}
 	}
 
@@ -134,5 +134,13 @@ impl RenderThread {
 		self.textures.insert(uuid, internal);
 
 		return Ok(reference);
+	}
+
+	fn get_textures(&mut self) -> Result<Box<[Arc<Texture>]>, ()> {
+		Ok(self.textures.values().filter_map(|t| t.reference.upgrade()).collect())
+	}
+	
+	fn drop_texture(&mut self, uuid: Uuid) {
+		self.textures.remove(&uuid);
 	}
 }

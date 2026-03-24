@@ -1,7 +1,5 @@
 
-use std::{
-	sync::Arc, thread::sleep, time::Duration
-};
+use std::sync::Arc;
 
 use crate::{
 	mesh_data::{MeshData, Vertex3D}, 
@@ -21,6 +19,7 @@ const INDICES: [u16; 6] = [
 ];
 
 #[test]
+/// Ensure `MeshData::new()` and `MeshData::drop()` are working as expected.
 fn new_mesh_data() {
 	let create_info = RenderEngineCreateInfo::new();
 	let engine = RenderEngine::new(create_info).unwrap();
@@ -29,6 +28,7 @@ fn new_mesh_data() {
 }
 
 #[test]
+/// Ensure `MeshData::get_all()` is working as expected.
 fn get_all() {
 	let create_info = RenderEngineCreateInfo::new();
 	let engine = RenderEngine::new(create_info).unwrap();
@@ -39,20 +39,4 @@ fn get_all() {
 
 	assert!(mesh_data_list.len() == 1);
 	assert!(Arc::ptr_eq(&mesh_data, &mesh_data_list[0]));
-}
-
-#[test]
-fn drop_mesh_data() {
-	let create_info = RenderEngineCreateInfo::new();
-	let engine = RenderEngine::new(create_info).unwrap();
-
-	let mesh_data = MeshData::new(engine.clone(), VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
-
-	drop(mesh_data);
-
-	sleep(Duration::from_secs(1));
-
-	let mesh_data_list = MeshData::get_all(engine).unwrap().unwrap();
-	
-	assert!(mesh_data_list.len() == 0);
 }

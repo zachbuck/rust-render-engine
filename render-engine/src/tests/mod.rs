@@ -5,5 +5,6 @@ mod render_engine;
 mod render_surface;
 mod renderable;
 mod shader;
+mod texture;
 
 mod test_scenes;

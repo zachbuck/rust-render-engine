@@ -1,9 +1,12 @@
-use std::{thread::sleep, time::Duration};
 
-use crate::{render_engine::{RenderEngine, RenderEngineCreateInfo}, render_surface::image_surface::ImageSurface};
+use crate::{
+	render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+	render_surface::image_surface::ImageSurface
+};
 
 
 #[test]
+/// Ensure that `ImageSurface::new()` and `ImageSurface::drop()` are working as expected.
 fn new_image_surface() {
 	let create_info = RenderEngineCreateInfo::new();
 	let engine = RenderEngine::new(create_info).unwrap();
@@ -12,18 +15,7 @@ fn new_image_surface() {
 }
 
 #[test]
-fn drop_image_surface() {
-	let create_info = RenderEngineCreateInfo::new();
-	let engine = RenderEngine::new(create_info).unwrap();
-
-	let image_surface = ImageSurface::new(engine.clone(), 100, 100).unwrap().unwrap();
-
-	drop(image_surface);
-
-	sleep(Duration::from_secs(1));
-}
-
-#[test]
+/// Ensure that `ImageSurface::get_image_surface_data()` is working as expected.
 fn get_image_surface_data() {
 	let create_info = RenderEngineCreateInfo::new();
 	let engine = RenderEngine::new(create_info).unwrap();

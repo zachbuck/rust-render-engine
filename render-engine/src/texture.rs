@@ -1,12 +1,18 @@
 
-use std::sync::{Arc, mpsc::sync_channel};
+use std::sync::{
+	Arc, 
+	mpsc::sync_channel
+};
 
 use uuid::Uuid;
 
-use crate::{render_engine::{
-	RenderEngine, 
-	engine_future::EngineFuture
-}, texture::texture_command::TextureCommand};
+use crate::{
+	render_engine::{
+		RenderEngine, 
+		engine_future::EngineFuture
+	}, 
+	texture::texture_command::TextureCommand
+};
 
 pub(crate) mod texture_command;
 pub(crate) mod texture_internal;
@@ -21,7 +27,11 @@ pub struct Texture {
 
 impl Drop for Texture {
 	fn drop(&mut self) {
-		todo!()
+		self.render_engine.command_channel.send(
+			TextureCommand::DropTexture { 
+				uuid: self.uuid,
+			}.into()
+		).unwrap();
 	}
 }
 
@@ -46,6 +56,14 @@ impl Texture {
 	}
 
 	pub fn get_all(render_engine: Arc<RenderEngine>) -> EngineFuture<Result<Box<[Arc<Texture>]>, ()>> {
-		todo!()
+		let (send, recv) = sync_channel(1);
+
+		render_engine.command_channel.send(
+			TextureCommand::GetTextures { 
+				send: send,
+			}.into()
+		).unwrap();
+
+		EngineFuture::new_single(recv)
 	}
 }

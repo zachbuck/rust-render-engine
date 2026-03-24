@@ -1,7 +1,8 @@
-use std::{thread::sleep, time::Duration};
 
-use crate::{render_engine::{RenderEngine, RenderEngineCreateInfo}, shader::{Shader, ShaderType}};
-
+use crate::{
+	render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+	shader::{Shader, ShaderType}
+};
 
 const VERTEX_SOURCE: &str = "
 #version 460
@@ -16,6 +17,7 @@ void main() {
 ";
 
 #[test]
+/// Ensure that `Shader::compile()` is working as expected.
 fn compile_shader() {
 	let create_info = RenderEngineCreateInfo::new()
 		.with_spirv_compiler();
@@ -33,6 +35,7 @@ fn compile_shader() {
 }
 
 #[test]
+/// Ensure that `Shader::new()` and `Shader::drop()` are working as expected.
 fn new_shader() {
 	let create_info = RenderEngineCreateInfo::new()
 		.with_spirv_compiler();
@@ -41,19 +44,4 @@ fn new_shader() {
 
 	let binary = Shader::compile(engine.clone(), "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
 	let _shader = Shader::new(engine.clone(), binary).unwrap().unwrap();
-}
-
-#[test]
-fn drop_shader() {
-	let create_info = RenderEngineCreateInfo::new()
-		.with_spirv_compiler();
-
-	let engine = RenderEngine::new(create_info).unwrap();
-
-	let binary = Shader::compile(engine.clone(), "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-	let shader = Shader::new(engine.clone(), binary).unwrap().unwrap();
-
-	drop(shader);
-
-	sleep(Duration::from_secs(1));
 }

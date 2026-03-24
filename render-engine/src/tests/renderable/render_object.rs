@@ -1,4 +1,3 @@
-use std::{thread::sleep, time::Duration};
 
 use crate::{
 	mesh_data::{MeshData, Vertex3D}, 
@@ -43,6 +42,7 @@ void main() {
 ";
 
 #[test]
+/// Ensure that `RenderObject::new()` and `RenderObject::drop()` are working as expected.
 fn new_render_object() {
 	let create_info = RenderEngineCreateInfo::new()
 		.with_spirv_compiler();
@@ -59,27 +59,4 @@ fn new_render_object() {
 	let pipeline = Pipeline::new(engine.clone(), &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
 
 	let _render_object = RenderObject::new(engine.clone(), mesh_data, pipeline).unwrap().unwrap();
-}
-
-#[test]
-fn drop_render_object() {
-	let create_info = RenderEngineCreateInfo::new()
-		.with_spirv_compiler();
-	let engine = RenderEngine::new(create_info).unwrap();
-
-	let mesh_data = MeshData::new(engine.clone(), VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
-
-	let vertex_binary = Shader::compile(engine.clone(), "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-	let vertex_shader = Shader::new(engine.clone(), vertex_binary).unwrap().unwrap();
-
-	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
-
-	let pipeline = Pipeline::new(engine.clone(), &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
-
-	let render_object = RenderObject::new(engine.clone(), mesh_data, pipeline).unwrap().unwrap();
-
-	drop(render_object);
-
-	sleep(Duration::from_secs(1));
 }
