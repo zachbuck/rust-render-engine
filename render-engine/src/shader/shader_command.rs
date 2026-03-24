@@ -58,6 +58,8 @@ impl RenderThread {
 
 		let entry_point = module.entry_point("main").unwrap();
 
+		println!("{:?}", entry_point.info().descriptor_binding_requirements);
+
 		let internal = ShaderInternal { entry_point };
 
 		let shader_type = internal.get_shader_type();
