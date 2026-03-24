@@ -15,7 +15,7 @@ use crate::{
 		RenderEngine, 
 		engine_future::EngineFuture
 	}, 
-	shader::{Shader, ShaderType}
+	shader::{Shader, ShaderType, descriptor_requirements::DescriptorRequirements}
 };
 
 pub(crate) mod pipeline_command;
@@ -30,11 +30,12 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-	pub fn new(render_engine: Arc<RenderEngine>, shaders: &[Arc<Shader>]) -> EngineFuture<Result<Arc<Pipeline>, ()>> {
+	pub fn new(render_engine: &Arc<RenderEngine>, shaders: &[Arc<Shader>]) -> EngineFuture<Result<Arc<Pipeline>, ()>> {
 		// Do some error checking on the input to make sure that this will link into a valid GraphicsPipeline
 		// 1. Only one of each stage
 		// 2. Must contain Vertex Shader
-		// 3. ... (more requirements but they come when more shader types implemented)
+		// 3. Descriptors must be compatible
+		// 4. ... (more requirements but they come when more shader types implemented)
 
 		let mut stages = HashSet::new();
 		for shader in shaders {
@@ -46,6 +47,11 @@ impl Pipeline {
 		}
 
 		if !stages.contains(&ShaderType::Vertex) {
+			return EngineFuture::new_immediate(Err(()));
+		}
+
+		let descriptors_compatable = DescriptorRequirements::test_compatibility(&shaders.iter().map(|s| &s.descriptor_requirements).collect::<Vec<_>>());
+		if !descriptors_compatable {
 			return EngineFuture::new_immediate(Err(()));
 		}
 
@@ -64,7 +70,7 @@ impl Pipeline {
 		return EngineFuture::new_single(recv);
 	}
 
-	pub fn get_all(render_engine: Arc<RenderEngine>) -> EngineFuture<Result<Box<[Arc<Pipeline>]>, ()>> {
+	pub fn get_all(render_engine: &Arc<RenderEngine>) -> EngineFuture<Result<Box<[Arc<Pipeline>]>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(

@@ -38,25 +38,25 @@ fn render_scene() {
 		.with_spirv_compiler();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let image_surface = ImageSurface::new(engine.clone(), 100, 100).unwrap().unwrap();
+	let image_surface = ImageSurface::new(&engine, 100, 100).unwrap().unwrap();
 
-	let mesh_data = MeshData::new(engine.clone(), VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+	let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 
 	let mut file = File::open(VERTEX_PATH).unwrap();
 	let mut source = String::new();
 	file.read_to_string(&mut source).unwrap();
-	let binary = Shader::compile(engine.clone(), VERTEX_PATH, ShaderType::Vertex, &source).unwrap();
-	let vertex_shader = Shader::new(engine.clone(), binary).unwrap().unwrap();
+	let binary = Shader::compile(&engine, VERTEX_PATH, ShaderType::Vertex, &source).unwrap();
+	let vertex_shader = Shader::new(&engine, binary).unwrap().unwrap();
 
 	let mut file = File::open(FRAGMENT_PATH).unwrap();
 	let mut source = String::new();
 	file.read_to_string(&mut source).unwrap();
-	let binary = Shader::compile(engine.clone(), FRAGMENT_PATH, ShaderType::Fragment, &source).unwrap();
-	let fragment_shader = Shader::new(engine.clone(), binary).unwrap().unwrap();
+	let binary = Shader::compile(&engine, FRAGMENT_PATH, ShaderType::Fragment, &source).unwrap();
+	let fragment_shader = Shader::new(&engine, binary).unwrap().unwrap();
 
-	let pipeline = Pipeline::new(engine.clone(), &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
+	let pipeline = Pipeline::new(&engine, &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
 
-	let _render_object = RenderObject::new(engine.clone(), mesh_data, pipeline).unwrap().unwrap();
+	let _render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
 
 	image_surface.render_all().unwrap().unwrap();
 

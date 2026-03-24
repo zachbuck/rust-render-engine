@@ -36,13 +36,18 @@ fn new_pipeline() {
 		.with_spirv_compiler();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let vertex_binary = Shader::compile(engine.clone(), "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-	let vertex_shader = Shader::new(engine.clone(), vertex_binary).unwrap().unwrap();
+	let vertex_binary = Shader::compile(&engine, "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
+	let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
 
-	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
+	let fragment_binary = Shader::compile(&engine, "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
+	let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
 
-	let _pipeline = Pipeline::new(engine.clone(), &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
+	let pipeline = Pipeline::new(&engine, &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
+
+	drop(pipeline);
+
+	let pipeline_list = Pipeline::get_all(&engine).unwrap().unwrap();
+	assert!(pipeline_list.len() == 0)
 }
 
 #[test]
@@ -53,13 +58,13 @@ fn duplicate_shader_error() {
 		.with_spirv_compiler();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let vertex_binary = Shader::compile(engine.clone(), "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-	let vertex_shader = Shader::new(engine.clone(), vertex_binary).unwrap().unwrap();
+	let vertex_binary = Shader::compile(&engine, "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
+	let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
 
-	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
+	let fragment_binary = Shader::compile(&engine, "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
+	let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
 
-	let result = Pipeline::new(engine.clone(), &vec![vertex_shader.clone(), vertex_shader, fragment_shader]).unwrap();
+	let result = Pipeline::new(&engine, &vec![vertex_shader.clone(), vertex_shader, fragment_shader]).unwrap();
 
 	assert!(result.unwrap_err() == ());
 }
@@ -72,10 +77,10 @@ fn invalid_shader_set() {
 		.with_spirv_compiler();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
+	let fragment_binary = Shader::compile(&engine, "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
+	let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
 
-	let result = Pipeline::new(engine.clone(), &vec![fragment_shader]).unwrap();
+	let result = Pipeline::new(&engine, &vec![fragment_shader]).unwrap();
 
 	assert!(result.unwrap_err() == ());
 }
@@ -87,15 +92,15 @@ fn get_all() {
 		.with_spirv_compiler();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let vertex_binary = Shader::compile(engine.clone(), "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-	let vertex_shader = Shader::new(engine.clone(), vertex_binary).unwrap().unwrap();
+	let vertex_binary = Shader::compile(&engine, "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
+	let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
 
-	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
+	let fragment_binary = Shader::compile(&engine, "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
+	let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
 
-	let pipeline = Pipeline::new(engine.clone(), &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
+	let pipeline = Pipeline::new(&engine, &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
 
-	let pipeline_list = Pipeline::get_all(engine.clone()).unwrap().unwrap();
+	let pipeline_list = Pipeline::get_all(&engine).unwrap().unwrap();
 
 	assert!(pipeline_list.len() == 1);
 	assert!(Arc::ptr_eq(&pipeline, &pipeline_list[0]));

@@ -24,7 +24,12 @@ fn new_mesh_data() {
 	let create_info = RenderEngineCreateInfo::new();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let _mesh_data = MeshData::new(engine.clone(), VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+	let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+
+	drop(mesh_data);
+
+	let mesh_data_list = MeshData::get_all(&engine).unwrap().unwrap();
+	assert!(mesh_data_list.len() == 0);
 }
 
 #[test]
@@ -33,9 +38,9 @@ fn get_all() {
 	let create_info = RenderEngineCreateInfo::new();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let mesh_data = MeshData::new(engine.clone(), VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+	let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 
-	let mesh_data_list = MeshData::get_all(engine.clone()).unwrap().unwrap();
+	let mesh_data_list = MeshData::get_all(&engine).unwrap().unwrap();
 
 	assert!(mesh_data_list.len() == 1);
 	assert!(Arc::ptr_eq(&mesh_data, &mesh_data_list[0]));

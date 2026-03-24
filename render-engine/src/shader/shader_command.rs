@@ -14,8 +14,7 @@ use crate::{
 		render_thread::RenderThread
 	}, 
 	shader::{
-		Shader, 
-		shader_internal::ShaderInternal
+		Shader, descriptor_requirements::DescriptorRequirements, shader_internal::ShaderInternal
 	}
 };
 
@@ -58,15 +57,21 @@ impl RenderThread {
 
 		let entry_point = module.entry_point("main").unwrap();
 
-		println!("{:?}", entry_point.info().descriptor_binding_requirements);
-
-		let internal = ShaderInternal { entry_point };
+		let internal = ShaderInternal { 
+			entry_point: entry_point.clone(),
+			descriptor_requirements: DescriptorRequirements::from_vulkano(&entry_point)?,
+		};
 
 		let shader_type = internal.get_shader_type();
 
 		self.shaders.insert(uuid, internal);
 
-		Ok(Arc::new(Shader { uuid, render_engine: engine, shader_type: shader_type }))
+		Ok(Arc::new(Shader { 
+			uuid, 
+			render_engine: engine, 
+			shader_type: shader_type,
+			descriptor_requirements: DescriptorRequirements::from_vulkano(&entry_point).unwrap(),
+		}))
 	}
 
 	fn drop_shader(&mut self, uuid: Uuid) {

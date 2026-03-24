@@ -11,7 +11,7 @@ fn new_image_surface() {
 	let create_info = RenderEngineCreateInfo::new();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let _image_surface = ImageSurface::new(engine.clone(), 100, 100).unwrap().unwrap();
+	let _image_surface = ImageSurface::new(&engine, 100, 100).unwrap().unwrap();
 }
 
 #[test]
@@ -20,7 +20,7 @@ fn get_image_surface_data() {
 	let create_info = RenderEngineCreateInfo::new();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let image_surface = ImageSurface::new(engine.clone(), 100, 100).unwrap().unwrap();
+	let image_surface = ImageSurface::new(&engine, 100, 100).unwrap().unwrap();
 
 	image_surface.render_all().unwrap().unwrap();
 

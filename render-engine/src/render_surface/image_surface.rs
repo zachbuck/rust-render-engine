@@ -39,7 +39,7 @@ impl Drop for ImageSurface {
 }
 
 impl ImageSurface {
-	pub fn new(render_engine: Arc<RenderEngine>, x_size: u32, y_size: u32) -> EngineFuture<Result<Arc<ImageSurface>, ()>> {
+	pub fn new(render_engine: &Arc<RenderEngine>, x_size: u32, y_size: u32) -> EngineFuture<Result<Arc<ImageSurface>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(

@@ -15,9 +15,13 @@ use crate::{
 		RenderEngine, 
 		engine_future::EngineFuture
 	}, 
-	shader::shader_command::ShaderCommand
+	shader::{
+		descriptor_requirements::DescriptorRequirements, 
+		shader_command::ShaderCommand
+	}
 };
 
+pub(crate) mod descriptor_requirements;
 pub(crate) mod shader_internal;
 pub(crate) mod shader_command;
 
@@ -27,6 +31,7 @@ pub struct Shader {
 	render_engine: Arc<RenderEngine>,
 
 	pub shader_type: ShaderType,
+	pub(crate) descriptor_requirements: DescriptorRequirements,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -39,7 +44,7 @@ pub enum ShaderType {
 }
 
 impl Shader { 
-	pub fn compile(render_engine: Arc<RenderEngine>, shader_name: &str, shader_type: ShaderType, shader_source: &str) -> Result<Box<[u32]>, ()> {
+	pub fn compile(render_engine: &Arc<RenderEngine>, shader_name: &str, shader_type: ShaderType, shader_source: &str) -> Result<Box<[u32]>, ()> {
 		let compiler = render_engine.spirv_compiler.as_ref().ok_or(())?;
 
 		let artifact = compiler.compile_into_spirv(
@@ -53,7 +58,7 @@ impl Shader {
 		return Ok(artifact.as_binary().to_owned().into_boxed_slice());
 	}
 
-	pub fn new(render_engine: Arc<RenderEngine>, binary: Box<[u32]>) -> EngineFuture<Result<Arc<Self>, ()>> {
+	pub fn new(render_engine: &Arc<RenderEngine>, binary: Box<[u32]>) -> EngineFuture<Result<Arc<Self>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(

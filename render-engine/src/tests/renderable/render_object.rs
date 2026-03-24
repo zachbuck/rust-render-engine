@@ -48,15 +48,15 @@ fn new_render_object() {
 		.with_spirv_compiler();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let mesh_data = MeshData::new(engine.clone(), VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+	let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 
-	let vertex_binary = Shader::compile(engine.clone(), "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-	let vertex_shader = Shader::new(engine.clone(), vertex_binary).unwrap().unwrap();
+	let vertex_binary = Shader::compile(&engine, "vertex.glsl", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
+	let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
 
-	let fragment_binary = Shader::compile(engine.clone(), "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-	let fragment_shader = Shader::new(engine.clone(), fragment_binary).unwrap().unwrap();
+	let fragment_binary = Shader::compile(&engine, "fragment.glsl", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
+	let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
 
-	let pipeline = Pipeline::new(engine.clone(), &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
+	let pipeline = Pipeline::new(&engine, &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
 
-	let _render_object = RenderObject::new(engine.clone(), mesh_data, pipeline).unwrap().unwrap();
+	let _render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
 }

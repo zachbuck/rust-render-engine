@@ -5,12 +5,17 @@ use vulkano::shader::EntryPoint;
 
 use crate::{
 	render_engine::render_thread::RenderThread, 
-	shader::{Shader, ShaderType}
+	shader::{
+		Shader, 
+		ShaderType, 
+		descriptor_requirements::DescriptorRequirements
+	}
 };
 
 #[derive(Debug)]
 pub(crate) struct ShaderInternal {
 	pub(crate) entry_point: EntryPoint,
+	pub(crate) descriptor_requirements: DescriptorRequirements,
 }
 
 impl ShaderInternal {

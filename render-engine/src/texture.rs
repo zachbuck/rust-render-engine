@@ -36,7 +36,7 @@ impl Drop for Texture {
 }
 
 impl Texture {
-	pub fn new(render_engine: Arc<RenderEngine>, data: &[u8], x_size: u32, y_size: u32) -> EngineFuture<Result<Arc<Texture>, ()>> {
+	pub fn new(render_engine: &Arc<RenderEngine>, data: &[u8], x_size: u32, y_size: u32) -> EngineFuture<Result<Arc<Texture>, ()>> {
 		let (fut_send, fut_recv) = sync_channel(1);
 		let (send, recv) = sync_channel(1);
 		
@@ -55,7 +55,7 @@ impl Texture {
 			.with_wait_condition(fut_recv.into())
 	}
 
-	pub fn get_all(render_engine: Arc<RenderEngine>) -> EngineFuture<Result<Box<[Arc<Texture>]>, ()>> {
+	pub fn get_all(render_engine: &Arc<RenderEngine>) -> EngineFuture<Result<Box<[Arc<Texture>]>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(

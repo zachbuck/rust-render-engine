@@ -11,10 +11,10 @@ fn new_texture() {
 
 	let data = [0u8; 100 * 100 * 4];
 	
-	let texture = Texture::new(engine.clone(), &data, 100, 100).unwrap().unwrap();
+	let texture = Texture::new(&engine, &data, 100, 100).unwrap().unwrap();
 	drop(texture);
 
-	let textures = Texture::get_all(engine.clone()).unwrap().unwrap();
+	let textures = Texture::get_all(&engine).unwrap().unwrap();
 	assert!(textures.len() == 0);
 }
 
@@ -26,9 +26,9 @@ fn get_texture() {
 
 	let data = [0u8; 100 * 100 * 4];
 
-	let texture = Texture::new(engine.clone(), &data, 100, 100).unwrap().unwrap();
+	let texture = Texture::new(&engine, &data, 100, 100).unwrap().unwrap();
 
-	let textures = Texture::get_all(engine.clone()).unwrap().unwrap();
+	let textures = Texture::get_all(&engine).unwrap().unwrap();
 
 	assert!(textures.len() == 1);
 	assert!(Arc::ptr_eq(&texture, &textures[0]));
