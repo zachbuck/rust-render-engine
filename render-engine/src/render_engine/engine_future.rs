@@ -65,7 +65,11 @@ impl<T> EngineFuture<T> {
 impl EngineWaitType {
 	fn wait(self) -> () {
 		match self {
-			EngineWaitType::GpuFuture(future) => future.recv().unwrap().wait(None).unwrap(),
+			EngineWaitType::GpuFuture(future) => {
+				let result = future.recv();
+				if result.is_err() { return; }
+				result.unwrap().wait(None).unwrap();
+			},
 		}
 	}
 }

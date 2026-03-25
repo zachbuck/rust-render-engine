@@ -84,7 +84,7 @@ impl RenderThread {
 				..Default::default()
 			}, 
 			data.iter().map(|b| *b),
-		).map_err(|_| { let _ = fut_send.send(Arc::new(sync::now(self.device.clone()).boxed_send().then_signal_fence())); () })?;
+		).map_err(|_| ())?;
 
 		let image = Image::new(
 			self.buffer_allocator.clone(), 
@@ -99,7 +99,7 @@ impl RenderThread {
 				memory_type_filter: MemoryTypeFilter::PREFER_DEVICE,
 				..Default::default()
 			}
-		).map_err(|_| { let _ = fut_send.send(Arc::new(sync::now(self.device.clone()).boxed_send().then_signal_fence())); () })?;
+		).map_err(|_| ())?;
 
 		let queue = self.get_transfer_queue();
 
@@ -107,19 +107,19 @@ impl RenderThread {
 			self.command_allocator.clone(), 
 			queue.queue_family_index(), 
 			CommandBufferUsage::OneTimeSubmit,
-		).map_err(|_| { let _ = fut_send.send(Arc::new(sync::now(self.device.clone()).boxed_send().then_signal_fence())); () })?;
+		).map_err(|_| ())?;
 
 		builder
-			.copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(buffer, image.clone())).map_err(|_| { let _ = fut_send.send(Arc::new(sync::now(self.device.clone()).boxed_send().then_signal_fence())); () })?;
+			.copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(buffer, image.clone())).map_err(|_| ())?;
 
-		let command_buffer = builder.build().map_err(|_| { let _ = fut_send.send(Arc::new(sync::now(self.device.clone()).boxed_send().then_signal_fence())); () })?;
+		let command_buffer = builder.build().map_err(|_| ())?;
 
 		let mut future = self.transfer_future.take().unwrap();
 		future.cleanup_finished();
 
 		let future = Arc::new(future
-			.then_execute(queue, command_buffer).map_err(|_| { self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); let _ = fut_send.send(Arc::new(sync::now(self.device.clone()).boxed_send().then_signal_fence())); () })?.boxed_send()
-			.then_signal_fence_and_flush().map_err(|_| { self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); let _ = fut_send.send(Arc::new(sync::now(self.device.clone()).boxed_send().then_signal_fence())); () })?);
+			.then_execute(queue, command_buffer).map_err(|_| { self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); () })?.boxed_send()
+			.then_signal_fence_and_flush().map_err(|_| { self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); () })?);
 
 		let _ = fut_send.send(future.clone());
 
@@ -127,7 +127,7 @@ impl RenderThread {
 
 		let reference = Arc::new(Texture { uuid, render_engine: engine, y_size, x_size });
 
-		let image_view = ImageView::new_default(image.clone()).map_err(|_| { let _ = fut_send.send(Arc::new(sync::now(self.device.clone()).boxed_send().then_signal_fence())); () })?;
+		let image_view = ImageView::new_default(image.clone()).map_err(|_| ())?;
 
 		let internal = TextureInternal { reference: Arc::downgrade(&reference), image: image_view };
 
