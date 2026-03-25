@@ -6,13 +6,17 @@ use vulkano::{
 	pipeline::GraphicsPipeline
 };
 
-use crate::pipeline::Pipeline;
+use crate::{
+	pipeline::Pipeline, 
+	shader::descriptor_requirements::DescriptorRequirements
+};
 
 #[derive(Debug)]
 pub(crate) struct PipelineInternal {
 	pub(crate) reference: Weak<Pipeline>,
 
 	pub(crate) pipeline: Arc<GraphicsPipeline>,
+	pub(crate) descriptor_requirements: DescriptorRequirements,
 }
 
 impl PipelineInternal {

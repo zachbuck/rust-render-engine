@@ -7,7 +7,6 @@
 - Switch to non-dynamic rendering? (tbh not really worth)
 - Better Errors
 - Cameras, Projection
-- Textures
 - Windows
 - Viewports
 - Uniforms
@@ -28,5 +27,8 @@
 - better transfer queue selection
 - let mesh_data have several buffers for vertices
 - seperate samplers from textures?
+- allow for descriptor arrays
 
 ## In Progress
+
+- Textures

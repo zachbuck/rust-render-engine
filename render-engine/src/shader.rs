@@ -7,7 +7,7 @@ use std::sync::{
 use shaderc::ShaderKind;
 use uuid::Uuid;
 use vulkano::shader::{
-	spirv::ExecutionModel
+	ShaderStages, spirv::ExecutionModel
 };
 
 use crate::{
@@ -38,10 +38,13 @@ pub struct Shader {
 #[derive(Hash)]
 #[derive(Clone, Copy)]
 #[derive(Debug)]
+#[repr(u8)]
 pub enum ShaderType {
-	Vertex,
-	Fragment,
+	Vertex		= 0x1,
+	Fragment	= 0x2,
 }
+
+pub(crate) const SHADER_TYPES: [ShaderType; 2] = [ShaderType::Vertex, ShaderType::Fragment];
 
 impl Shader { 
 	pub fn compile(render_engine: &Arc<RenderEngine>, shader_name: &str, shader_type: ShaderType, shader_source: &str) -> Result<Box<[u32]>, ()> {
@@ -98,6 +101,15 @@ impl From<ExecutionModel> for ShaderType {
 			ExecutionModel::Vertex		=> ShaderType::Vertex,
 			ExecutionModel::Fragment 	=> ShaderType::Fragment,
 			_ => panic!("Unknown ExecutionModel type: '{:?}'", value),
+		}
+	}
+}
+
+impl Into<ShaderStages> for ShaderType {
+	fn into(self) -> ShaderStages {
+		match self {
+			ShaderType::Vertex 		=> ShaderStages::VERTEX,
+			ShaderType::Fragment 	=> ShaderStages::FRAGMENT,
 		}
 	}
 }

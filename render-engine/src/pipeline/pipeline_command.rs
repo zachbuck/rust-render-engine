@@ -26,7 +26,7 @@ use vulkano::{
 			vertex_input::{Vertex, VertexDefinition}, 
 			viewport::ViewportState
 		}, 
-		layout::PipelineDescriptorSetLayoutCreateInfo
+		layout::{PipelineLayoutCreateFlags, PipelineLayoutCreateInfo}
 	}
 };
 
@@ -41,7 +41,7 @@ use crate::{
 		render_command::RenderEngineCommand, 
 		render_thread::RenderThread
 	}, 
-	shader::{Shader, ShaderType}
+	shader::{Shader, ShaderType, descriptor_requirements::DescriptorRequirements}
 };
 
 #[derive(Debug)]
@@ -79,13 +79,13 @@ impl RenderThread {
 		let uuid = Uuid::now_v7();
 
 		let stages = shaders.iter()
-			.map(|s| self.get_shader_internal(s.clone()).unwrap())
+			.map(|s| self.get_shader_internal(s).unwrap())
 			.map(|s| s.entry_point.clone())
 			.map(|e| PipelineShaderStageCreateInfo::new(e));
 
 		let vertex_shader = self.get_shader_internal(
 			shaders.iter()
-				.find(|s| s.shader_type == ShaderType::Vertex).unwrap().clone()
+				.find(|s| s.shader_type == ShaderType::Vertex).unwrap()
 		).unwrap();
 		let vertex_input_state = Vertex3D::per_vertex().definition(&vertex_shader.entry_point).map_err(|_| ())?;
 
@@ -94,16 +94,20 @@ impl RenderThread {
 			..Default::default()
 		}.into();
 
+		let mut descriptor_requirements = DescriptorRequirements::empty();
+		let internal = shaders.iter().map(|s| self.get_shader_internal(s).unwrap());
+		for shader in internal {
+			descriptor_requirements = descriptor_requirements.merge_with(&shader.descriptor_requirements);
+		}
+
 		let layout = PipelineLayout::new(
 			self.device.clone(),
-			PipelineDescriptorSetLayoutCreateInfo::from_stages(
-				shaders.iter()
-					.map(|s| self.get_shader_internal(s.clone()).unwrap())
-					.map(|s| s.entry_point.clone())
-					.map(|e| PipelineShaderStageCreateInfo::new(e))
-					.collect::<Vec<_>>().iter()
-					.map(|i| i)
-			).into_pipeline_layout_create_info(self.device.clone()).map_err(|_| ())?
+			PipelineLayoutCreateInfo {
+				flags: PipelineLayoutCreateFlags::empty(),
+				set_layouts: descriptor_requirements.get_descriptor_layout(&self.device)?,
+				push_constant_ranges: Vec::new(),
+				..Default::default()
+			}
 		).map_err(|_| ())?;
 
 		let mut dynamic_state = HashSet::with_hasher(RandomState::default());
@@ -143,6 +147,7 @@ impl RenderThread {
 		let internal = PipelineInternal {
 			reference: Arc::downgrade(&reference),
 			pipeline: pipeline,
+			descriptor_requirements: descriptor_requirements,
 		};
 
 		self.pipelines.insert(uuid, internal);
