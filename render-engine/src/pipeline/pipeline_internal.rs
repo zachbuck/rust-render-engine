@@ -16,6 +16,7 @@ pub(crate) struct PipelineInternal {
 	pub(crate) reference: Weak<Pipeline>,
 
 	pub(crate) pipeline: Arc<GraphicsPipeline>,
+	#[expect(dead_code)]
 	pub(crate) descriptor_requirements: DescriptorRequirements,
 }
 

@@ -72,7 +72,7 @@ impl RenderThread {
 
 	fn create_texture(&mut self, fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>, x_size: u32, y_size: u32, data: Box<[u8]>, engine: Arc<RenderEngine>) -> Result<Arc<Texture>, ()> {
 		let uuid = Uuid::now_v7();
-		
+
 		let buffer = Buffer::from_iter(
 			self.buffer_allocator.clone(), 
 			BufferCreateInfo {

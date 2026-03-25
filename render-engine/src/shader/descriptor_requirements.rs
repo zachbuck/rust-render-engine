@@ -1,7 +1,14 @@
 
-use std::{collections::{BTreeMap, HashMap}, sync::Arc};
+use std::{
+	collections::{BTreeMap, HashMap}, 
+	sync::Arc
+};
 
-use vulkano::{descriptor_set::layout::{DescriptorBindingFlags, DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateFlags, DescriptorSetLayoutCreateInfo}, device::Device, shader::{EntryPoint, spirv::ExecutionModel}};
+use vulkano::{
+	descriptor_set::layout::{DescriptorBindingFlags, DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateFlags, DescriptorSetLayoutCreateInfo}, 
+	device::Device, 
+	shader::EntryPoint
+};
 
 use crate::shader::{SHADER_TYPES, ShaderType};
 

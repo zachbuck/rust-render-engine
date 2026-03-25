@@ -4,8 +4,10 @@ use std::{
 	io::Read
 };
 
+use image::open;
+
 use crate::{
-	mesh_data::{MeshData, Vertex3D}, pipeline::Pipeline, render_engine::{RenderEngine, RenderEngineCreateInfo}, render_surface::image_surface::ImageSurface, shader::{Shader, ShaderType}
+	mesh_data::{MeshData, Vertex3D}, pipeline::Pipeline, render_engine::{RenderEngine, RenderEngineCreateInfo}, render_surface::image_surface::ImageSurface, shader::{Shader, ShaderType}, texture::Texture
 };
 
 const VERTICES: [Vertex3D; 4] = [
@@ -23,6 +25,8 @@ const INDICES: [u16; 6] = [
 const VERTEX_PATH: &str = "./src/tests/test_scenes/texture_quad/vertex.glsl.vert";
 const FRAGMENT_PATH: &str = "./src/tests/test_scenes/texture_quad/fragment.glsl.frag";
 
+const TEXTURE_PATH: &str = "./src/tests/test_scenes/texture_quad/texture.png";
+
 #[test]
 fn render_scene() {
 	let create_info = RenderEngineCreateInfo::new()
@@ -31,9 +35,9 @@ fn render_scene() {
 		.with_spirv_compiler();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let image_surface = ImageSurface::new(&engine, 100, 100).unwrap().unwrap();
+	let _image_surface = ImageSurface::new(&engine, 200, 200).unwrap().unwrap();
 	
-	let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+	let _mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 
 	let mut file = File::open(VERTEX_PATH).unwrap();
 	let mut source = String::new();
@@ -47,5 +51,8 @@ fn render_scene() {
 	let binary = Shader::compile(&engine, FRAGMENT_PATH, ShaderType::Fragment, &source).unwrap();
 	let fragment_shader = Shader::new(&engine, binary).unwrap().unwrap();
 
-	let pipeline = Pipeline::new(&engine, &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
+	let _pipeline = Pipeline::new(&engine, &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
+
+ 	let texture_data = open(TEXTURE_PATH).unwrap().into_rgba8();
+	let _texture = Texture::new(&engine, &texture_data, texture_data.width(), texture_data.height()).unwrap().unwrap();
 }
