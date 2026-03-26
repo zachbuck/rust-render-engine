@@ -4,10 +4,10 @@ use std::{
 	io::Read
 };
 
-use image::open;
+use image::{ImageBuffer, Rgba, open};
 
 use crate::{
-	mesh_data::{MeshData, Vertex3D}, pipeline::Pipeline, render_engine::{RenderEngine, RenderEngineCreateInfo}, render_surface::image_surface::ImageSurface, shader::{Shader, ShaderType}, texture::Texture
+	mesh_data::{MeshData, Vertex3D}, pipeline::Pipeline, render_engine::{RenderEngine, RenderEngineCreateInfo}, render_surface::image_surface::ImageSurface, renderable::{descriptor_set_data::DescriptorData, render_object::RenderObject}, shader::{Shader, ShaderType}, texture::Texture
 };
 
 const VERTICES: [Vertex3D; 4] = [
@@ -35,9 +35,9 @@ fn render_scene() {
 		.with_spirv_compiler();
 	let engine = RenderEngine::new(create_info).unwrap();
 
-	let _image_surface = ImageSurface::new(&engine, 200, 200).unwrap().unwrap();
+	let image_surface = ImageSurface::new(&engine, 200, 200).unwrap().unwrap();
 	
-	let _mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+	let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 
 	let mut file = File::open(VERTEX_PATH).unwrap();
 	let mut source = String::new();
@@ -51,8 +51,18 @@ fn render_scene() {
 	let binary = Shader::compile(&engine, FRAGMENT_PATH, ShaderType::Fragment, &source).unwrap();
 	let fragment_shader = Shader::new(&engine, binary).unwrap().unwrap();
 
-	let _pipeline = Pipeline::new(&engine, &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
+	let pipeline = Pipeline::new(&engine, &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
 
  	let texture_data = open(TEXTURE_PATH).unwrap().into_rgba8();
-	let _texture = Texture::new(&engine, &texture_data, texture_data.width(), texture_data.height()).unwrap().unwrap();
+	let texture = Texture::new(&engine, &texture_data, texture_data.width(), texture_data.height()).unwrap().unwrap();
+
+	let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
+
+	render_object.update_descriptor(0, 0, DescriptorData::CombinedImageSampler(texture)).unwrap().unwrap();
+
+	image_surface.render_all().unwrap().unwrap();
+
+	let image_data = image_surface.get_image_surface_data().unwrap().unwrap();
+	let image = ImageBuffer::<Rgba<u8>, _>::from_raw(200, 200, image_data).unwrap();
+	image.save("./test.png").unwrap();
 }

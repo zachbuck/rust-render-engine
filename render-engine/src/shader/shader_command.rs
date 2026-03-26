@@ -8,13 +8,16 @@ use uuid::Uuid;
 use vulkano::shader::{ShaderModule, ShaderModuleCreateInfo};
 
 use crate::{
+	macros::error_map, 
 	render_engine::{
 		RenderEngine, 
 		render_command::RenderEngineCommand, 
-		render_thread::RenderThread
+		render_thread::RenderThread,
 	}, 
 	shader::{
-		Shader, descriptor_requirements::DescriptorRequirements, shader_internal::ShaderInternal
+		Shader, 
+		descriptor_requirements::DescriptorRequirements, 
+		shader_internal::ShaderInternal,
 	}
 };
 
@@ -52,7 +55,7 @@ impl RenderThread {
 			ShaderModule::new(
 				self.device.clone(),
 				ShaderModuleCreateInfo::new(shader_binary)
-			).map_err(|_| ())?
+			).map_err(error_map!())?
 		};
 
 		let entry_point = module.entry_point("main").unwrap();

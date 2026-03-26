@@ -9,10 +9,13 @@ use std::{
 
 use shaderc::Compiler;
 
-use crate::render_engine::{
-    create_info::RenderEngineCreateInfoFlags, 
-    render_command::RenderEngineCommand, 
-    render_thread::RenderThread
+use crate::{
+	macros::error_map,
+	render_engine::{
+		create_info::RenderEngineCreateInfoFlags, 
+    	render_command::RenderEngineCommand, 
+    	render_thread::RenderThread
+	}
 };
 
 pub use create_info::RenderEngineCreateInfo as RenderEngineCreateInfo;
@@ -58,13 +61,13 @@ impl RenderEngine {
         ThreadBuilder::new()
             .name("Render Thread".to_string())
             .spawn(run_render_thread!(create_info, command_r, init_s))
-            .map_err(|_| ())?;
+            .map_err(error_map!())?;
 
         init_r.recv().unwrap()?;
 
         let compiler;
         if flags & RenderEngineCreateInfoFlags::InitSpirvCompiler as u64 != 0 {
-            compiler = Some(Compiler::new().map_err(|_| ())?)
+            compiler = Some(Compiler::new().map_err(error_map!())?)
         } else {
             compiler = None;
         }

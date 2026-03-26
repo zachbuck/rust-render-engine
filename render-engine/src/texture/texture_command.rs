@@ -14,26 +14,28 @@ use vulkano::{
 		ImageCreateInfo, 
 		ImageType, 
 		ImageUsage, 
-		view::ImageView
+		sampler::{Filter, Sampler, SamplerCreateInfo}, 
+		view::ImageView,
 	}, 
 	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}, 
 	sync::{
 		self, 
 		GpuFuture, 
-		future::FenceSignalFuture
-	}
+		future::FenceSignalFuture,
+	},
 };
 
 use crate::{
+	macros::error_map, 
 	render_engine::{
 		RenderEngine, 
 		render_command::RenderEngineCommand, 
-		render_thread::RenderThread
+		render_thread::RenderThread,
 	}, 
 	texture::{
 		Texture, 
-		texture_internal::TextureInternal
-	}
+		texture_internal::TextureInternal,
+	},
 };
 
 #[derive(Debug)]
@@ -84,7 +86,7 @@ impl RenderThread {
 				..Default::default()
 			}, 
 			data.iter().map(|b| *b),
-		).map_err(|_| ())?;
+		).map_err(error_map!())?;
 
 		let image = Image::new(
 			self.buffer_allocator.clone(), 
@@ -99,7 +101,7 @@ impl RenderThread {
 				memory_type_filter: MemoryTypeFilter::PREFER_DEVICE,
 				..Default::default()
 			}
-		).map_err(|_| ())?;
+		).map_err(error_map!())?;
 
 		let queue = self.get_transfer_queue();
 
@@ -107,12 +109,12 @@ impl RenderThread {
 			self.command_allocator.clone(), 
 			queue.queue_family_index(), 
 			CommandBufferUsage::OneTimeSubmit,
-		).map_err(|_| ())?;
+		).map_err(error_map!())?;
 
 		builder
-			.copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(buffer, image.clone())).map_err(|_| ())?;
+			.copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(buffer, image.clone())).map_err(error_map!())?;
 
-		let command_buffer = builder.build().map_err(|_| ())?;
+		let command_buffer = builder.build().map_err(error_map!())?;
 
 		let mut future = self.transfer_future.take().unwrap();
 		future.cleanup_finished();
@@ -127,9 +129,22 @@ impl RenderThread {
 
 		let reference = Arc::new(Texture { uuid, render_engine: engine, y_size, x_size });
 
-		let image_view = ImageView::new_default(image.clone()).map_err(|_| ())?;
+		let image_view = ImageView::new_default(image.clone()).map_err(error_map!())?;
 
-		let internal = TextureInternal { reference: Arc::downgrade(&reference), image: image_view };
+		let sampler = Sampler::new(
+			self.device.clone(), 
+			SamplerCreateInfo {
+				mag_filter: Filter::Nearest,
+				min_filter: Filter::Nearest,
+				..Default::default()
+			}
+		).map_err(error_map!())?;
+
+		let internal = TextureInternal { 
+			reference: Arc::downgrade(&reference), 
+			image: image_view,
+			sampler: sampler,
+		};
 
 		self.textures.insert(uuid, internal);
 

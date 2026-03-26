@@ -28,6 +28,8 @@
 - let mesh_data have several buffers for vertices
 - seperate samplers from textures?
 - allow for descriptor arrays
+- add different sampling options for textures
+- move tests around because they bother me the way they are organized
 
 ## In Progress
 

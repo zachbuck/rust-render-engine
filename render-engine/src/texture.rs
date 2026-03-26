@@ -17,8 +17,9 @@ use crate::{
 pub(crate) mod texture_command;
 pub(crate) mod texture_internal;
 
+#[derive(Debug)]
 pub struct Texture {
-	uuid: Uuid,
+	pub(crate) uuid: Uuid,
 	render_engine: Arc<RenderEngine>,
 
 	pub y_size: u32,

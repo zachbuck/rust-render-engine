@@ -1,12 +1,12 @@
 
-use std::sync::Arc;
+use std::collections::HashMap;
 
+use uuid::Uuid;
 use vulkano::shader::EntryPoint;
 
 use crate::{
 	render_engine::render_thread::RenderThread, 
 	shader::{
-		Shader, 
 		ShaderType, 
 		descriptor_requirements::DescriptorRequirements
 	}
@@ -25,6 +25,8 @@ impl ShaderInternal {
 
 impl RenderThread {
 	#[inline]
-	pub(crate) fn get_shader_internal(&self, reference: &Arc<Shader>) -> Option<&ShaderInternal> { self.shaders.get(&reference.uuid) }
+	pub(crate) fn get_shader_internal<'a>(shaders: &'a HashMap<Uuid, ShaderInternal>, uuid: &Uuid) -> Option<&'a ShaderInternal> { 
+		shaders.get(uuid)
+	}
 }
 

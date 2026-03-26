@@ -27,6 +27,7 @@ pub struct Pipeline {
 	render_engine: Arc<RenderEngine>,
 
 	pub shaders: Box<[Arc<Shader>]>,
+	pub(crate) descriptor_requirements: DescriptorRequirements,
 }
 
 impl Pipeline {

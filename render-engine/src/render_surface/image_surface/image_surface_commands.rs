@@ -23,12 +23,11 @@ use vulkano::{
 };
 
 use crate::{
-	render_engine::{
+	macros::error_map, render_engine::{
 		RenderEngine, 
 		render_command::RenderEngineCommand, 
 		render_thread::RenderThread
-	}, 
-	render_surface::image_surface::{
+	}, render_surface::image_surface::{
 		ImageSurface, 
 		image_surface_internal::ImageSurfaceInternal
 	}
@@ -86,9 +85,9 @@ impl RenderThread {
 				memory_type_filter: MemoryTypeFilter::PREFER_DEVICE,
 				..Default::default()
 			}
-		).map_err(|_| ())?;
+		).map_err(error_map!())?;
 
-		let image_view = ImageView::new_default(image).map_err(|_| ())?;
+		let image_view = ImageView::new_default(image).map_err(error_map!())?;
 
 		let internal = Box::new(ImageSurfaceInternal {
 			image: image_view,

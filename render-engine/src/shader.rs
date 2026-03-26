@@ -1,24 +1,26 @@
 
 use std::sync::{
 	Arc, 
-	mpsc::sync_channel
+	mpsc::sync_channel,
 };
 
 use shaderc::ShaderKind;
 use uuid::Uuid;
 use vulkano::shader::{
-	ShaderStages, spirv::ExecutionModel
+	ShaderStages, 
+	spirv::ExecutionModel,
 };
 
 use crate::{
+	macros::error_map, 
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture
+		engine_future::EngineFuture,
 	}, 
 	shader::{
 		descriptor_requirements::DescriptorRequirements, 
-		shader_command::ShaderCommand
-	}
+		shader_command::ShaderCommand,
+	},
 };
 
 pub(crate) mod descriptor_requirements;
@@ -27,7 +29,7 @@ pub(crate) mod shader_command;
 
 #[derive(Debug)]
 pub struct Shader {
-	uuid: Uuid,
+	pub(crate) uuid: Uuid,
 	render_engine: Arc<RenderEngine>,
 
 	pub shader_type: ShaderType,
@@ -56,7 +58,7 @@ impl Shader {
 			shader_name, 
 			"main", 
 			None
-		).map_err(|_| ())?;
+		).map_err(error_map!())?;
 
 		return Ok(artifact.as_binary().to_owned().into_boxed_slice());
 	}

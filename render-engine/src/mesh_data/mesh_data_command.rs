@@ -11,12 +11,11 @@ use vulkano::{
 };
 
 use crate::{
-	mesh_data::{
+	macros::error_map, mesh_data::{
 		MeshData, 
 		Vertex3D, 
 		mesh_data_internal::MeshDataInternal
-	}, 
-	render_engine::{
+	}, render_engine::{
 		RenderEngine, 
 		render_command::RenderEngineCommand, 
 		render_thread::RenderThread
@@ -69,7 +68,7 @@ impl RenderThread {
 				..Default::default()
 			},
 			vertices.iter().map(|v| *v)
-		).map_err(|_| ())?;
+		).map_err(error_map!())?;
 
 		let indices = Buffer::from_iter(
 			self.buffer_allocator.clone(),
@@ -82,7 +81,7 @@ impl RenderThread {
 				..Default::default()
 			},
 			indices.iter().map(|i| *i)
-		).map_err(|_| ())?;
+		).map_err(error_map!())?;
 
 		let reference = Arc::new(MeshData { uuid, render_engine: engine });
 

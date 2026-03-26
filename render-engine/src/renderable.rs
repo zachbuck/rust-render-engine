@@ -8,6 +8,7 @@ use vulkano::command_buffer::{
 
 use crate::render_engine::render_resources::RenderResources;
 
+pub mod descriptor_set_data;
 pub mod render_object;
 
 pub(crate) trait Renderable: Any {
@@ -15,6 +16,5 @@ pub(crate) trait Renderable: Any {
 
 	#[expect(unused)]
 	fn as_any(&self) -> &dyn Any;
-	#[expect(unused)]
 	fn as_mut_any(&mut self) -> &mut dyn Any;
 }

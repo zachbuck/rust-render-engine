@@ -31,17 +31,14 @@ use vulkano::{
 };
 
 use crate::{
-	mesh_data::Vertex3D, 
-	pipeline::{
+	macros::error_map, mesh_data::Vertex3D, pipeline::{
 		Pipeline, 
 		pipeline_internal::PipelineInternal
-	}, 
-	render_engine::{
+	}, render_engine::{
 		RenderEngine, 
 		render_command::RenderEngineCommand, 
 		render_thread::RenderThread
-	}, 
-	shader::{Shader, ShaderType, descriptor_requirements::DescriptorRequirements}
+	}, shader::{Shader, ShaderType, descriptor_requirements::DescriptorRequirements}
 };
 
 #[derive(Debug)]
@@ -79,15 +76,17 @@ impl RenderThread {
 		let uuid = Uuid::now_v7();
 
 		let stages = shaders.iter()
-			.map(|s| self.get_shader_internal(s).unwrap())
+			.map(|s| Self::get_shader_internal(&self.shaders, &s.uuid).unwrap())
 			.map(|s| s.entry_point.clone())
 			.map(|e| PipelineShaderStageCreateInfo::new(e));
 
-		let vertex_shader = self.get_shader_internal(
-			shaders.iter()
+		let vertex_shader = Self::get_shader_internal(
+			&self.shaders,
+			&shaders.iter()
 				.find(|s| s.shader_type == ShaderType::Vertex).unwrap()
+				.uuid
 		).unwrap();
-		let vertex_input_state = Vertex3D::per_vertex().definition(&vertex_shader.entry_point).map_err(|_| ())?;
+		let vertex_input_state = Vertex3D::per_vertex().definition(&vertex_shader.entry_point).map_err(error_map!())?;
 
 		let subpass = PipelineRenderingCreateInfo {
 			color_attachment_formats: vec![Some(Format::R8G8B8A8_UNORM)],
@@ -95,20 +94,21 @@ impl RenderThread {
 		}.into();
 
 		let mut descriptor_requirements = DescriptorRequirements::empty();
-		let internal = shaders.iter().map(|s| self.get_shader_internal(s).unwrap());
+		let internal = shaders.iter().map(|s| Self::get_shader_internal(&self.shaders, &s.uuid).unwrap());
 		for shader in internal {
 			descriptor_requirements = descriptor_requirements.merge_with(&shader.descriptor_requirements);
 		}
 
+		let descriptor_set_layouts = descriptor_requirements.get_descriptor_layout(&self.device)?;
 		let layout = PipelineLayout::new(
 			self.device.clone(),
 			PipelineLayoutCreateInfo {
 				flags: PipelineLayoutCreateFlags::empty(),
-				set_layouts: descriptor_requirements.get_descriptor_layout(&self.device)?,
+				set_layouts: descriptor_set_layouts.clone(),
 				push_constant_ranges: Vec::new(),
 				..Default::default()
 			}
-		).map_err(|_| ())?;
+		).map_err(error_map!())?;
 
 		let mut dynamic_state = HashSet::with_hasher(RandomState::default());
 		dynamic_state.insert(DynamicState::ViewportWithCount);
@@ -136,18 +136,19 @@ impl RenderThread {
 				subpass: Some(subpass),
 				..GraphicsPipelineCreateInfo::layout(layout)
 			}
-		).map_err(|_| ())?;
+		).map_err(error_map!())?;
 
 		let reference = Arc::new(Pipeline {
 			uuid: uuid,
 			render_engine: engine,
 			shaders: shaders.clone(),
+			descriptor_requirements: descriptor_requirements,
 		});
 
 		let internal = PipelineInternal {
 			reference: Arc::downgrade(&reference),
 			pipeline: pipeline,
-			descriptor_requirements: descriptor_requirements,
+			descriptor_layouts: descriptor_set_layouts.into_boxed_slice(),
 		};
 
 		self.pipelines.insert(uuid, internal);

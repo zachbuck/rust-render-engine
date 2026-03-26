@@ -5,32 +5,38 @@ use std::{
 };
 
 use vulkano::{
-	descriptor_set::layout::{DescriptorBindingFlags, DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateFlags, DescriptorSetLayoutCreateInfo}, 
+	descriptor_set::{
+		layout::{DescriptorBindingFlags, DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateFlags, DescriptorSetLayoutCreateInfo}
+	}, 
 	device::Device, 
 	shader::EntryPoint
 };
 
-use crate::shader::{SHADER_TYPES, ShaderType};
+use crate::{
+	macros::error_map, 
+	shader::{SHADER_TYPES, ShaderType},
+};
 
 #[derive(Debug)]
+#[derive(Clone)]
 pub(crate) struct DescriptorRequirements {
-	sets: Box<[DescriptorSetRequirements]>,
+	pub(crate) sets: Box<[DescriptorSetRequirements]>,
 }
 
 #[derive(Debug)]
 #[derive(Clone)]
 pub(crate) struct DescriptorSetRequirements {
-	set: u32,
+	pub(crate) set: u32,
 
-	bindings: Box<[DescriptorBindingRequirements]>,
+	pub(crate) bindings: Box<[DescriptorBindingRequirements]>,
 }
 
 #[derive(Debug)]
 #[derive(Clone, Copy)]
 pub(crate) struct DescriptorBindingRequirements {
-	binding: u32,
+	pub(crate) binding: u32,
 
-	descriptor_type: DescriptorType,
+	pub(crate) descriptor_type: DescriptorType,
 	stages: ShaderStages,
 }
 
@@ -225,7 +231,7 @@ impl DescriptorRequirements {
 					bindings: bindings,
 					..Default::default()
 				}
-			).map_err(|_| ())?;
+			).map_err(error_map!())?;
 
 			out.push(set_layout);
 		}

@@ -29,15 +29,18 @@ use vulkano::{
 };
 
 use crate::{
-    mesh_data::mesh_data_internal::MeshDataInternal, 
-    pipeline::pipeline_internal::PipelineInternal, 
-    render_engine::{
+    macros::error_map, 
+	mesh_data::mesh_data_internal::MeshDataInternal, 
+	pipeline::pipeline_internal::PipelineInternal, 
+	render_engine::{
         RenderEngineCreateInfo, 
-        render_command::RenderEngineCommand
+        render_command::RenderEngineCommand, 
+		render_resources::DefaultResources,
     }, 
-    render_surface::RenderSurface, 
-    renderable::Renderable, 
-    shader::shader_internal::ShaderInternal, texture::texture_internal::TextureInternal
+	render_surface::RenderSurface, 
+	renderable::Renderable, 
+	shader::shader_internal::ShaderInternal, 
+	texture::texture_internal::TextureInternal,
 };
 
 pub(crate) struct RenderThread {
@@ -47,6 +50,8 @@ pub(crate) struct RenderThread {
     pub(crate) shaders: HashMap<Uuid, ShaderInternal>,
 	pub(crate) pipelines: HashMap<Uuid, PipelineInternal>,
     pub(crate) textures: HashMap<Uuid, TextureInternal>,
+
+	pub(crate) default_resources: DefaultResources,
 
     pub(crate) renderables: HashMap<Uuid, Box<dyn Renderable>>,
 
@@ -60,7 +65,6 @@ pub(crate) struct RenderThread {
 
 	pub(crate) buffer_allocator: Arc<StandardMemoryAllocator>,
 	pub(crate) command_allocator: Arc<StandardCommandBufferAllocator>,
-    #[expect(dead_code)]
 	pub(crate) descriptor_allocator: Arc<StandardDescriptorSetAllocator>,
 
     pub(super) should_close: bool,
@@ -68,7 +72,7 @@ pub(crate) struct RenderThread {
 
 impl RenderThread {
     pub(super) fn new(create_info: RenderEngineCreateInfo, command_channel: Receiver<RenderEngineCommand>) -> Result<Self, ()> {
-        let library = VulkanLibrary::new().map_err(|_| ())?;
+        let library = VulkanLibrary::new().map_err(error_map!())?;
 
         let instance = Instance::new(
             library,
@@ -83,9 +87,9 @@ impl RenderThread {
 
                 ..Default::default()
             }
-        ).map_err(|_| ())?;
+        ).map_err(error_map!())?;
 
-        let physical_device = instance.enumerate_physical_devices().map_err(|_| ())?
+        let physical_device = instance.enumerate_physical_devices().map_err(error_map!())?
             // Filter for devices that support requested device extensions
             .filter(|pd| pd.supported_extensions().contains(&create_info.device_extensions))
             // Filter for devices that support graphics operations
@@ -141,7 +145,7 @@ impl RenderThread {
                 enabled_features: create_info.device_features,
                 ..Default::default()
             }
-        ).map_err(|_| ())?;
+        ).map_err(error_map!())?;
 
         let graphics_queue = queues.next().unwrap();
         let transfer_queue = queues.next().unwrap_or(graphics_queue.clone());
@@ -149,31 +153,35 @@ impl RenderThread {
 		let buffer_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
 		let command_allocator = Arc::new(StandardCommandBufferAllocator::new(device.clone(), Default::default()));
 		let descriptor_allocator = Arc::new(StandardDescriptorSetAllocator::new(device.clone(), Default::default()));
+		
+		let default_resources = DefaultResources::generate(&device, &transfer_queue, &buffer_allocator, &command_allocator)?;
 
         Ok(RenderThread {
-            command_channel:    	command_channel,
+			command_channel:    	command_channel,
 
 			mesh_data:				HashMap::new(),
-            shaders:                HashMap::new(),
+			shaders:                HashMap::new(),
 			pipelines:				HashMap::new(),
-            textures:               HashMap::new(),
+			textures:               HashMap::new(),
 
-            renderables:            HashMap::new(),
+			default_resources:		default_resources,
 
-            render_surfaces:        HashMap::new(),
+			renderables:            HashMap::new(),
 
-            device:             	device.clone(),
-            graphics_queue:     	graphics_queue,
-            graphics_future:    	Some(sync::now(device.clone()).boxed_send()),
-            transfer_queue:     	transfer_queue,
-            transfer_future:    	Some(sync::now(device.clone()).boxed_send()),
+			render_surfaces:        HashMap::new(),
+
+			device:             	device.clone(),
+			graphics_queue:     	graphics_queue,
+			graphics_future:    	Some(sync::now(device.clone()).boxed_send()),
+			transfer_queue:     	transfer_queue,
+			transfer_future:    	Some(sync::now(device.clone()).boxed_send()),
 
 			buffer_allocator: 		buffer_allocator,
 			command_allocator: 		command_allocator,
 			descriptor_allocator: 	descriptor_allocator,
 			
-            should_close:       	false,
-        })
+			should_close:       	false,
+		})
     }
 
     // boilerplate for later when multiple queues potentially exist

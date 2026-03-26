@@ -7,10 +7,9 @@ use vulkano::{
 	sync::{self, GpuFuture}
 };
 
-use crate::render_engine::{
-	render_command::RenderEngineCommand, 
-	render_thread::RenderThread
-};
+use crate::{macros::error_map, render_engine::{
+	render_command::RenderEngineCommand, render_resources::RenderResources, render_thread::RenderThread
+}};
 
 #[derive(Debug)]
 pub(crate) enum RenderSurfaceCommand {
@@ -43,9 +42,9 @@ impl RenderThread {
 			self.command_allocator.clone(), 
 			queue.queue_family_index(), 
 			CommandBufferUsage::OneTimeSubmit,
-		).map_err(|_| ())?;
+		).map_err(error_map!())?;
 
-		let render_resources = self.generate_render_resources();
+		let render_resources = RenderResources::new(&self.mesh_data, &self.pipelines, &self.textures);
 
 		render_surface.begin_rendering(&mut builder)?;
 

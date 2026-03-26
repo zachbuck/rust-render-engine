@@ -7,7 +7,7 @@ use vulkano::{
 };
 
 use crate::{
-	mesh_data::{MeshData, Vertex3D}, 
+	macros::error_map, mesh_data::{MeshData, Vertex3D} 
 };
 
 #[derive(Debug)]
@@ -22,8 +22,8 @@ impl MeshDataInternal {
 	#[inline]
 	pub(crate) fn bind<'a>(&self, builder: &'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<&'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, ()> {
 		builder
-			.bind_vertex_buffers(0, self.vertices.clone()).map_err(|_| ())?
-			.bind_index_buffer(self.indices.clone()).map_err(|_| ())?;
+			.bind_vertex_buffers(0, self.vertices.clone()).map_err(error_map!())?
+			.bind_index_buffer(self.indices.clone()).map_err(error_map!())?;
 
 		return Ok(builder)
 	}
