@@ -5,8 +5,7 @@ use std::{
 };
 
 use image::{ImageBuffer, Rgba, open};
-
-use crate::{
+use render_engine::{
 	mesh_data::{MeshData, Vertex3D}, 
 	pipeline::Pipeline, 
 	render_engine::{RenderEngine, RenderEngineCreateInfo}, 
@@ -25,10 +24,10 @@ const INDICES: [u16; 3] = [
 	0, 1, 2
 ];
 
-const VERTEX_PATH: &str = "./src/tests/test_scenes/basic_triangle/vertex.glsl.vert";
-const FRAGMENT_PATH: &str = "./src/tests/test_scenes/basic_triangle/fragment.glsl.frag";
+const VERTEX_PATH: &str = "./tests/basic_triangle/vertex.glsl.vert";
+const FRAGMENT_PATH: &str = "./tests/basic_triangle/fragment.glsl.frag";
 
-const TEST_IMAGE_PATH: &str = "./src/tests/test_scenes/basic_triangle/test.png";
+const TEST_IMAGE_PATH: &str = "./tests/basic_triangle/test.png";
 
 #[test]
 fn render_scene() {

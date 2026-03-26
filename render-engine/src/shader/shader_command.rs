@@ -29,6 +29,9 @@ pub(crate) enum ShaderCommand {
 		binary: Box<[u32]>,
 		engine: Arc<RenderEngine>,
 	},
+	GetShaders {
+		sender: SyncSender<Result<Box<[Arc<Shader>]>, ()>>,
+	},
 	DropShader {
 		uuid: Uuid,
 	},
@@ -44,6 +47,7 @@ impl RenderThread {
 	pub(crate) fn process_shader_command(&mut self, command: ShaderCommand) {
 		match command {
 			ShaderCommand::CreateShader { sender, binary , engine} => { let _ = sender.send(self.create_shader(binary.as_ref(), engine)); },
+			ShaderCommand::GetShaders { sender } => { let _ = sender.send(self.get_shaders()); }
 			ShaderCommand::DropShader { uuid } => self.drop_shader(uuid),
 		}
 	}
@@ -58,23 +62,32 @@ impl RenderThread {
 			).map_err(error_map!())?
 		};
 
-		let entry_point = module.entry_point("main").unwrap();
+		let entry_point = module.entry_point("main").ok_or(())?;
+
+		let shader_type = entry_point.info().execution_model.into();
+
+		let reference = Arc::new(Shader {
+			uuid,
+			render_engine: engine,
+			shader_type: shader_type,
+			descriptor_requirements: DescriptorRequirements::from_vulkano(&entry_point).map_err(error_map!())?
+		});
 
 		let internal = ShaderInternal { 
+			reference: Arc::downgrade(&reference),
+
 			entry_point: entry_point.clone(),
 			descriptor_requirements: DescriptorRequirements::from_vulkano(&entry_point)?,
 		};
 
-		let shader_type = internal.get_shader_type();
-
 		self.shaders.insert(uuid, internal);
 
-		Ok(Arc::new(Shader { 
-			uuid, 
-			render_engine: engine, 
-			shader_type: shader_type,
-			descriptor_requirements: DescriptorRequirements::from_vulkano(&entry_point).unwrap(),
-		}))
+		return Ok(reference)
+
+	}
+
+	fn get_shaders(&mut self) -> Result<Box<[Arc<Shader>]>, ()> {
+		Ok(self.shaders.values().filter_map(|s| s.reference.upgrade()).collect())
 	}
 
 	fn drop_shader(&mut self, uuid: Uuid) {

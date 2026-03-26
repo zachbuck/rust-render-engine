@@ -2,8 +2,8 @@
 macro_rules! error_map {
 	() => {
 		|e| { 
-			if cfg!(test) {
-				println!("{:?}", e); 
+			if cfg!(debug_assertions) {
+				println!("ERROR at `render-engine\\{}:{}:{}:`: \n\t{:?}", file!(), line!(), column!(), e); 
 			}
 			() 
 		}

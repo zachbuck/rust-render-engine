@@ -1,2 +1,0 @@
-
-mod render_object;

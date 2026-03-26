@@ -5,9 +5,17 @@ use std::{
 };
 
 use image::{ImageBuffer, Rgba, open};
-
-use crate::{
-	mesh_data::{MeshData, Vertex3D}, pipeline::Pipeline, render_engine::{RenderEngine, RenderEngineCreateInfo}, render_surface::image_surface::ImageSurface, renderable::{descriptor_set_data::DescriptorData, render_object::RenderObject}, shader::{Shader, ShaderType}, texture::Texture
+use render_engine::{
+	mesh_data::{MeshData, Vertex3D}, 
+	pipeline::Pipeline, 
+	render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+	render_surface::image_surface::ImageSurface, 
+	renderable::{
+		descriptor_set_data::DescriptorData, 
+		render_object::RenderObject,
+	}, 
+	shader::{Shader, ShaderType}, 
+	texture::Texture,
 };
 
 const VERTICES: [Vertex3D; 4] = [
@@ -22,10 +30,10 @@ const INDICES: [u16; 6] = [
 	2, 1, 0,
 ];
 
-const VERTEX_PATH: &str = "./src/tests/test_scenes/texture_quad/vertex.glsl.vert";
-const FRAGMENT_PATH: &str = "./src/tests/test_scenes/texture_quad/fragment.glsl.frag";
+const VERTEX_PATH: &str = "./tests/texture_quad/vertex.glsl.vert";
+const FRAGMENT_PATH: &str = "./tests/texture_quad/fragment.glsl.frag";
 
-const TEXTURE_PATH: &str = "./src/tests/test_scenes/texture_quad/texture.png";
+const TEXTURE_PATH: &str = "./tests/texture_quad/texture.png";
 
 #[test]
 fn render_scene() {

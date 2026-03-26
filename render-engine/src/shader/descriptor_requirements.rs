@@ -81,7 +81,7 @@ impl DescriptorRequirements {
 					stages: ShaderStages::from_shader_type(entry_point.info().execution_model.into()),
 				});
 			} else {
-				return Err(())
+				todo!("Only Combined Image Sampler descriptors are currently supported.")
 			}
 		}
 

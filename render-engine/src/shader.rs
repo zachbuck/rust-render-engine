@@ -76,6 +76,18 @@ impl Shader {
 
 		return EngineFuture::new_single(recv);
 	}
+
+	pub fn get_all(render_engine: &Arc<RenderEngine>) -> EngineFuture<Result<Box<[Arc<Shader>]>, ()>> {
+		let (send, recv) = sync_channel(1);
+
+		render_engine.command_channel.send(
+			ShaderCommand::GetShaders { 
+				sender: send
+			}.into()
+		).unwrap();
+		
+		EngineFuture::new_single(recv)
+	}
 }
 
 impl Drop for Shader {
@@ -102,7 +114,7 @@ impl From<ExecutionModel> for ShaderType {
 		match value {
 			ExecutionModel::Vertex		=> ShaderType::Vertex,
 			ExecutionModel::Fragment 	=> ShaderType::Fragment,
-			_ => panic!("Unknown ExecutionModel type: '{:?}'", value),
+			_ => todo!("Currently only Vertex and Fragment shaders are currently supported."),
 		}
 	}
 }
@@ -113,5 +125,136 @@ impl Into<ShaderStages> for ShaderType {
 			ShaderType::Vertex 		=> ShaderStages::VERTEX,
 			ShaderType::Fragment 	=> ShaderStages::FRAGMENT,
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::{render_engine::{RenderEngine, RenderEngineCreateInfo}, shader::{Shader, ShaderType}};
+
+	const VERTEX_SOURCE: &str = "
+		#version 460
+
+		void main() {
+			gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+		}
+	";
+
+	const VERTEX_BINARY: [u32; 188] = [
+		0x07230203, 0x00010000, 0x000D000B, 0x00000015, 0x00000000, 
+		0x00020011, 0x00000001, 0x0006000B, 0x00000001, 0x4C534C47, 
+		0x6474732E, 0x3035342E, 0x00000000, 0x0003000E, 0x00000000, 
+		0x00000001, 0x0006000F, 0x00000000, 0x00000004, 0x6E69616D, 
+		0x00000000, 0x0000000D, 0x00030003, 0x00000002, 0x000001CC, 
+		0x000A0004, 0x475F4C47, 0x4C474F4F, 0x70635F45, 0x74735F70, 
+		0x5F656C79, 0x656E696C, 0x7269645F, 0x69746365, 0x00006576, 
+		0x00080004, 0x475F4C47, 0x4C474F4F, 0x6E695F45, 0x64756C63, 
+		0x69645F65, 0x74636572, 0x00657669, 0x00040005, 0x00000004, 
+		0x6E69616D, 0x00000000, 0x00060005, 0x0000000B, 0x505F6C67, 
+		0x65567265, 0x78657472, 0x00000000, 0x00060006, 0x0000000B, 
+		0x00000000, 0x505F6C67, 0x7469736F, 0x006E6F69, 0x00070006, 
+		0x0000000B, 0x00000001, 0x505F6C67, 0x746E696F, 0x657A6953, 
+		0x00000000, 0x00070006, 0x0000000B, 0x00000002, 0x435F6C67, 
+		0x4470696C, 0x61747369, 0x0065636E, 0x00070006, 0x0000000B, 
+		0x00000003, 0x435F6C67, 0x446C6C75, 0x61747369, 0x0065636E, 
+		0x00030005, 0x0000000D, 0x00000000, 0x00030047, 0x0000000B, 
+		0x00000002, 0x00050048, 0x0000000B, 0x00000000, 0x0000000B, 
+		0x00000000, 0x00050048, 0x0000000B, 0x00000001, 0x0000000B, 
+		0x00000001, 0x00050048, 0x0000000B, 0x00000002, 0x0000000B,
+		0x00000003, 0x00050048, 0x0000000B, 0x00000003, 0x0000000B, 
+		0x00000004, 0x00020013, 0x00000002, 0x00030021, 0x00000003,
+		0x00000002, 0x00030016, 0x00000006, 0x00000020, 0x00040017, 
+		0x00000007, 0x00000006, 0x00000004, 0x00040015, 0x00000008,
+		0x00000020, 0x00000000, 0x0004002B, 0x00000008, 0x00000009, 
+		0x00000001, 0x0004001C, 0x0000000A, 0x00000006, 0x00000009,
+		0x0006001E, 0x0000000B, 0x00000007, 0x00000006, 0x0000000A, 
+		0x0000000A, 0x00040020, 0x0000000C, 0x00000003, 0x0000000B,
+		0x0004003B, 0x0000000C, 0x0000000D, 0x00000003, 0x00040015, 
+		0x0000000E, 0x00000020, 0x00000001, 0x0004002B, 0x0000000E,
+		0x0000000F, 0x00000000, 0x0004002B, 0x00000006, 0x00000010, 
+		0x00000000, 0x0004002B, 0x00000006, 0x00000011, 0x3F800000,
+		0x0007002C, 0x00000007, 0x00000012, 0x00000010, 0x00000010, 
+		0x00000010, 0x00000011, 0x00040020, 0x00000013, 0x00000003,
+		0x00000007, 0x00050036, 0x00000002, 0x00000004, 0x00000000, 
+		0x00000003, 0x000200F8, 0x00000005, 0x00050041, 0x00000013,
+		0x00000014, 0x0000000D, 0x0000000F, 0x0003003E, 0x00000014, 
+		0x00000012, 0x000100FD, 0x00010038, 
+	];
+
+	const ERROR_SOURCE: &str = "
+		#version 460
+
+		void main() {
+			gl_Position = vec4(0.0, 0.0, 0.0);
+		}
+	";
+
+	#[test]
+	/// Ensure that `Shader::compile()` is working as expected.
+	fn compile_shader() {
+		let create_info = RenderEngineCreateInfo::new()
+			.with_spirv_compiler();
+		let engine = RenderEngine::new(create_info).unwrap();
+
+		let binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
+
+		assert!(binary.len() == VERTEX_BINARY.len());
+		for i in 0..binary.len() {
+			assert!(binary[i] == VERTEX_BINARY[i]);
+		}
+	}
+
+	#[test]
+	/// Ensure that `Shader::compile()` returns `Err(())` on incorrect code submission.
+	fn compile_shader_incorrect_code() {
+		let create_info = RenderEngineCreateInfo::new()
+			.with_spirv_compiler();
+		let engine = RenderEngine::new(create_info).unwrap();
+
+		let result = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, ERROR_SOURCE);
+
+		assert!(result.is_err_and(|e| e == ()));
+	}
+
+	#[test]
+	/// Ensure that `Shader::compile()` returns `Err(())` if `RenderEngine` is created without a SPIR-V compiler.
+	fn compile_shader_no_spirv_compiler() {
+		let create_info = RenderEngineCreateInfo::new();
+		let engine = RenderEngine::new(create_info).unwrap();
+
+		let result = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE);
+
+		assert!(result.is_err_and(|e| e == ()));
+	}
+
+	#[test]
+	/// Ensure that `Shader::new()` and `Shader::drop()` are working as expected.
+	fn new_shader() {
+		let create_info = RenderEngineCreateInfo::new();
+		let engine = RenderEngine::new(create_info).unwrap();
+
+		let shader = Shader::new(&engine, Box::new(VERTEX_BINARY)).unwrap().unwrap();
+
+		drop(shader);
+
+		let shader_list = Shader::get_all(&engine).unwrap().unwrap();
+
+		assert!(shader_list.len() == 0);
+	}
+
+	#[test]
+	/// Ensure that `Shader::get_all()` is working as expected.
+	fn get_all() {
+		let create_info = RenderEngineCreateInfo::new();
+		let engine = RenderEngine::new(create_info).unwrap();
+
+		let shader = Shader::new(&engine, Box::new(VERTEX_BINARY)).unwrap().unwrap();
+
+		let shader_list = Shader::get_all(&engine).unwrap().unwrap();
+
+		assert!(shader_list.len() == 1);
+		assert!(Arc::ptr_eq(&shader, &shader_list[0]));
 	}
 }
