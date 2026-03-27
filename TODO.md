@@ -9,7 +9,6 @@
 - Cameras, Projection
 - Windows
 - Viewports
-- Uniforms
 - Descriptors Generally
 - push constants
 - caching of shaders / pipelines
@@ -30,3 +29,5 @@
 - add different sampling options for textures
 
 ## In Progress
+
+- Uniforms

@@ -39,7 +39,7 @@ const TEXTURE_PATH: &str = "./tests/texture_quad/texture.png";
 fn render_scene() {
 	let create_info = RenderEngineCreateInfo::new()
 		.with_app_name("Texture Quad".to_string())
-		.with_app_vers(1, 0, 0)
+		.with_app_vers(0, 1, 0)
 		.with_spirv_compiler();
 	let engine = RenderEngine::new(create_info).unwrap();
 
