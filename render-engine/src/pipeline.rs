@@ -51,7 +51,7 @@ impl Pipeline {
 			return EngineFuture::new_immediate(Err(()));
 		}
 
-		if !DescriptorRequirements::test_compatibility(&shaders.iter().map(|s| &s.descriptor_requirements).collect::<Vec<_>>()) {
+		if !DescriptorRequirements::test_compatibility(&shaders.iter().map(|s| s.descriptor_requirements.clone()).collect::<Vec<_>>()) {
 			return EngineFuture::new_immediate(Err(()));
 		}
 

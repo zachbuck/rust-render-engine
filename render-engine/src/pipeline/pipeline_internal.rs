@@ -17,7 +17,7 @@ pub(crate) struct PipelineInternal {
 	pub(crate) reference: Weak<Pipeline>,
 
 	pub(crate) pipeline: Arc<GraphicsPipeline>,
-	pub(crate) descriptor_layouts: Box<[Arc<DescriptorSetLayout>]>,
+	pub(crate) descriptor_layouts: HashMap<u32, Arc<DescriptorSetLayout>>,
 }
 
 impl PipelineInternal {

@@ -15,8 +15,8 @@ use crate::{
 	}, 
 	renderable::{
 		descriptor_set_data::DescriptorData, 
-		render_object::render_object_command::RenderObjectCommand
-	}, 
+		render_object::render_object_command::RenderObjectCommand,
+	},
 };
 
 pub(crate) mod render_object_command;
@@ -47,15 +47,11 @@ impl RenderObject {
 	}
 
 	pub fn update_descriptor(&self, set: u32, binding: u32, data: DescriptorData) -> EngineFuture<Result<(), ()>> {
-		let set_requirements = self.pipeline.descriptor_requirements.sets.iter().find(|s| s.set == set);
-		if set_requirements.is_none() { return EngineFuture::new_immediate(Err(())) }
-		let set_requirements = set_requirements.unwrap();
+		let result = self.pipeline.descriptor_requirements.descriptors.iter().find(|((s, b), _, _)| *s == set && *b == binding);
+		if result.is_none() { return EngineFuture::new_immediate(Err(())); }
+		let (_, descriptor_type, _) = result.unwrap();
 
-		let binding_requirements = set_requirements.bindings.iter().find(|b| b.binding == binding);
-		if binding_requirements.is_none() { return EngineFuture::new_immediate(Err(())) }
-		let binding_requirements =binding_requirements.unwrap();
-
-		if !data.comptable_with_type(binding_requirements.descriptor_type) { return EngineFuture::new_immediate(Err(())) }
+		if !data.compatable_with(descriptor_type) { return EngineFuture::new_immediate(Err(())) }
 
 		let (send, recv) = sync_channel(1);
 

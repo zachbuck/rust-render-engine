@@ -11,8 +11,7 @@ use render_engine::{
 	render_engine::{RenderEngine, RenderEngineCreateInfo}, 
 	render_surface::image_surface::ImageSurface, 
 	renderable::{
-		descriptor_set_data::DescriptorData, 
-		render_object::RenderObject,
+		descriptor_set_data::DescriptorData, render_object::RenderObject
 	}, 
 	shader::{Shader, ShaderType}, 
 	texture::Texture,

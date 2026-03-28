@@ -31,14 +31,22 @@ use vulkano::{
 };
 
 use crate::{
-	macros::error_map, mesh_data::Vertex3D, pipeline::{
+	macros::error_map, 
+	mesh_data::Vertex3D, 
+	pipeline::{
 		Pipeline, 
 		pipeline_internal::PipelineInternal
-	}, render_engine::{
+	}, 
+	render_engine::{
 		RenderEngine, 
 		render_command::RenderEngineCommand, 
 		render_thread::RenderThread
-	}, shader::{Shader, ShaderType, descriptor_requirements::DescriptorRequirements}
+	}, 
+	shader::{
+		Shader, 
+		ShaderType, 
+		descriptor_requirements::DescriptorRequirements
+	},
 };
 
 #[derive(Debug)]
@@ -93,18 +101,14 @@ impl RenderThread {
 			..Default::default()
 		}.into();
 
-		let mut descriptor_requirements = DescriptorRequirements::empty();
-		let internal = shaders.iter().map(|s| Self::get_shader_internal(&self.shaders, &s.uuid).unwrap());
-		for shader in internal {
-			descriptor_requirements = descriptor_requirements.merge_with(&shader.descriptor_requirements);
-		}
+		let descriptor_requirements = DescriptorRequirements::combine(&shaders.iter().map(|s| s.descriptor_requirements.clone()).collect::<Vec<_>>());
 
-		let descriptor_set_layouts = descriptor_requirements.get_descriptor_layout(&self.device)?;
+		let descriptor_set_layouts = descriptor_requirements.get_descriptor_layouts(&self.device)?;
 		let layout = PipelineLayout::new(
 			self.device.clone(),
 			PipelineLayoutCreateInfo {
 				flags: PipelineLayoutCreateFlags::empty(),
-				set_layouts: descriptor_set_layouts.clone(),
+				set_layouts: descriptor_set_layouts.values().map(|l| l.clone()).collect(),
 				push_constant_ranges: Vec::new(),
 				..Default::default()
 			}
@@ -148,7 +152,7 @@ impl RenderThread {
 		let internal = PipelineInternal {
 			reference: Arc::downgrade(&reference),
 			pipeline: pipeline,
-			descriptor_layouts: descriptor_set_layouts.into_boxed_slice(),
+			descriptor_layouts: descriptor_set_layouts,
 		};
 
 		self.pipelines.insert(uuid, internal);

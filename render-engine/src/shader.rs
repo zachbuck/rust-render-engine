@@ -46,8 +46,6 @@ pub enum ShaderType {
 	Fragment	= 0x2,
 }
 
-pub(crate) const SHADER_TYPES: [ShaderType; 2] = [ShaderType::Vertex, ShaderType::Fragment];
-
 impl Shader { 
 	pub fn compile(render_engine: &Arc<RenderEngine>, shader_name: &str, shader_type: ShaderType, shader_source: &str) -> Result<Box<[u32]>, ()> {
 		let compiler = render_engine.spirv_compiler.as_ref().ok_or(())?;

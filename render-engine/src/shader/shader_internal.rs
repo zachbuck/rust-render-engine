@@ -9,10 +9,7 @@ use vulkano::shader::EntryPoint;
 
 use crate::{
 	render_engine::render_thread::RenderThread, 
-	shader::{
-		Shader, 
-		descriptor_requirements::DescriptorRequirements,
-	}
+	shader::Shader,
 };
 
 #[derive(Debug)]
@@ -20,7 +17,6 @@ pub(crate) struct ShaderInternal {
 	pub(crate) reference: Weak<Shader>,
 
 	pub(crate) entry_point: EntryPoint,
-	pub(crate) descriptor_requirements: DescriptorRequirements,
 }
 
 impl RenderThread {

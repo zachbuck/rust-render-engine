@@ -54,7 +54,7 @@ impl RenderThread {
 
 	fn create_shader(&mut self, shader_binary: &[u32], engine: Arc<RenderEngine>) -> Result<Arc<Shader>, ()> {
 		let uuid = Uuid::now_v7();
-		
+
 		let module = unsafe {
 			ShaderModule::new(
 				self.device.clone(),
@@ -63,6 +63,8 @@ impl RenderThread {
 		};
 
 		let entry_point = module.entry_point("main").ok_or(())?;
+		
+		let descriptor_requirements = DescriptorRequirements::from_binary(shader_binary, entry_point.info().execution_model.into());
 
 		let shader_type = entry_point.info().execution_model.into();
 
@@ -70,14 +72,13 @@ impl RenderThread {
 			uuid,
 			render_engine: engine,
 			shader_type: shader_type,
-			descriptor_requirements: DescriptorRequirements::from_vulkano(&entry_point).map_err(error_map!())?
+			descriptor_requirements: descriptor_requirements.clone(),
 		});
 
 		let internal = ShaderInternal { 
 			reference: Arc::downgrade(&reference),
 
 			entry_point: entry_point.clone(),
-			descriptor_requirements: DescriptorRequirements::from_vulkano(&entry_point)?,
 		};
 
 		self.shaders.insert(uuid, internal);

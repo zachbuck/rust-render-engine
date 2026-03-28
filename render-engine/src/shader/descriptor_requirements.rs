@@ -5,223 +5,236 @@ use std::{
 };
 
 use vulkano::{
-	descriptor_set::{
-		layout::{DescriptorBindingFlags, DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateFlags, DescriptorSetLayoutCreateInfo}
-	}, 
+	descriptor_set::layout::{DescriptorBindingFlags, DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateFlags, DescriptorSetLayoutCreateInfo}, 
 	device::Device, 
-	shader::EntryPoint
+	shader::ShaderStages,
 };
 
-use crate::{
-	macros::error_map, 
-	shader::{SHADER_TYPES, ShaderType},
-};
+use crate::{macros::error_map, shader::ShaderType};
 
 #[derive(Debug)]
 #[derive(Clone)]
-pub(crate) struct DescriptorRequirements {
-	pub(crate) sets: Box<[DescriptorSetRequirements]>,
+/// each element of descriptors is in the format 
+/// .0.0: 	the set of the descriptor
+/// .0.1: 	the binding of the descriptor
+/// .1:		the type of the descriptor
+/// .2:		the stages the descriptor is used in
+pub struct DescriptorRequirements {
+	pub(crate) descriptors: Box<[((u32, u32), DescriptorType, ShaderStages)]>
 }
 
 #[derive(Debug)]
 #[derive(Clone)]
-pub(crate) struct DescriptorSetRequirements {
-	pub(crate) set: u32,
-
-	pub(crate) bindings: Box<[DescriptorBindingRequirements]>,
-}
-
-#[derive(Debug)]
-#[derive(Clone, Copy)]
-pub(crate) struct DescriptorBindingRequirements {
-	pub(crate) binding: u32,
-
-	pub(crate) descriptor_type: DescriptorType,
-	stages: ShaderStages,
-}
-
-#[derive(Debug)]
-#[derive(Clone, Copy)]
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum DescriptorType {
+#[derive(PartialEq, Eq)]
+pub enum DescriptorType {
 	CombinedImageSampler,
+	UniformBuffer(Box<[UniformBufferElement]>),
 }
 
 #[derive(Debug)]
-#[derive(Clone, Copy)]
-pub(crate) struct ShaderStages {
-	stages: u8,
+#[derive(Clone)]
+#[derive(PartialEq, Eq)]
+pub enum UniformBufferElement {
+	Float,
+	Vec2,
+	Vec3,
+	Vec4,
+	Mat2,
+	Mat3,
+	Mat4,
+}
+
+#[derive(Debug)]
+#[derive(Default)]
+struct DecorationSet {
+	set: Option<u32>,
+	binding: Option<u32>,
+}
+
+#[derive(Debug)]
+#[expect(unused)]
+enum SpirvType {
+	Void,
+	Bool,
+	Int(u32, bool),
+	Float(u32),
+	Vector(u32, u32),
+	Matrix(u32, u32),
+	Image,
+	Sampler,
+	SampledImage(u32),
+	Array(u32, u32),
+	RuntimeArray(u32),
+	Struct(Box<[u32]>),
+	Pointer(u32),
+	Function,
+}
+
+#[derive(Debug)]
+#[expect(unused)]
+enum Constant {
+	True,
+	False,
+	Type(u32, Box<[u32]>),
+}
+
+#[derive(Debug)]
+struct Variable {
+	var_type: u32,
+	storage_class: StorageClass,
 }
 
 impl DescriptorRequirements {
-	pub(crate) fn empty() -> Self {
-		DescriptorRequirements {
-			sets: Box::new([]),
-		}
-	}
+	pub(crate) fn from_binary(binary: &[u32], shader_stage: ShaderType) -> Self {
+		let mut decorations: HashMap<u32, DecorationSet> = HashMap::new();
+		let mut types: HashMap<u32, SpirvType> = HashMap::new();
+		let mut constants: HashMap<u32, Constant> = HashMap::new();
+		let mut variables: HashMap<u32, Variable> = HashMap::new();
 
-	pub(crate) fn from_vulkano(entry_point: &EntryPoint) -> Result<Self, ()> {
-		let requirement_set = &entry_point.info().descriptor_binding_requirements;
+		let mut i = 5;
+		while i < binary.len() {
+			let word_count = ((0xFFFF0000 & binary[i]) >> 16) as u16;
+			let op_code = (0x0000FFFF & binary[i]) as u16;
+			let instruction = &binary[i..i+(word_count as usize)];
 
-		let mut stage_one = HashMap::new();
-		for ((set, binding), requirements) in requirement_set {
-			if !stage_one.contains_key(set) {
-				stage_one.insert(*set, Vec::new());
+			match OpCode::get_op_code(op_code) {
+				OpCode::OpNop => (),
+
+				OpCode::OpDecorate => { decorations.entry(instruction[1]).or_default().apply_decoration(instruction); },
+
+				OpCode::OpTypeVoid => { types.insert(instruction[1], SpirvType::Void); },
+				OpCode::OpTypeBool => { types.insert(instruction[1], SpirvType::Bool); },
+				OpCode::OpTypeInt => { types.insert(instruction[1], SpirvType::Int(instruction[2], instruction[3] == 1)); },
+				OpCode::OpTypeFloat => { types.insert(instruction[1], SpirvType::Float(instruction[2])); },
+				OpCode::OpTypeVector => { types.insert(instruction[1], SpirvType::Vector(instruction[2], instruction[3])); },
+				OpCode::OpTypeMatrix => { types.insert(instruction[1], SpirvType::Matrix(instruction[2], instruction[3])); },
+				OpCode::OpTypeImage => { types.insert(instruction[1], SpirvType::Image); },
+				OpCode::OpTypeSampler => { types.insert(instruction[1], SpirvType::Sampler); },
+				OpCode::OpTypeSampledImage => { types.insert(instruction[1], SpirvType::SampledImage(instruction[2])); },
+				OpCode::OpTypeArray => { types.insert(instruction[1], SpirvType::Array(instruction[2], instruction[3])); },
+				OpCode::OpTypeRuntimeArray => { types.insert(instruction[1], SpirvType::RuntimeArray(instruction[2])); },
+				OpCode::OpTypeStruct => { types.insert(instruction[1], SpirvType::Struct(instruction[2..].to_owned().into_boxed_slice())); },
+				OpCode::OpTypePointer => { types.insert(instruction[1], SpirvType::Pointer(instruction[3])); },
+				OpCode::OpTypeFunction => { types.insert(instruction[1], SpirvType::Function); },
+
+				OpCode::OpConstantTrue => { constants.insert(instruction[2], Constant::True); },
+				OpCode::OpConstantFalse => { constants.insert(instruction[2], Constant::False); },
+				OpCode::OpConstant => { constants.insert(instruction[2], Constant::Type(instruction[1], instruction[3..].to_vec().into_boxed_slice())); },
+
+				OpCode::OpVariable => { variables.insert(instruction[2], Variable { var_type: instruction[1], storage_class: StorageClass::from_code(instruction[3]) }); },
 			}
-			let set = stage_one.get_mut(set).unwrap();
 
-			if requirements.descriptor_types.contains(&vulkano::descriptor_set::layout::DescriptorType::CombinedImageSampler) {
-				if requirements.descriptor_count != Some(1) { return Err(()) }
-				if requirements.image_view_type != Some(vulkano::image::view::ImageViewType::Dim2d) { return Err(()) }
+			i += word_count as usize;
+		}
 
-				set.push(DescriptorBindingRequirements {
-					binding: *binding,
+		let mut descriptors = Vec::new();
 
-					descriptor_type: DescriptorType::CombinedImageSampler,
-					stages: ShaderStages::from_shader_type(entry_point.info().execution_model.into()),
-				});
+		for (variable_id, variable) in variables {
+			if variable.storage_class != StorageClass::Uniform && variable.storage_class != StorageClass::UniformConstant { continue; }
+
+			let decorator = decorations.get(&variable_id).unwrap();
+			let set = decorator.set.unwrap();
+			let binding = decorator.binding.unwrap();
+
+			let descriptor_type;
+			let variable_pointer_type = types.get(&variable.var_type).unwrap();
+			if let SpirvType::Pointer(variable_type_id) = variable_pointer_type {
+				let variable_type = types.get(variable_type_id).unwrap();
+				if let SpirvType::Struct(elements) = variable_type {
+					let mut uniform_buffer_elements = Vec::with_capacity(elements.len());
+
+					for element in elements {
+						uniform_buffer_elements.push(Self::get_struct_format(element, &types));
+					}
+
+					descriptor_type = DescriptorType::UniformBuffer(uniform_buffer_elements.into_boxed_slice());
+				} else if let SpirvType::SampledImage(_) = variable_type {
+					descriptor_type = DescriptorType::CombinedImageSampler;
+				} else {
+					panic!()
+				}
 			} else {
-				todo!("Only Combined Image Sampler descriptors are currently supported.")
-			}
-		}
-
-		let mut stage_two = Vec::new();
-		for (set, mut bindings) in stage_one {
-			bindings.sort_by_key(|bind| bind.binding);
-
-			let set = DescriptorSetRequirements {
-				set: set,
-				bindings: bindings.into_boxed_slice(),
-			};
-
-			stage_two.push(set);
-		}
-
-		stage_two.sort_by_key(|set| set.set);
-
-		Ok(DescriptorRequirements {
-			sets: stage_two.into_boxed_slice(),
-		})
-	}
-
-	pub(crate) fn merge_with(self, other: &DescriptorRequirements) -> Self {
-		let mut stage_one = HashMap::new();
-
-		for set in &self.sets {
-			stage_one.insert(set.set, HashMap::new());
-
-			let set_requirement = stage_one.get_mut(&set.set).unwrap();
-			for binding in &set.bindings {
-				set_requirement.insert(binding.binding, *binding);
-			}
-		}
-
-		for set in &other.sets {
-			if !stage_one.contains_key(&set.set) {
-				stage_one.insert(set.set, HashMap::new());
+				panic!();
 			}
 
-			let set_requirement = stage_one.get_mut(&set.set).unwrap();
-			for binding in &set.bindings {
-				if !set_requirement.contains_key(&binding.binding) {
-					set_requirement.insert(binding.binding, *binding);
-					continue
-				} 
-
-				let binding_requirement = set_requirement.get_mut(&binding.binding).unwrap();
-				binding_requirement.stages.merge_with(&binding.stages);
-			}
+			descriptors.push(((set, binding), descriptor_type, shader_stage.into()));
 		}
 
-		let mut stage_two = Vec::new();
-		for (set, bindings) in stage_one {
-			let mut bindings = bindings.values().map(|b| *b).collect::<Vec<_>>();
-			bindings.sort_by_key(|b| b.binding);
-
-			let set_requirement = DescriptorSetRequirements {
-				set: set,
-				bindings: bindings.into_boxed_slice(),
-			};
-
-			stage_two.push(set_requirement);
-		}
-
-		stage_two.sort_by_key(|s| s.set);
+		descriptors.sort_by_key(|((set, binding), _, _)| ((*set as u64) << 16) + (*binding as u64));
 
 		DescriptorRequirements {
-			sets: stage_two.into_boxed_slice(),
+			descriptors: descriptors.into_boxed_slice(),
 		}
 	}
-	
-	pub(crate) fn test_compatibility(requirements: &[&DescriptorRequirements]) -> bool {
-		let mut max_set = None;
+
+	pub(crate) fn test_compatibility(requirements: &[DescriptorRequirements]) -> bool {
+		let mut descriptor_set = HashMap::new();
+
 		for requirement in requirements {
-			if requirement.sets.len() == 0 { continue }
-			let set = requirement.sets.last().unwrap().set;
-			if max_set.is_none() { max_set = Some(set); }
-			if set > max_set.unwrap() { max_set = Some(set); }
-		}
-
-		if max_set.is_none() { return true; }
-
-		for set in 0..=max_set.unwrap() {
-			let set_requirements = requirements.iter().filter_map(|r| r.sets.iter().find(|s| s.set == set)).collect::<Vec<_>>();
-
-			let set_compatible = Self::test_set_compatibility(&set_requirements);
-			if !set_compatible { return false; }
+			for (binding, descriptor_type, _) in &requirement.descriptors {
+				if descriptor_set.contains_key(&binding) {
+					return *descriptor_set.get(&binding).unwrap() == descriptor_type;
+				} else {
+					descriptor_set.insert(binding, descriptor_type);
+				}
+			}
 		}
 
 		return true;
 	}
 
-	fn test_set_compatibility(requirements: &[&DescriptorSetRequirements]) -> bool {
-		let mut max_binding = None;
+	pub(crate) fn combine(requirements: &[DescriptorRequirements]) -> Self {
+		let mut descriptor_set = HashMap::new();
+
 		for requirement in requirements {
-			if requirement.bindings.len() == 0 { continue }
-			let binding = requirement.bindings.last().unwrap().binding;
-			if max_binding.is_none() { max_binding = Some(binding); }
-			if binding > max_binding.unwrap() { max_binding = Some(binding); }
+			for (binding, descriptor_type, shader_stages) in &requirement.descriptors {
+				let descriptor = descriptor_set
+					.entry(binding)
+					.or_insert((descriptor_type, ShaderStages::empty()));
+
+				descriptor.1 = descriptor.1.union(*shader_stages);
+			}
 		}
 
-		if max_binding.is_none() { return true; }
-
-		for binding in 0..=max_binding.unwrap() {
-			let binding_requirements = requirements.iter().filter_map(|s| s.bindings.iter().find(|b| b.binding == binding)).collect::<Vec<_>>();
-
-			let binding_compatible = Self::test_binding_compatibility(&binding_requirements);
-			if !binding_compatible { return false; }
+		let mut descriptors = Vec::with_capacity(descriptor_set.len());
+		for (binding, (descriptor_type, shader_stages)) in descriptor_set {
+			descriptors.push((*binding, descriptor_type.clone(), shader_stages));
 		}
 
-		return true;
+		descriptors.sort_by_key(|((set, binding), _, _)| ((*set as u64) << 16) + (*binding as u64));
+
+		DescriptorRequirements {
+			descriptors: descriptors.into_boxed_slice(),
+		}
 	}
 
-	fn test_binding_compatibility(requirements: &[&DescriptorBindingRequirements]) -> bool {
-		if requirements.len() <= 1 { return true; }
+	pub(crate) fn get_descriptor_layouts(&self, device: &Arc<Device>) -> Result<HashMap<u32, Arc<DescriptorSetLayout>>, ()> {
+		let sets = self.descriptors.chunk_by(|((set1, _), _, _), ((set2, _), _, _)| set1 == set2);
+		let mut out = HashMap::new();
 
-		let first = requirements.first().unwrap();
-		for i in 1..=requirements.len() {
-			if first.descriptor_type != requirements[i].descriptor_type { return false; }
-		}
-
-		return true;
-	}
-
-	pub(crate) fn get_descriptor_layout(&self, device: &Arc<Device>) -> Result<Vec<Arc<DescriptorSetLayout>>, ()> {
-		let mut out = Vec::new();
-
-		for set in &self.sets {
+		for set in sets {
 			let mut bindings = BTreeMap::new();
 
-			for binding in &set.bindings {
-				let binding_layout = DescriptorSetLayoutBinding {
-					binding_flags: DescriptorBindingFlags::empty(),
-					descriptor_count: 1,
-					stages: binding.stages.as_vulkano_shader_stages(),
-					immutable_samplers: Vec::new(),
-					..DescriptorSetLayoutBinding::descriptor_type(binding.descriptor_type.as_vulkano_descriptor_type())
-				};
-
-				bindings.insert(binding.binding, binding_layout);
+			for ((_, binding), descriptor_type, shader_stages) in set {
+				let descriptor_set_layout_binding = 
+				match descriptor_type {
+						DescriptorType::CombinedImageSampler => DescriptorSetLayoutBinding {
+							binding_flags: DescriptorBindingFlags::empty(),
+							descriptor_count: 1,
+							stages: *shader_stages,
+							immutable_samplers: Vec::new(),
+							..DescriptorSetLayoutBinding::descriptor_type(vulkano::descriptor_set::layout::DescriptorType::CombinedImageSampler)
+						},
+						DescriptorType::UniformBuffer(_) => DescriptorSetLayoutBinding { 
+							binding_flags: DescriptorBindingFlags::empty(), 
+							descriptor_count: 1, 
+							stages: *shader_stages, 
+							immutable_samplers: Vec::new(), 
+							..DescriptorSetLayoutBinding::descriptor_type(vulkano::descriptor_set::layout::DescriptorType::UniformBuffer)
+						},
+					};
+				
+				bindings.insert(*binding, descriptor_set_layout_binding);
 			}
 
 			let set_layout = DescriptorSetLayout::new(
@@ -233,41 +246,197 @@ impl DescriptorRequirements {
 				}
 			).map_err(error_map!())?;
 
-			out.push(set_layout);
+			out.insert(set[0].0.0, set_layout);
 		}
 
+		out.shrink_to_fit();
 		return Ok(out);
 	}
-}
 
-impl ShaderStages {
-	fn from_shader_type(shader_type: ShaderType) -> Self {
-		ShaderStages {
-			stages: shader_type as u8,
+	fn get_struct_format(id: &u32, types: &HashMap<u32, SpirvType>) -> UniformBufferElement {
+		match types.get(id).unwrap() {
+			SpirvType::Bool => todo!("Boolean uniforms are not currently supported"),
+			SpirvType::Int(_, _) => todo!("Integer uniforms are not currently supported"),
+			SpirvType::Float(width) => {
+				match width {
+					32 => UniformBufferElement::Float,
+
+					_ => panic!()
+				}
+			},
+			SpirvType::Vector(id, count) => {
+				match Self::get_struct_format(id, types) {
+					UniformBufferElement::Float => {
+						match count {
+							2 => UniformBufferElement::Vec2,
+							3 => UniformBufferElement::Vec3,
+							4 => UniformBufferElement::Vec4,
+
+							_ => panic!()
+						}
+					},
+
+					_ => panic!()
+				}
+			},
+			SpirvType::Matrix(id, count) => {
+				match Self::get_struct_format(id, types) {
+					UniformBufferElement::Vec2 => {
+						match count {
+							2 => UniformBufferElement::Mat2,
+
+							_ => panic!()
+						}
+					},
+					UniformBufferElement::Vec3 => {
+						match count {
+							3 => UniformBufferElement::Mat3,
+
+							_ => panic!()
+						}
+					},
+					UniformBufferElement::Vec4 => {
+						match count {
+							4 => UniformBufferElement::Mat4,
+
+							_ => panic!()
+						}
+					},
+
+					_ => panic!()
+				}
+			},
+			SpirvType::Array(_, _) => todo!("Arrays are not currently supported"),
+			SpirvType::RuntimeArray(_) => todo!("Runtime sized arrays are not currently supported"),
+			SpirvType::Struct(_) => todo!("Structs in uniforms are not currently supported"),
+
+			_ => panic!()
 		}
 	}
+}
 
-	fn merge_with(&mut self, other: &ShaderStages) {
-		self.stages &= other.stages;
+impl DecorationSet {
+	fn apply_decoration(&mut self, instruction: &[u32]) {
+		if instruction[2] == Decorations::Binding as u32 {
+			self.binding = Some(instruction[3]);
+		} else if instruction[2] == Decorations::DescriptorSet as u32 {
+			self.set = Some(instruction[3]);
+		} else {
+			return;
+		}
 	}
+}
 
-	fn as_vulkano_shader_stages(&self) -> vulkano::shader::ShaderStages {
-		let mut out = vulkano::shader::ShaderStages::empty();
+impl UniformBufferElement {
+	pub(crate) fn size(uniforms: &[UniformBufferElement]) -> u32 {
+		let mut sum = 0;
 
-		for shader_type in SHADER_TYPES {
-			if shader_type as u8 & self.stages != 0 {
-				out = out.union(shader_type.into());
+		for uniform in uniforms {
+			sum += match uniform {
+				UniformBufferElement::Float => 32,
+				UniformBufferElement::Vec2 => 32 * 2,
+				UniformBufferElement::Vec3 => 32 * 3,
+				UniformBufferElement::Vec4 => 32 * 4,
+				UniformBufferElement::Mat2 => 32 * 2 * 2,
+				UniformBufferElement::Mat3 => 32 * 3 * 3,
+				UniformBufferElement::Mat4 => 32 * 4 * 4,
 			}
 		}
-
-		return out;
+		
+		return sum;
 	}
 }
 
-impl DescriptorType {
-	fn as_vulkano_descriptor_type(&self) -> vulkano::descriptor_set::layout::DescriptorType {
-		match self {
-			DescriptorType::CombinedImageSampler => vulkano::descriptor_set::layout::DescriptorType::CombinedImageSampler,
+#[repr(u16)]
+enum OpCode {
+	// Misc. Instructions
+	OpNop					= 0,
+
+	// Annotation Instructions
+	OpDecorate 				= 71,
+
+	// Type-Declaration Instructions
+	OpTypeVoid				= 19,
+	OpTypeBool				= 20,
+	OpTypeInt				= 21,
+	OpTypeFloat				= 22,
+	OpTypeVector			= 23,
+	OpTypeMatrix			= 24,
+	OpTypeImage				= 25,
+	OpTypeSampler			= 26,
+	OpTypeSampledImage 		= 27,
+	OpTypeArray				= 28,
+	OpTypeRuntimeArray		= 29,
+	OpTypeStruct			= 30,
+	OpTypePointer			= 32,
+	OpTypeFunction			= 33,
+
+	// Constant-Declaration Instructions
+	OpConstantTrue			= 41,
+	OpConstantFalse			= 42,
+	OpConstant				= 43,
+
+	// Memory Instructions
+	OpVariable 				= 59,
+}
+
+impl OpCode {
+	fn get_op_code(code: u16) -> Self {
+		match code {
+			0  => OpCode::OpNop,
+
+			71 => OpCode::OpDecorate,
+
+			19 => OpCode::OpTypeVoid,
+			20 => OpCode::OpTypeBool,
+			21 => OpCode::OpTypeInt,
+			22 => OpCode::OpTypeFloat,
+			23 => OpCode::OpTypeVector,
+			24 => OpCode::OpTypeMatrix,
+			25 => OpCode::OpTypeImage,
+			26 => OpCode::OpTypeSampler,
+			27 => OpCode::OpTypeSampledImage,
+			28 => OpCode::OpTypeArray,
+			29 => OpCode::OpTypeRuntimeArray,
+			30 => OpCode::OpTypeStruct,
+			32 => OpCode::OpTypePointer,
+			33 => OpCode::OpTypeFunction,
+
+			41 => OpCode::OpConstantTrue,
+			42 => OpCode::OpConstantFalse,
+			43 => OpCode::OpConstant,
+
+			59 => OpCode::OpVariable,
+
+			_  => OpCode::OpNop,
+		}
+	}
+}
+
+#[repr(u32)]
+enum Decorations {
+	Binding 		= 33,
+	DescriptorSet 	= 34,
+}
+
+#[derive(Debug)]
+#[derive(PartialEq, Eq)]
+#[repr(u32)]
+enum StorageClass {
+	UniformConstant 	= 0,
+	Input				= 1,
+	Uniform 			= 2,
+	Output				= 3,
+}
+
+impl StorageClass {
+	fn from_code(code: u32) -> Self {
+		match code {
+			0 => Self::UniformConstant,
+			1 => Self::Input,
+			2 => Self::Uniform,
+			3 => Self::Output,
+			_ => todo!(),
 		}
 	}
 }

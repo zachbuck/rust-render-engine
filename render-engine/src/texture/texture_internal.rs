@@ -6,7 +6,9 @@ use vulkano::image::{
 	view::ImageView,
 };
 
-use crate::texture::Texture;
+use crate::{
+	texture::Texture,
+};
 
 #[derive(Debug)]
 pub(crate) struct TextureInternal {

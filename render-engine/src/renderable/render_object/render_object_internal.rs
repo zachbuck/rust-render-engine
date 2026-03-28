@@ -1,6 +1,8 @@
 
 use std::{
-	any::Any, collections::HashMap, sync::Arc
+	any::Any, 
+	collections::HashMap, 
+	sync::Arc,
 };
 
 use uuid::Uuid;
@@ -9,24 +11,32 @@ use vulkano::{
 		AutoCommandBufferBuilder, 
 		PrimaryAutoCommandBuffer,
 	}, 
-	pipeline::Pipeline as _,
+	descriptor_set::DescriptorSet, 
+	pipeline::{
+		Pipeline as _, 
+		PipelineBindPoint,
+	},
 };
 
 use crate::{
-	macros::error_map, mesh_data::MeshData, pipeline::Pipeline, render_engine::{
+	macros::error_map, 
+	mesh_data::MeshData, 
+	pipeline::Pipeline, 
+	render_engine::{
 		render_resources::RenderResources, 
 		render_thread::RenderThread,
-	}, renderable::{
+	}, 
+	renderable::{
 		Renderable, 
-		descriptor_set_data::DescriptorSetData,
-	}
+		descriptor_set_data::DescriptorDataInternal, 
+	},
 };
 
 pub(crate) struct RenderObjectInternal {
 	pub(crate) mesh: Arc<MeshData>,
 	pub(crate) pipeline: Arc<Pipeline>,
 
-	pub(crate) descriptor_data: Box<[DescriptorSetData]>,
+	pub(crate) descriptor_data: Box<[(u32, Arc<DescriptorSet>, Box<[(u32, DescriptorDataInternal)]>)]>,
 }
 
 impl Renderable for RenderObjectInternal {
@@ -36,8 +46,14 @@ impl Renderable for RenderObjectInternal {
 
 		mesh.bind(builder)?;
 		pipeline.bind(builder)?;
-		for descriptor_set in &self.descriptor_data {
-			descriptor_set.bind(builder, pipeline.pipeline.layout())?;
+
+		if self.descriptor_data.len() != 0 {
+			builder.bind_descriptor_sets(
+				PipelineBindPoint::Graphics, 
+				pipeline.pipeline.layout().clone(), 
+				self.descriptor_data[0].0, 
+				self.descriptor_data.iter().map(|(_, set, _)| set.clone()).collect::<Vec<_>>(),
+			).map_err(error_map!())?;
 		}
 
 		unsafe {
