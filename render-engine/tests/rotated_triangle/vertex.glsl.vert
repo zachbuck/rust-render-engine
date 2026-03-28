@@ -6,9 +6,8 @@ layout(location = 2) in vec2 uv;
 
 layout(set = 0, binding = 0) uniform UBO {
 	mat4 transform;
-	mat4 camera;
 };
 
 void main() {
-	gl_Position = camera * transform * vec4(position, 1.0);
+	gl_Position = transform * vec4(position, 1.0);
 }

@@ -3,7 +3,7 @@ use std::any::Any;
 
 use vulkano::command_buffer::{
 	AutoCommandBufferBuilder, 
-	PrimaryAutoCommandBuffer
+	PrimaryAutoCommandBuffer,
 };
 
 use crate::render_engine::render_resources::RenderResources;

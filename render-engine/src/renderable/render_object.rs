@@ -82,7 +82,11 @@ impl Drop for RenderObject {
 #[cfg(test)]
 mod tests {
     use crate::{
-		mesh_data::{MeshData, Vertex3D}, pipeline::Pipeline, render_engine::{RenderEngine, RenderEngineCreateInfo}, renderable::render_object::RenderObject, shader::{Shader, ShaderType}
+		mesh_data::{MeshData, Vertex3D}, 
+		pipeline::Pipeline, 
+		render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+		renderable::{descriptor_set_data::DescriptorData, render_object::RenderObject}, 
+		shader::{Shader, ShaderType}, texture::Texture,
 	};
 	
 	const VERTICES: [Vertex3D; 4] = [
@@ -109,6 +113,22 @@ mod tests {
 		}
 	";
 
+	const VERTEX_DESCRIPTOR_SOURCE: &str = "
+		#version 460
+
+		layout(location = 0) in vec3 position;
+		layout(location = 1) in vec3 normal;
+		layout(location = 2) in vec2 uv;
+
+		layout(set = 0, binding = 0) uniform UBO {
+			mat4 transform;
+		};
+
+		void main() {
+			gl_Position = transform * vec4(position, 1.0);
+		}
+	";
+
 	const FRAGMENT_SOURCE: &str = "
 		#version 460
 
@@ -118,6 +138,20 @@ mod tests {
 			f_color = vec4(1.0, 0.0, 0.0, 1.0);
 		}
 	";
+
+	const FRAGMENT_DESCRIPTOR_SOURCE: &str = "
+		#version 460
+
+		layout(location = 0) out vec4 f_color;
+
+		layout(set = 0, binding = 0) uniform sampler2D color_tex;
+
+		void main() {
+			f_color = vec4(texture(color_tex, vec2(0.0, 0.0)));
+		}
+	";
+
+	const TEXTURE_DATA: [u8; 40000] = [0u8; 100 * 100 * 4];
 
 	#[test]
 	/// Ensure that `RenderObject::new()` and `RenderObject::drop()` are working as expected.
@@ -139,5 +173,75 @@ mod tests {
 		let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
 
 		drop(render_object);
+	}
+
+	#[test]
+	/// Ensure that `RenderObject::update_descriptor()` is working as expected for uniform buffers.
+	fn update_descriptor_uniform_buffer() {
+		let create_info = RenderEngineCreateInfo::new()
+			.with_spirv_compiler();
+		let engine = RenderEngine::new(create_info).unwrap();
+
+		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+
+		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_DESCRIPTOR_SOURCE).unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+
+		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+
+		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap().unwrap();
+
+		let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
+
+		render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(Box::new([0u8; 4 * 4 * 4]))).unwrap().unwrap();
+	}
+
+	#[test]
+	/// Ensure that `RenderObject::update_descriptor()` is working as expected for combined image samplers.
+	fn update_descriptor_combined_image_sampler() {
+		let create_info = RenderEngineCreateInfo::new()
+			.with_spirv_compiler();
+		let engine = RenderEngine::new(create_info).unwrap();
+
+		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+
+		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+
+		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_DESCRIPTOR_SOURCE).unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+
+		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap().unwrap();
+
+		let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
+
+		let texture = Texture::new(&engine, &TEXTURE_DATA, 100, 100).unwrap().unwrap();
+
+		render_object.update_descriptor(0, 0, DescriptorData::CombinedImageSampler(texture)).unwrap().unwrap();
+	}
+
+	#[test]
+	/// Ensure that `RenderObject::update_descriptor()` is returning `Err(())` as expected on incorrect descriptor submission.
+	fn update_descriptor_incorrect_descriptor_type() {
+		let create_info = RenderEngineCreateInfo::new()
+			.with_spirv_compiler();
+		let engine = RenderEngine::new(create_info).unwrap();
+
+		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+
+		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+
+		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_DESCRIPTOR_SOURCE).unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+
+		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap().unwrap();
+
+		let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
+
+		let result = render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(Box::new([0u8; 4 * 4 * 4]))).unwrap();
+
+		assert!(result.is_err_and(|e| e == ()));
 	}
 }

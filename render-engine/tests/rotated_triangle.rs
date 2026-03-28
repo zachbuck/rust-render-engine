@@ -4,12 +4,13 @@ use std::{
 	io::Read,
 };
 
+use image::{ImageBuffer, Rgba, open};
 use render_engine::{
 	mesh_data::{MeshData, Vertex3D}, 
 	pipeline::Pipeline, 
 	render_engine::{RenderEngine, RenderEngineCreateInfo}, 
 	render_surface::image_surface::ImageSurface, 
-	renderable::render_object::RenderObject, 
+	renderable::{descriptor_set_data::DescriptorData, render_object::RenderObject}, 
 	shader::{Shader, ShaderType},
 };
 
@@ -26,8 +27,24 @@ const INDICES: [u16; 3] = [
 const VERTEX_PATH: &str = "./tests/rotated_triangle/vertex.glsl.vert";
 const FRAGMENT_PATH: &str = "./tests/rotated_triangle/fragment.glsl.frag";
 
+const UNIT_MATRIX: [[f32; 4]; 4] = [
+	[1.0, 0.0, 0.0, 0.0],
+	[0.0, 1.0, 0.0, 0.0],
+	[0.0, 0.0, 1.0, 0.0],
+	[0.0, 0.0, 0.0, 1.0],
+];
+
+const FLIP_MATRIX: [[f32; 4]; 4] = [
+	[1.0, 0.0, 0.0, 0.0],
+	[0.0,-1.0, 0.0, 0.0],
+	[0.0, 0.0, 1.0, 0.0],
+	[0.0, 0.0, 0.0, 1.0],
+];
+
+const UNIT_TEST_IMAGE_PATH: &str = "./tests/rotated_triangle/unit_matrix_test.png";
+const FLIP_TEST_IMAGE_PATH: &str = "./tests/rotated_triangle/flip_matrix_test.png";
+
 #[test]
-#[allow(unused)]
 fn render_scene() {
 	let create_info = RenderEngineCreateInfo::new()
 		.with_app_name("Rotated Triangle".to_string())
@@ -54,4 +71,55 @@ fn render_scene() {
 	let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap().unwrap();
 
 	let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
+
+	let mut data = Box::new([0u8; 4 * 4 * 4]);
+	for x in 0..4 {
+		for y in 0..4 {
+			let bytes = UNIT_MATRIX[x][y].to_le_bytes();
+			for b in 0..4 {
+				data[x * 4 * 4 + y * 4 + b] = bytes[b];
+			}
+		}
+	}
+
+	render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(data)).unwrap().unwrap();
+
+	image_surface.render_all().unwrap().unwrap();
+
+	let unit_image_data = image_surface.get_image_surface_data().unwrap().unwrap();
+	let image = ImageBuffer::<Rgba<u8>, _>::from_raw(image_surface.x_size, image_surface.y_size, unit_image_data).unwrap();
+	
+	let test_image = open(UNIT_TEST_IMAGE_PATH).unwrap().into_rgba8();
+
+	assert!(image.dimensions() == test_image.dimensions());
+	for x in 0..image.width() {
+		for y in 0..image.height() {
+			assert!(image.get_pixel(x, y) == test_image.get_pixel(x, y))
+		}
+	}
+
+	let mut data = Box::new([0u8; 4 * 4 * 4]);
+	for x in 0..4 {
+		for y in 0..4 {
+			let bytes = FLIP_MATRIX[x][y].to_le_bytes();
+			for b in 0..4 {
+				data[x * 4 * 4 + y * 4 + b] = bytes[b];
+			}
+		}
+	}
+
+	render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(data)).unwrap().unwrap();
+
+	image_surface.render_all().unwrap().unwrap();
+
+	let flip_image_data = image_surface.get_image_surface_data().unwrap().unwrap();
+	let image = ImageBuffer::<Rgba<u8>, _>::from_raw(image_surface.x_size, image_surface.y_size, flip_image_data).unwrap();
+	let test_image = open(FLIP_TEST_IMAGE_PATH).unwrap().into_rgba8();
+
+	assert!(image.dimensions() == test_image.dimensions());
+	for x in 0..image.width() {
+		for y in 0..image.height() {
+			assert!(image.get_pixel(x, y) == test_image.get_pixel(x, y));
+		}
+	}
 }

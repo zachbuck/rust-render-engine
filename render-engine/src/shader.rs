@@ -130,7 +130,10 @@ impl Into<ShaderStages> for ShaderType {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{render_engine::{RenderEngine, RenderEngineCreateInfo}, shader::{Shader, ShaderType}};
+    use crate::{
+		render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+		shader::{Shader, ShaderType},
+	};
 
 	const VERTEX_SOURCE: &str = "
 		#version 460

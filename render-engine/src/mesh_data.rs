@@ -15,7 +15,7 @@ use crate::{
 	render_engine::{
 		RenderEngine, 
 		engine_future::EngineFuture,
-	}
+	},
 };
 
 pub(crate) mod mesh_data_command;

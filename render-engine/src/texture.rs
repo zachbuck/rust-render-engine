@@ -1,7 +1,7 @@
 
 use std::sync::{
 	Arc, 
-	mpsc::sync_channel
+	mpsc::sync_channel,
 };
 
 use uuid::Uuid;
@@ -9,9 +9,9 @@ use uuid::Uuid;
 use crate::{
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture
+		engine_future::EngineFuture,
 	}, 
-	texture::texture_command::TextureCommand
+	texture::texture_command::TextureCommand,
 };
 
 pub(crate) mod texture_command;

@@ -100,7 +100,7 @@ mod tests {
     use crate::{
 		pipeline::Pipeline, 
 		render_engine::{RenderEngine, RenderEngineCreateInfo}, 
-		shader::{Shader, ShaderType}
+		shader::{Shader, ShaderType},
 	};
 
 	const VERTEX_SOURCE: &str = "
@@ -115,6 +115,25 @@ mod tests {
 		}
 	";
 
+	const VERTEX_DESCRIPTOR_SOURCE: &str = "
+		#version 460
+
+		layout(location = 0) in vec3 position;
+		layout(location = 1) in vec3 normal;
+		layout(location = 2) in vec2 uv;
+
+		layout(location = 0) out vec2 uv_out;
+
+		layout(set = 0, binding = 0) uniform UBO {
+			mat4 transform;
+		};
+
+		void main() {
+			gl_Position = transform * vec4(position, 1.0);
+			uv_out = uv;
+		}
+	";
+
 	const FRAGMENT_SOURCE: &str = "
 		#version 460
 
@@ -122,6 +141,20 @@ mod tests {
 
 		void main() {
 			f_color = vec4(1.0, 0.0, 0.0, 1.0);
+		}
+	";
+
+	const FRAGMENT_DESCRIPTOR_SOURCE: &str = "
+		#version 460
+
+		layout(location = 0) in vec2 uv;
+
+		layout(location = 0) out vec4 f_color;
+
+		layout(set = 0, binding = 0) uniform sampler2D color_tex;
+
+		void main() {
+			f_color = vec4(texture(color_tex, uv));
 		}
 	";
 
@@ -149,7 +182,7 @@ mod tests {
 	#[test]
 	/// Ensure that `Pipeline::new()` returns `Err(())` as expected when shaders of duplicate stages are supplied.
 	/// 
-	/// `VUID-VkGraphicsPipelineShaderGroupsCreateInfoNV-pGroups-02882`
+	/// `VUID-VkGraphicsPipelineCreateInfo-stage-06897`
 	fn new_pipeline_duplicate_shader() {
 		let create_info = RenderEngineCreateInfo::new()
 			.with_spirv_compiler();
@@ -172,7 +205,7 @@ mod tests {
 	#[test]
 	/// Ensure that `Pipeline::new()` returns `Err(())` as expected when a set of shaders not including a vertex shader is supplied.
 	/// 
-	/// `VUID-VkGraphicsPipelineShaderGroupsCreateInfoNV-pGroups-02882`
+	/// `VUID-VkGraphicsPipelineCreateInfo-stage-02096`
 	fn new_pipeline_no_vertex_shader() {
 		let create_info = RenderEngineCreateInfo::new()
 			.with_spirv_compiler();
@@ -182,6 +215,26 @@ mod tests {
 		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
 
 		let result = Pipeline::new(&engine, &[fragment_shader]).unwrap();
+
+		assert!(result.is_err_and(|e| e == ()));
+	}
+
+	#[test]
+	/// Ensure that `Pipeline::new()` returns `Err(())` as expected when a set of shaders with incompatible descriptor bindings is supplied.
+	/// 
+	/// `VUID-VkGraphicsPipelineCreateInfo-layout-00756`
+	fn new_pipeline_incompatible_descriptors() {
+		let create_info = RenderEngineCreateInfo::new()
+			.with_spirv_compiler();
+		let engine = RenderEngine::new(create_info).unwrap();
+
+		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_DESCRIPTOR_SOURCE).unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+
+		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_DESCRIPTOR_SOURCE).unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+
+		let result = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap();
 
 		assert!(result.is_err_and(|e| e == ()));
 	}

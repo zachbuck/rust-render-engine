@@ -333,13 +333,13 @@ impl UniformBufferElement {
 
 		for uniform in uniforms {
 			sum += match uniform {
-				UniformBufferElement::Float => 32,
-				UniformBufferElement::Vec2 => 32 * 2,
-				UniformBufferElement::Vec3 => 32 * 3,
-				UniformBufferElement::Vec4 => 32 * 4,
-				UniformBufferElement::Mat2 => 32 * 2 * 2,
-				UniformBufferElement::Mat3 => 32 * 3 * 3,
-				UniformBufferElement::Mat4 => 32 * 4 * 4,
+				UniformBufferElement::Float => 4,
+				UniformBufferElement::Vec2 => 4 * 2,
+				UniformBufferElement::Vec3 => 4 * 3,
+				UniformBufferElement::Vec4 => 4 * 4,
+				UniformBufferElement::Mat2 => 4 * 2 * 2,
+				UniformBufferElement::Mat3 => 4 * 3 * 3,
+				UniformBufferElement::Mat4 => 4 * 4 * 4,
 			}
 		}
 		

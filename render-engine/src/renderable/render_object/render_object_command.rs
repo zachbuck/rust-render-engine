@@ -8,18 +8,29 @@ use std::{
 };
 
 use uuid::Uuid;
-use vulkano::descriptor_set::DescriptorSet;
+use vulkano::{
+	buffer::{Buffer, BufferCreateInfo, BufferUsage}, 
+	descriptor_set::DescriptorSet, 
+	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter},
+};
 
 use crate::{
-	macros::error_map, mesh_data::MeshData, pipeline::Pipeline, render_engine::{
-		RenderEngine, render_command::RenderEngineCommand, render_resources::RenderResources, render_thread::RenderThread
-	}, renderable::{
+	macros::error_map, 
+	mesh_data::MeshData, 
+	pipeline::Pipeline, 
+	render_engine::{
+		RenderEngine, 
+		render_command::RenderEngineCommand, 
+		render_resources::RenderResources, 
+		render_thread::RenderThread,
+	}, 
+	renderable::{
 		descriptor_set_data::{DescriptorData, DescriptorDataInternal, DescriptorDataType}, 
 		render_object::{
 			RenderObject, 
 			render_object_internal::RenderObjectInternal,
 		},
-	}
+	},
 };
 
 #[derive(Debug)]
@@ -32,7 +43,7 @@ pub(crate) enum RenderObjectCommand {
 		render_engine: Arc<RenderEngine>,
 	},
 	DropRenderObject {
-		uuid: Uuid
+		uuid: Uuid,
 	},
 
 	UpdateDescriptor {
@@ -43,7 +54,7 @@ pub(crate) enum RenderObjectCommand {
 		binding: u32,
 
 		data: DescriptorData,
-	}
+	},
 }
 
 impl Into<RenderEngineCommand> for RenderObjectCommand {
@@ -146,13 +157,30 @@ impl RenderThread {
 			DescriptorData::UniformBuffer(data) => {
 				let data_type = &mut descriptor_data.descriptor_data;
 
-				if let DescriptorDataType::UniformBuffer(buf) = data_type {
-					let mut write_guard = buf.write().unwrap();
-					for i in 0..data.len() {
-						(*write_guard)[i] = data[i];
-					}
+				if let DescriptorDataType::UniformBuffer(_) = data_type {
+					let buf = Buffer::from_iter(
+						self.buffer_allocator.clone(), 
+						BufferCreateInfo {
+							usage: BufferUsage::UNIFORM_BUFFER,
+							..Default::default()
+						}, 
+						AllocationCreateInfo {
+							memory_type_filter: MemoryTypeFilter::HOST_SEQUENTIAL_WRITE | MemoryTypeFilter::PREFER_DEVICE,
+							..Default::default()
+						}, 
+						data.iter().map(|b| *b)
+					).map_err(error_map!())?;
+
+					*data_type = DescriptorDataType::UniformBuffer(buf);
 				} else {
 					return Err(())
+				}
+
+				unsafe {
+					descriptor_set.update_by_ref(
+						bindings.iter().map(|b| DescriptorDataInternal::get_descriptor_write(b)), 
+						[],
+					).map_err(error_map!())?;
 				}
 			},
 		}

@@ -1,14 +1,14 @@
 
 use std::{
 	any::Any, 
-	sync::Arc
+	sync::Arc,
 };
 
 use uuid::Uuid;
 use vulkano::{
 	command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer}, 
 	device::Queue, 
-	sync::GpuFuture
+	sync::GpuFuture,
 };
 
 use crate::{
@@ -16,7 +16,7 @@ use crate::{
 		render_resources::RenderResources, 
 		render_thread::RenderThread
 	}, 
-	renderable::Renderable
+	renderable::Renderable,
 };
 
 pub mod image_surface;

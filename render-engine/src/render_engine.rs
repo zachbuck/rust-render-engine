@@ -4,7 +4,7 @@ use std::{
         Arc, 
         mpsc::{Sender, channel, sync_channel},
     }, 
-	thread::Builder as ThreadBuilder
+	thread::Builder as ThreadBuilder,
 };
 
 use shaderc::Compiler;
@@ -14,7 +14,7 @@ use crate::{
 	render_engine::{
 		create_info::RenderEngineCreateInfoFlags, 
     	render_command::RenderEngineCommand, 
-    	render_thread::RenderThread
+    	render_thread::RenderThread,
 	}
 };
 

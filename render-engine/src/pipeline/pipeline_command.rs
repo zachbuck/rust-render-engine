@@ -3,8 +3,8 @@ use std::{
 	collections::HashSet, 
 	sync::{
 		Arc, 
-		mpsc::SyncSender
-	}
+		mpsc::SyncSender,
+	},
 };
 
 use foldhash::fast::RandomState;
@@ -24,10 +24,10 @@ use vulkano::{
 			rasterization::RasterizationState, 
 			subpass::PipelineRenderingCreateInfo, 
 			vertex_input::{Vertex, VertexDefinition}, 
-			viewport::ViewportState
+			viewport::ViewportState,
 		}, 
-		layout::{PipelineLayoutCreateFlags, PipelineLayoutCreateInfo}
-	}
+		layout::{PipelineLayoutCreateFlags, PipelineLayoutCreateInfo},
+	},
 };
 
 use crate::{
@@ -35,17 +35,17 @@ use crate::{
 	mesh_data::Vertex3D, 
 	pipeline::{
 		Pipeline, 
-		pipeline_internal::PipelineInternal
+		pipeline_internal::PipelineInternal,
 	}, 
 	render_engine::{
 		RenderEngine, 
 		render_command::RenderEngineCommand, 
-		render_thread::RenderThread
+		render_thread::RenderThread,
 	}, 
 	shader::{
 		Shader, 
 		ShaderType, 
-		descriptor_requirements::DescriptorRequirements
+		descriptor_requirements::DescriptorRequirements,
 	},
 };
 
@@ -62,7 +62,7 @@ pub(crate) enum PipelineCommand {
 	},
 	DropPipeline {
 		uuid: Uuid,
-	}
+	},
 }
 
 impl Into<RenderEngineCommand> for PipelineCommand {
