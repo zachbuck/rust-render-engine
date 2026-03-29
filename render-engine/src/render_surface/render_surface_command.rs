@@ -41,8 +41,6 @@ impl RenderThread {
 	fn render_render_surface(&mut self, uuid: Uuid) -> Result<(), ()> {
 		let queue = self.get_graphics_queue();
 
-		let render_surface = Self::get_render_surface(&self.render_surfaces, &uuid).ok_or(())?;
-
 		let mut builder = AutoCommandBufferBuilder::primary(
 			self.command_allocator.clone(), 
 			queue.queue_family_index(), 
@@ -51,7 +49,11 @@ impl RenderThread {
 
 		let render_resources = RenderResources::new(&self.mesh_data, &self.pipelines, &self.textures);
 
+		let render_surface = Self::get_mut_render_surface(&mut self.render_surfaces, &uuid).ok_or(())?;
+
 		render_surface.begin_rendering(&mut builder)?;
+
+		let render_surface = Self::get_render_surface(&self.render_surfaces, &uuid).ok_or(())?;
 
 		for (_, renderable) in &self.renderables {
 			render_surface.render_renderable(&mut builder, renderable, &render_resources)?;

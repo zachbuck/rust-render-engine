@@ -32,7 +32,7 @@ pub(crate) struct ImageSurfaceInternal {
 }
 
 impl RenderSurface for ImageSurfaceInternal {
-	fn begin_rendering<'a>(&self, builder: &'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<&'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, ()> {
+	fn begin_rendering<'a>(&mut self, builder: &'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<&'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, ()> {
 		builder.begin_rendering(
 			RenderingInfo {
 				color_attachments: vec![
@@ -60,9 +60,14 @@ impl RenderSurface for ImageSurfaceInternal {
 		Ok(builder)
 	}
 
-	fn end_rendering(&mut self, mut builder: AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, future: Box<dyn GpuFuture + Send>, queue: Arc<Queue>) -> Result<Box<dyn GpuFuture + Send>, ()> {
+	fn end_rendering(&mut self, mut builder: AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, mut future: Box<dyn GpuFuture + Send>, queue: Arc<Queue>) -> Result<Box<dyn GpuFuture + Send>, ()> {
 		builder.end_rendering().map_err(error_map!())?;
 		let buffer = builder.build().map_err(error_map!())?;
+
+		if self.operation_future.is_some() {
+			future = future
+				.join(self.operation_future.as_ref().unwrap().clone()).boxed_send();
+		}
 
 		let future = future
 			.then_execute(queue.clone(), buffer).map_err(error_map!())?.boxed_send()
@@ -80,12 +85,12 @@ impl RenderSurface for ImageSurfaceInternal {
 
 impl RenderThread {
 	#[inline]
+	#[expect(dead_code)]
 	pub(crate) fn get_image_surface<'a>(render_surfaces: &'a HashMap<Uuid, Box<dyn RenderSurface>>, uuid: &Uuid) -> Option<&'a ImageSurfaceInternal> {
 		Self::get_render_surface(render_surfaces, uuid)?.as_any().downcast_ref()
 	}
 
 	#[inline]
-	#[expect(dead_code)]
 	pub(crate) fn get_mut_image_surface<'a>(render_surfaces: &'a mut HashMap<Uuid, Box<dyn RenderSurface>>, uuid: &Uuid) -> Option<&'a mut ImageSurfaceInternal> {
 		Self::get_mut_render_surface(render_surfaces, uuid)?.as_mut_any().downcast_mut()
 	}

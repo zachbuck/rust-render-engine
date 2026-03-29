@@ -112,7 +112,7 @@ impl RenderThread {
 	fn read_image_surface_data(&mut self, uuid: Uuid, fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>) ->  Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send> {
 		let queue = self.get_transfer_queue();
 		
-		let image_surface = Self::get_image_surface(&self.render_surfaces, &uuid).unwrap();
+		let image_surface = Self::get_mut_image_surface(&mut self.render_surfaces, &uuid).unwrap();
 
 		let result = Buffer::from_iter(
 			self.buffer_allocator.clone(),
@@ -156,7 +156,8 @@ impl RenderThread {
 
 		let _ = fut_send.send(future.clone());
 
-		self.transfer_future = Some(future.boxed_send());
+		self.transfer_future = Some(future.clone().boxed_send());
+		image_surface.operation_future = Some(future.clone());
 
 		return Box::new(move || {
 			Ok(buffer.read().unwrap().to_owned().into_boxed_slice())
