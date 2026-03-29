@@ -3,7 +3,7 @@ use std::{
 	collections::HashSet, 
 	sync::{
 		Arc, 
-		mpsc::SyncSender,
+		mpsc::{Sender, SyncSender},
 	},
 };
 
@@ -38,7 +38,6 @@ use crate::{
 		pipeline_internal::PipelineInternal,
 	}, 
 	render_engine::{
-		RenderEngine, 
 		render_command::RenderEngineCommand, 
 		render_thread::RenderThread,
 	}, 
@@ -55,7 +54,7 @@ pub(crate) enum PipelineCommand {
 		sender: SyncSender<Result<Arc<Pipeline>, ()>>,
 
 		shaders: Box<[Arc<Shader>]>,
-		engine: Arc<RenderEngine>,
+		command_channel: Arc<Sender<RenderEngineCommand>>,
 	},
 	GetPipelines {
 		sender: SyncSender<Result<Box<[Arc<Pipeline>]>, ()>>,
@@ -74,13 +73,13 @@ impl Into<RenderEngineCommand> for PipelineCommand {
 impl RenderThread {
 	pub(crate) fn process_pipeline_command(&mut self, command: PipelineCommand) {
 		match command {
-			PipelineCommand::CreatePipeline { sender, shaders , engine} => { let _ = sender.send(self.create_pipeline(shaders, engine)); },
+			PipelineCommand::CreatePipeline { sender, shaders , command_channel} => { let _ = sender.send(self.create_pipeline(shaders, command_channel)); },
 			PipelineCommand::GetPipelines { sender } => { let _ = sender.send(self.get_pipelines()); },
 			PipelineCommand::DropPipeline { uuid } => self.drop_pipeline(uuid),
 		}
 	}
 
-	fn create_pipeline(&mut self, shaders: Box<[Arc<Shader>]>, engine: Arc<RenderEngine>) -> Result<Arc<Pipeline>, ()> {
+	fn create_pipeline(&mut self, shaders: Box<[Arc<Shader>]>, engine: Arc<Sender<RenderEngineCommand>>) -> Result<Arc<Pipeline>, ()> {
 		let uuid = Uuid::now_v7();
 
 		let stages = shaders.iter()
@@ -144,7 +143,7 @@ impl RenderThread {
 
 		let reference = Arc::new(Pipeline {
 			uuid: uuid,
-			render_engine: engine,
+			command_channel: engine,
 			shaders: shaders.clone(),
 			descriptor_requirements: descriptor_requirements,
 		});

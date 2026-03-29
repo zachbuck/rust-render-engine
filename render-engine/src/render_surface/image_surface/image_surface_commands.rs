@@ -1,7 +1,7 @@
 
 use std::sync::{
 	Arc, 
-	mpsc::SyncSender
+	mpsc::{Sender, SyncSender}
 };
 
 use uuid::Uuid;
@@ -23,11 +23,12 @@ use vulkano::{
 };
 
 use crate::{
-	macros::error_map, render_engine::{
-		RenderEngine, 
+	macros::error_map, 
+	render_engine::{
 		render_command::RenderEngineCommand, 
 		render_thread::RenderThread
-	}, render_surface::image_surface::{
+	}, 
+	render_surface::image_surface::{
 		ImageSurface, 
 		image_surface_internal::ImageSurfaceInternal
 	}
@@ -40,7 +41,7 @@ pub(crate) enum ImageSurfaceCommand {
 
 		x_size: u32,
 		y_size: u32,
-		render_engine: Arc<RenderEngine>
+		command_channel: Arc<Sender<RenderEngineCommand>>,
 	},
 	DropImageSurface {
 		uuid: Uuid
@@ -63,13 +64,13 @@ impl Into<RenderEngineCommand> for ImageSurfaceCommand {
 impl RenderThread {
 	pub(crate) fn process_image_surface_command(&mut self, command: ImageSurfaceCommand) {
 		match command {
-			ImageSurfaceCommand::CreateImageSurface { channel, x_size, y_size, render_engine } => { let _ = channel.send(self.create_image_surface(x_size, y_size, render_engine)); },
+			ImageSurfaceCommand::CreateImageSurface { channel, x_size, y_size, command_channel } => { let _ = channel.send(self.create_image_surface(x_size, y_size, command_channel)); },
 			ImageSurfaceCommand::DropImageSurface { uuid } => self.drop_image_surface(uuid),
 			ImageSurfaceCommand::ReadImageSurfaceData { uuid, func_send, fut_send } => { let _ = func_send.send(self.read_image_surface_data(uuid, fut_send)) ;},
 		}
 	}
 
-	fn create_image_surface(&mut self, x_size: u32, y_size: u32, render_engine: Arc<RenderEngine>) -> Result<Arc<ImageSurface>, ()> {
+	fn create_image_surface(&mut self, x_size: u32, y_size: u32, command_channel: Arc<Sender<RenderEngineCommand>>) -> Result<Arc<ImageSurface>, ()> {
 		let uuid = Uuid::now_v7();
 
 		let image = Image::new(
@@ -98,7 +99,7 @@ impl RenderThread {
 
 		Ok(Arc::new(ImageSurface {
 			uuid: uuid,
-			render_engine: render_engine,
+			command_channel,
 			x_size: x_size,
 			y_size: y_size
 		}))

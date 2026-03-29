@@ -1,7 +1,7 @@
 
 use std::sync::{
 	Arc, 
-	mpsc::sync_channel,
+	mpsc::{Sender, sync_channel},
 };
 
 use shaderc::ShaderKind;
@@ -15,7 +15,8 @@ use crate::{
 	macros::error_map, 
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture,
+		engine_future::EngineFuture, 
+		render_command::RenderEngineCommand,
 	}, 
 	shader::{
 		descriptor_requirements::DescriptorRequirements, 
@@ -30,7 +31,7 @@ pub(crate) mod shader_command;
 #[derive(Debug)]
 pub struct Shader {
 	pub(crate) uuid: Uuid,
-	render_engine: Arc<RenderEngine>,
+	command_channel: Arc<Sender<RenderEngineCommand>>,
 
 	pub shader_type: ShaderType,
 	pub(crate) descriptor_requirements: DescriptorRequirements,
@@ -47,7 +48,7 @@ pub enum ShaderType {
 }
 
 impl Shader { 
-	pub fn compile(render_engine: &Arc<RenderEngine>, shader_name: &str, shader_type: ShaderType, shader_source: &str) -> Result<Box<[u32]>, ()> {
+	pub fn compile(render_engine: &RenderEngine, shader_name: &str, shader_type: ShaderType, shader_source: &str) -> Result<Box<[u32]>, ()> {
 		let compiler = render_engine.spirv_compiler.as_ref().ok_or(())?;
 
 		let artifact = compiler.compile_into_spirv(
@@ -61,21 +62,21 @@ impl Shader {
 		return Ok(artifact.as_binary().to_owned().into_boxed_slice());
 	}
 
-	pub fn new(render_engine: &Arc<RenderEngine>, binary: Box<[u32]>) -> EngineFuture<Result<Arc<Self>, ()>> {
+	pub fn new(render_engine: &RenderEngine, binary: Box<[u32]>) -> EngineFuture<Result<Arc<Self>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
 			ShaderCommand::CreateShader { 
 				sender: send, 
 				binary, 
-				engine: render_engine.clone(), 
+				command_channel: render_engine.command_channel.clone(), 
 			}.into()
 		).unwrap();
 
 		return EngineFuture::new_single(recv);
 	}
 
-	pub fn get_all(render_engine: &Arc<RenderEngine>) -> EngineFuture<Result<Box<[Arc<Shader>]>, ()>> {
+	pub fn get_all(render_engine: &RenderEngine) -> EngineFuture<Result<Box<[Arc<Shader>]>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -90,7 +91,7 @@ impl Shader {
 
 impl Drop for Shader {
 	fn drop(&mut self) {
-		self.render_engine.command_channel.send(
+		self.command_channel.send(
 			ShaderCommand::DropShader { 
 				uuid: self.uuid,
 			}.into()

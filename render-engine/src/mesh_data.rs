@@ -1,7 +1,7 @@
 
 use std::sync::{
 	Arc, 
-	mpsc::sync_channel,
+	mpsc::{Sender, sync_channel},
 };
 
 use uuid::Uuid;
@@ -14,7 +14,7 @@ use crate::{
 	mesh_data::mesh_data_command::MeshDataCommand, 
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture,
+		engine_future::EngineFuture, render_command::RenderEngineCommand,
 	},
 };
 
@@ -24,7 +24,7 @@ pub(crate) mod mesh_data_internal;
 #[derive(Debug)]
 pub struct MeshData {
 	pub(crate) uuid: Uuid,
-	render_engine: Arc<RenderEngine>,
+	command_channel: Arc<Sender<RenderEngineCommand>>,
 }
 
 #[repr(C)]
@@ -41,7 +41,7 @@ pub struct Vertex3D {
 }
 
 impl MeshData {
-	pub fn new(render_engine: &Arc<RenderEngine>, vertices: Vec<Vertex3D>, indices: Vec<u16>) -> EngineFuture<Result<Arc<Self>, ()>> {
+	pub fn new(render_engine: &RenderEngine, vertices: Vec<Vertex3D>, indices: Vec<u16>) -> EngineFuture<Result<Arc<Self>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -50,14 +50,14 @@ impl MeshData {
 
 				vertices: vertices.into_boxed_slice(),
 				indices: indices.into_boxed_slice(),
-				engine: render_engine.clone(),
+				command_channel: render_engine.command_channel.clone(),
 			}.into()
 		).unwrap();
 
 		return EngineFuture::new_single(recv);
 	}
 
-	pub fn get_all(render_engine: &Arc<RenderEngine>) -> EngineFuture<Result<Box<[Arc<MeshData>]>, ()>> {
+	pub fn get_all(render_engine: &RenderEngine) -> EngineFuture<Result<Box<[Arc<MeshData>]>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -72,7 +72,7 @@ impl MeshData {
 
 impl Drop for MeshData {
 	fn drop(&mut self) {
-		self.render_engine.command_channel.send(
+		self.command_channel.send(
 			MeshDataCommand::DropMeshData { 
 				uuid: self.uuid 
 			}.into()

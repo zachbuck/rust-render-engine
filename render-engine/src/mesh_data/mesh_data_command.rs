@@ -1,7 +1,7 @@
 
 use std::sync::{
 	Arc, 
-	mpsc::SyncSender,
+	mpsc::{Sender, SyncSender},
 };
 
 use uuid::Uuid;
@@ -16,7 +16,6 @@ use crate::{
 		Vertex3D, 
 		mesh_data_internal::MeshDataInternal
 	}, render_engine::{
-		RenderEngine, 
 		render_command::RenderEngineCommand, 
 		render_thread::RenderThread
 	}
@@ -25,17 +24,17 @@ use crate::{
 #[derive(Debug)]
 pub(crate) enum MeshDataCommand {
 	CreateMeshData {
-		sender: 	SyncSender<Result<Arc<MeshData>, ()>>,
+		sender: 			SyncSender<Result<Arc<MeshData>, ()>>,
 
-		vertices:	Box<[Vertex3D]>,
-		indices:	Box<[u16]>,
-		engine: 	Arc<RenderEngine>,
+		vertices:			Box<[Vertex3D]>,
+		indices:			Box<[u16]>,
+		command_channel: 	Arc<Sender<RenderEngineCommand>>,
 	},
 	GetMeshData {
-		sender: SyncSender<Result<Box<[Arc<MeshData>]>, ()>>,
+		sender: 			SyncSender<Result<Box<[Arc<MeshData>]>, ()>>,
 	},
 	DropMeshData {
-		uuid:		Uuid,
+		uuid:				Uuid,
 	}
 }
 
@@ -48,13 +47,13 @@ impl Into<RenderEngineCommand> for MeshDataCommand {
 impl RenderThread {
 	pub(crate) fn process_mesh_data_command(&mut self, command: MeshDataCommand) {
 		match command {
-			MeshDataCommand::CreateMeshData { sender, vertices, indices, engine } => { let _ = sender.send(self.create_mesh_data(&vertices, &indices, engine)); },
+			MeshDataCommand::CreateMeshData { sender, vertices, indices, command_channel } => { let _ = sender.send(self.create_mesh_data(&vertices, &indices, command_channel)); },
 			MeshDataCommand::GetMeshData { sender } => { let _ = sender.send(self.get_all_mesh_data()); },
 			MeshDataCommand::DropMeshData { uuid } => self.drop_mesh_data(uuid),
 		}
 	}
 
-	fn create_mesh_data(&mut self, vertices: &[Vertex3D], indices: &[u16], engine: Arc<RenderEngine>) -> Result<Arc<MeshData>, ()> {
+	fn create_mesh_data(&mut self, vertices: &[Vertex3D], indices: &[u16], command_channel: Arc<Sender<RenderEngineCommand>>) -> Result<Arc<MeshData>, ()> {
 		let uuid = Uuid::now_v7();
 
 		let vertices = Buffer::from_iter(
@@ -83,7 +82,7 @@ impl RenderThread {
 			indices.iter().map(|i| *i)
 		).map_err(error_map!())?;
 
-		let reference = Arc::new(MeshData { uuid, render_engine: engine });
+		let reference = Arc::new(MeshData { uuid, command_channel });
 
 		let internal = MeshDataInternal { reference: Arc::downgrade(&reference), vertices, indices };
 		self.mesh_data.insert(uuid, internal);

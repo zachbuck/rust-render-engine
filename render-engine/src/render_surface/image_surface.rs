@@ -1,7 +1,7 @@
 
 use std::sync::{
 	Arc, 
-	mpsc::sync_channel
+	mpsc::{Sender, sync_channel}
 };
 
 use uuid::Uuid;
@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture
+		engine_future::EngineFuture, render_command::RenderEngineCommand
 	}, 
 	render_surface::{
 		image_surface::image_surface_commands::ImageSurfaceCommand, 
@@ -22,7 +22,7 @@ pub(crate) mod image_surface_internal;
 
 pub struct ImageSurface {
 	uuid: Uuid,
-	render_engine: Arc<RenderEngine>,
+	command_channel: Arc<Sender<RenderEngineCommand>>,
 
 	pub x_size: u32,
 	pub y_size: u32,
@@ -30,7 +30,7 @@ pub struct ImageSurface {
 
 impl Drop for ImageSurface {
 	fn drop(&mut self) {
-		self.render_engine.command_channel.send(
+		self.command_channel.send(
 			ImageSurfaceCommand::DropImageSurface { 
 				uuid: self.uuid
 			}.into()
@@ -39,7 +39,7 @@ impl Drop for ImageSurface {
 }
 
 impl ImageSurface {
-	pub fn new(render_engine: &Arc<RenderEngine>, x_size: u32, y_size: u32) -> EngineFuture<Result<Arc<ImageSurface>, ()>> {
+	pub fn new(render_engine: &RenderEngine, x_size: u32, y_size: u32) -> EngineFuture<Result<Arc<ImageSurface>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -47,7 +47,7 @@ impl ImageSurface {
 				channel: send, 
 				x_size: x_size, 
 				y_size: y_size, 
-				render_engine: render_engine.clone() 
+				command_channel: render_engine.command_channel.clone() 
 			}.into()
 		).unwrap();
 
@@ -57,7 +57,7 @@ impl ImageSurface {
 	pub fn render_all(&self) -> EngineFuture<Result<(), ()>> {
 		let (send, recv) = sync_channel(1);
 
-		self.render_engine.command_channel.send(
+		self.command_channel.send(
 			RenderSurfaceCommand::RenderRenderSurface { 
 				sender: send, 
 				uuid: self.uuid, 
@@ -71,7 +71,7 @@ impl ImageSurface {
 		let (func_send, func_recv) = sync_channel(1);
 		let (send, recv) = sync_channel(1);
 
-		self.render_engine.command_channel.send(
+		self.command_channel.send(
 			ImageSurfaceCommand::ReadImageSurfaceData { 
 				uuid: self.uuid,
 

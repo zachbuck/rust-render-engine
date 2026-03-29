@@ -3,7 +3,7 @@ use std::{
 	collections::HashSet, 
 	sync::{
 		Arc, 
-		mpsc::sync_channel
+		mpsc::{Sender, sync_channel}
 	}
 };
 
@@ -13,7 +13,7 @@ use crate::{
 	pipeline::pipeline_command::PipelineCommand, 
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture
+		engine_future::EngineFuture, render_command::RenderEngineCommand
 	}, 
 	shader::{Shader, ShaderType, descriptor_requirements::DescriptorRequirements}
 };
@@ -24,14 +24,14 @@ pub(crate) mod pipeline_internal;
 #[derive(Debug)]
 pub struct Pipeline {
 	pub(crate) uuid: Uuid,
-	render_engine: Arc<RenderEngine>,
+	command_channel: Arc<Sender<RenderEngineCommand>>,
 
 	pub shaders: Box<[Arc<Shader>]>,
 	pub(crate) descriptor_requirements: DescriptorRequirements,
 }
 
 impl Pipeline {
-	pub fn new(render_engine: &Arc<RenderEngine>, shaders: &[Arc<Shader>]) -> EngineFuture<Result<Arc<Pipeline>, ()>> {
+	pub fn new(render_engine: &RenderEngine, shaders: &[Arc<Shader>]) -> EngineFuture<Result<Arc<Pipeline>, ()>> {
 		// Do some error checking on the input to make sure that this will link into a valid GraphicsPipeline
 		// 1. Only one of each stage
 		// 2. Must contain Vertex Shader
@@ -63,14 +63,14 @@ impl Pipeline {
 			PipelineCommand::CreatePipeline { 
 				sender: send, 
 				shaders: shaders,
-				engine: render_engine.clone(),
+				command_channel: render_engine.command_channel.clone(),
 			}.into()
 		).unwrap();
 
 		return EngineFuture::new_single(recv);
 	}
 
-	pub fn get_all(render_engine: &Arc<RenderEngine>) -> EngineFuture<Result<Box<[Arc<Pipeline>]>, ()>> {
+	pub fn get_all(render_engine: &RenderEngine) -> EngineFuture<Result<Box<[Arc<Pipeline>]>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -85,7 +85,7 @@ impl Pipeline {
 
 impl Drop for Pipeline {
 	fn drop(&mut self) {
-		self.render_engine.command_channel.send(
+		self.command_channel.send(
 			PipelineCommand::DropPipeline { 
 				uuid: self.uuid 
 			}.into()

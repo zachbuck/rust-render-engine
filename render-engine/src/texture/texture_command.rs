@@ -1,7 +1,7 @@
 
 use std::sync::{
 	Arc, 
-	mpsc::SyncSender
+	mpsc::{Sender, SyncSender}
 };
 
 use uuid::Uuid;
@@ -28,7 +28,6 @@ use vulkano::{
 use crate::{
 	macros::error_map, 
 	render_engine::{
-		RenderEngine, 
 		render_command::RenderEngineCommand, 
 		render_thread::RenderThread,
 	}, 
@@ -47,7 +46,7 @@ pub(crate) enum TextureCommand {
 		x_size: u32,
 		y_size: u32,
 		data: Box<[u8]>,
-		engine: Arc<RenderEngine>,
+		command_channel: Arc<Sender<RenderEngineCommand>>,
 	},
 	GetTextures {
 		send: SyncSender<Result<Box<[Arc<Texture>]>, ()>>,
@@ -66,13 +65,13 @@ impl Into<RenderEngineCommand> for TextureCommand {
 impl RenderThread {
 	pub(crate) fn process_texture_command(&mut self, command: TextureCommand) {
 		match command {
-			TextureCommand::CreateTexture { send, fut_send, x_size, y_size, data, engine } => { let _ = send.send(self.create_texture(fut_send, x_size, y_size, data, engine)); },
+			TextureCommand::CreateTexture { send, fut_send, x_size, y_size, data, command_channel } => { let _ = send.send(self.create_texture(fut_send, x_size, y_size, data, command_channel)); },
 			TextureCommand::GetTextures { send } => { let _ = send.send(self.get_textures()); },
 			TextureCommand::DropTexture { uuid } => self.drop_texture(uuid),
 		}
 	}
 
-	fn create_texture(&mut self, fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>, x_size: u32, y_size: u32, data: Box<[u8]>, engine: Arc<RenderEngine>) -> Result<Arc<Texture>, ()> {
+	fn create_texture(&mut self, fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>, x_size: u32, y_size: u32, data: Box<[u8]>, command_channel: Arc<Sender<RenderEngineCommand>>) -> Result<Arc<Texture>, ()> {
 		let uuid = Uuid::now_v7();
 
 		let buffer = Buffer::from_iter(
@@ -127,7 +126,7 @@ impl RenderThread {
 
 		self.transfer_future = Some(future.boxed_send());
 
-		let reference = Arc::new(Texture { uuid, render_engine: engine, y_size, x_size });
+		let reference = Arc::new(Texture { uuid, command_channel, y_size, x_size });
 
 		let image_view = ImageView::new_default(image.clone()).map_err(error_map!())?;
 

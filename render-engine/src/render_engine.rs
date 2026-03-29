@@ -1,10 +1,9 @@
 
 use std::{
-	sync::{
+	fmt::Debug, sync::{
         Arc, 
         mpsc::{Sender, channel, sync_channel},
-    }, 
-	thread::Builder as ThreadBuilder,
+    }, thread::Builder as ThreadBuilder
 };
 
 use shaderc::Compiler;
@@ -28,7 +27,7 @@ mod create_info;
 
 #[derive(Debug)]
 pub struct RenderEngine {
-    pub(crate) command_channel: Sender<RenderEngineCommand>,
+    pub(crate) command_channel: Arc<Sender<RenderEngineCommand>>,
     pub(crate) spirv_compiler: Option<Compiler>,
 }
 
@@ -52,7 +51,7 @@ macro_rules! run_render_thread {
 }
 
 impl RenderEngine {
-    pub fn new(create_info: RenderEngineCreateInfo) -> Result<Arc<Self>, ()> {
+    pub fn new(create_info: RenderEngineCreateInfo) -> Result<Self, ()> {
         let (command_s, command_r) = channel();
         let (init_s, init_r) = sync_channel(1);
 
@@ -72,10 +71,10 @@ impl RenderEngine {
             compiler = None;
         }
 
-        Ok(Arc::new(RenderEngine {
-            command_channel: command_s,
+        Ok(RenderEngine {
+            command_channel: Arc::new(command_s),
             spirv_compiler: compiler,
-        }))
+        })
     }
 }
 

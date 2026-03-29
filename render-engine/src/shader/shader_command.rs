@@ -1,7 +1,7 @@
 
 use std::sync::{
 	Arc, 
-	mpsc::SyncSender,
+	mpsc::{Sender, SyncSender},
 };
 
 use uuid::Uuid;
@@ -10,7 +10,6 @@ use vulkano::shader::{ShaderModule, ShaderModuleCreateInfo};
 use crate::{
 	macros::error_map, 
 	render_engine::{
-		RenderEngine, 
 		render_command::RenderEngineCommand, 
 		render_thread::RenderThread,
 	}, 
@@ -27,7 +26,7 @@ pub(crate) enum ShaderCommand {
 		sender: SyncSender<Result<Arc<Shader>, ()>>,
 
 		binary: Box<[u32]>,
-		engine: Arc<RenderEngine>,
+		command_channel: Arc<Sender<RenderEngineCommand>>,
 	},
 	GetShaders {
 		sender: SyncSender<Result<Box<[Arc<Shader>]>, ()>>,
@@ -46,13 +45,13 @@ impl Into<RenderEngineCommand> for ShaderCommand {
 impl RenderThread {
 	pub(crate) fn process_shader_command(&mut self, command: ShaderCommand) {
 		match command {
-			ShaderCommand::CreateShader { sender, binary , engine} => { let _ = sender.send(self.create_shader(binary.as_ref(), engine)); },
+			ShaderCommand::CreateShader { sender, binary , command_channel} => { let _ = sender.send(self.create_shader(binary.as_ref(), command_channel)); },
 			ShaderCommand::GetShaders { sender } => { let _ = sender.send(self.get_shaders()); }
 			ShaderCommand::DropShader { uuid } => self.drop_shader(uuid),
 		}
 	}
 
-	fn create_shader(&mut self, shader_binary: &[u32], engine: Arc<RenderEngine>) -> Result<Arc<Shader>, ()> {
+	fn create_shader(&mut self, shader_binary: &[u32], command_channel: Arc<Sender<RenderEngineCommand>>) -> Result<Arc<Shader>, ()> {
 		let uuid = Uuid::now_v7();
 
 		let module = unsafe {
@@ -70,7 +69,7 @@ impl RenderThread {
 
 		let reference = Arc::new(Shader {
 			uuid,
-			render_engine: engine,
+			command_channel,
 			shader_type: shader_type,
 			descriptor_requirements: descriptor_requirements.clone(),
 		});

@@ -3,7 +3,7 @@ use std::{
 	collections::HashMap, 
 	sync::{
 		Arc, 
-		mpsc::SyncSender,
+		mpsc::{Sender, SyncSender},
 	},
 };
 
@@ -19,7 +19,6 @@ use crate::{
 	mesh_data::MeshData, 
 	pipeline::Pipeline, 
 	render_engine::{
-		RenderEngine, 
 		render_command::RenderEngineCommand, 
 		render_resources::RenderResources, 
 		render_thread::RenderThread,
@@ -40,7 +39,7 @@ pub(crate) enum RenderObjectCommand {
 
 		mesh_data: Arc<MeshData>,
 		pipeline: Arc<Pipeline>,
-		render_engine: Arc<RenderEngine>,
+		command_channel: Arc<Sender<RenderEngineCommand>>,
 	},
 	DropRenderObject {
 		uuid: Uuid,
@@ -66,14 +65,14 @@ impl Into<RenderEngineCommand> for RenderObjectCommand {
 impl RenderThread {
 	pub(crate) fn process_render_object_command(&mut self, command: RenderObjectCommand) {
 		match command {
-			RenderObjectCommand::CreateRenderObject { sender, mesh_data, pipeline, render_engine } => {let _ = sender.send(self.create_render_object(mesh_data, pipeline, render_engine));},
+			RenderObjectCommand::CreateRenderObject { sender, mesh_data, pipeline, command_channel } => {let _ = sender.send(self.create_render_object(mesh_data, pipeline, command_channel));},
 			RenderObjectCommand::DropRenderObject { uuid } => self.drop_render_object(uuid),
 
 			RenderObjectCommand::UpdateDescriptor { sender, uuid, set, binding, data } => {let _ = sender.send(self.update_descriptor(uuid, set, binding, data));},
 		}
 	}
 
-	fn create_render_object(&mut self, mesh_data: Arc<MeshData>, pipeline: Arc<Pipeline>, render_engine: Arc<RenderEngine>) -> Result<Arc<RenderObject>, ()> {
+	fn create_render_object(&mut self, mesh_data: Arc<MeshData>, pipeline: Arc<Pipeline>, command_channel: Arc<Sender<RenderEngineCommand>>) -> Result<Arc<RenderObject>, ()> {
 		let uuid = Uuid::now_v7();
 
 		let pipeline_internal = Self::get_pipeline(&self.pipelines, &pipeline.uuid).unwrap();
@@ -117,7 +116,7 @@ impl RenderThread {
 
 		Ok(Arc::new(RenderObject { 
 			uuid: uuid, 
-			render_engine: render_engine.clone(), 
+			command_channel: command_channel.clone(), 
 
 			mesh: mesh_data.clone(), 
 			pipeline: pipeline.clone(),
