@@ -34,6 +34,8 @@ const FRAGMENT_PATH: &str = "./tests/texture_quad/fragment.glsl.frag";
 
 const TEXTURE_PATH: &str = "./tests/texture_quad/texture.png";
 
+const TEST_IMAGE_PATH: &str = "./tests/texture_quad/test.png";
+
 #[test]
 fn render_scene() {
 	let create_info = RenderEngineCreateInfo::new()
@@ -71,5 +73,13 @@ fn render_scene() {
 
 	let image_data = image_surface.get_image_surface_data().unwrap().unwrap();
 	let image = ImageBuffer::<Rgba<u8>, _>::from_raw(200, 200, image_data).unwrap();
-	image.save("./test.png").unwrap();
+
+	let test_image = open(TEST_IMAGE_PATH).unwrap().into_rgba8();
+
+	assert!(image.dimensions() == test_image.dimensions());
+	for x in 0..image.width() {
+		for y in 0..image.height() {
+			assert!(image.get_pixel(x, y) == test_image.get_pixel(x, y))
+		}
+	}
 }
