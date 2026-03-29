@@ -99,7 +99,7 @@ mod tests {
 
     use crate::{
 		pipeline::Pipeline, 
-		render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+		render_engine::{RenderEngine, RenderEngineFlags}, 
 		shader::{Shader, ShaderType},
 	};
 
@@ -161,9 +161,11 @@ mod tests {
 	#[test]
 	/// Ensure `Pipeline::new()` and `Pipeline::drop()` are working as expected.
 	fn new_pipeline() {
-		let create_info = RenderEngineCreateInfo::new()
-			.with_spirv_compiler();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine_flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
 		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
@@ -184,9 +186,11 @@ mod tests {
 	/// 
 	/// `VUID-VkGraphicsPipelineCreateInfo-stage-06897`
 	fn new_pipeline_duplicate_shader() {
-		let create_info = RenderEngineCreateInfo::new()
-			.with_spirv_compiler();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine_flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
 		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
@@ -207,9 +211,11 @@ mod tests {
 	/// 
 	/// `VUID-VkGraphicsPipelineCreateInfo-stage-02096`
 	fn new_pipeline_no_vertex_shader() {
-		let create_info = RenderEngineCreateInfo::new()
-			.with_spirv_compiler();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine_flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
 		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
@@ -224,9 +230,11 @@ mod tests {
 	/// 
 	/// `VUID-VkGraphicsPipelineCreateInfo-layout-00756`
 	fn new_pipeline_incompatible_descriptors() {
-		let create_info = RenderEngineCreateInfo::new()
-			.with_spirv_compiler();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine_flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_DESCRIPTOR_SOURCE).unwrap();
 		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
@@ -242,9 +250,11 @@ mod tests {
 	#[test]
 	/// Ensure that `Pipeline::get_all()` is working as expected.
 	fn get_all() {
-		let create_info = RenderEngineCreateInfo::new()
-			.with_spirv_compiler();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine_flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
 		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();

@@ -75,7 +75,7 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-		render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+		render_engine::{RenderEngine, RenderEngineFlags}, 
 		texture::Texture,
 	};
 
@@ -84,8 +84,7 @@ mod tests {
 	#[test]
 	/// Ensure that `Texture::new()` and `Texture::drop()` are working as expected.
 	fn new_texture() {
-		let create_info = RenderEngineCreateInfo::new();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine = RenderEngine::new("Texture Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
 		let texture = Texture::new(&engine, &TEXTURE_DATA, 100, 100).unwrap().unwrap();
 
@@ -99,8 +98,7 @@ mod tests {
 	#[test]
 	/// Ensure that `Texture::get_all()` is working as expected.
 	fn get_all() {
-		let create_info = RenderEngineCreateInfo::new();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine = RenderEngine::new("Texture Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
 		let texture = Texture::new(&engine, &TEXTURE_DATA, 100, 100).unwrap().unwrap();
 

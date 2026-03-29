@@ -132,7 +132,7 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-		render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+		render_engine::{RenderEngine, RenderEngineFlags}, 
 		shader::{Shader, ShaderType},
 	};
 
@@ -196,9 +196,11 @@ mod tests {
 	#[test]
 	/// Ensure that `Shader::compile()` is working as expected.
 	fn compile_shader() {
-		let create_info = RenderEngineCreateInfo::new()
-			.with_spirv_compiler();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine_flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Shader Test", [0, 1, 0], engine_flags).unwrap();
 
 		let binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
 
@@ -211,9 +213,11 @@ mod tests {
 	#[test]
 	/// Ensure that `Shader::compile()` returns `Err(())` on incorrect code submission.
 	fn compile_shader_incorrect_code() {
-		let create_info = RenderEngineCreateInfo::new()
-			.with_spirv_compiler();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine_flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Shader Test", [0, 1, 0], engine_flags).unwrap();
 
 		let result = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, ERROR_SOURCE);
 
@@ -223,8 +227,7 @@ mod tests {
 	#[test]
 	/// Ensure that `Shader::compile()` returns `Err(())` if `RenderEngine` is created without a SPIR-V compiler.
 	fn compile_shader_no_spirv_compiler() {
-		let create_info = RenderEngineCreateInfo::new();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine = RenderEngine::new("Shader Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
 		let result = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE);
 
@@ -234,8 +237,11 @@ mod tests {
 	#[test]
 	/// Ensure that `Shader::new()` and `Shader::drop()` are working as expected.
 	fn new_shader() {
-		let create_info = RenderEngineCreateInfo::new();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine_flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Shader Test", [0, 1, 0], engine_flags).unwrap();
 
 		let shader = Shader::new(&engine, Box::new(VERTEX_BINARY)).unwrap().unwrap();
 
@@ -249,8 +255,11 @@ mod tests {
 	#[test]
 	/// Ensure that `Shader::get_all()` is working as expected.
 	fn get_all() {
-		let create_info = RenderEngineCreateInfo::new();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine_flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Shader Test", [0, 1, 0], engine_flags).unwrap();
 
 		let shader = Shader::new(&engine, Box::new(VERTEX_BINARY)).unwrap().unwrap();
 

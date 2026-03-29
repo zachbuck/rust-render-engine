@@ -8,7 +8,7 @@ use image::{ImageBuffer, Rgba, open};
 use render_engine::{
 	mesh_data::{MeshData, Vertex3D}, 
 	pipeline::Pipeline, 
-	render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+	render_engine::{RenderEngine, RenderEngineFlags}, 
 	render_surface::image_surface::ImageSurface, 
 	renderable::{descriptor_set_data::DescriptorData, render_object::RenderObject}, 
 	shader::{Shader, ShaderType},
@@ -46,11 +46,11 @@ const FLIP_TEST_IMAGE_PATH: &str = "./tests/rotated_triangle/flip_matrix_test.pn
 
 #[test]
 fn render_scene() {
-	let create_info = RenderEngineCreateInfo::new()
-		.with_app_name("Rotated Triangle".to_string())
-		.with_app_vers(0, 1, 0)
-		.with_spirv_compiler();
-	let engine = RenderEngine::new(create_info).unwrap();
+	let flags = RenderEngineFlags {
+		feature_spirv_compiler: true,
+		..Default::default()
+	};
+	let engine = RenderEngine::new("Rotated Triangle", [0, 1, 0], flags).unwrap();
 
 	let image_surface = ImageSurface::new(&engine, 100, 100).unwrap().unwrap();
 

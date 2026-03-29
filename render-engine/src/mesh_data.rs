@@ -87,7 +87,7 @@ mod tests {
 
     use crate::{
 		mesh_data::{MeshData, Vertex3D}, 
-		render_engine::{RenderEngine, RenderEngineCreateInfo}
+		render_engine::{RenderEngine, RenderEngineFlags}
 	};
 
 	const VERTICES: [Vertex3D; 4] = [
@@ -105,8 +105,7 @@ mod tests {
 	#[test]
 	/// Ensure `MeshData::new()` and `MeshData::drop()` are working as expected.
 	fn new_mesh_data() {
-		let create_info = RenderEngineCreateInfo::new();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine = RenderEngine::new("Mesh Data Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
 		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 
@@ -119,8 +118,7 @@ mod tests {
 	#[test]
 	/// Ensure `MeshData::get_all()` is working as expected.
 	fn get_all() {
-		let create_info = RenderEngineCreateInfo::new();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine = RenderEngine::new("Mesh Data Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
 		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 

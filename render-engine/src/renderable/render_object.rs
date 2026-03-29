@@ -84,7 +84,7 @@ mod tests {
     use crate::{
 		mesh_data::{MeshData, Vertex3D}, 
 		pipeline::Pipeline, 
-		render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+		render_engine::{RenderEngine, RenderEngineFlags}, 
 		renderable::{descriptor_set_data::DescriptorData, render_object::RenderObject}, 
 		shader::{Shader, ShaderType}, texture::Texture,
 	};
@@ -156,9 +156,11 @@ mod tests {
 	#[test]
 	/// Ensure that `RenderObject::new()` and `RenderObject::drop()` are working as expected.
 	fn new_render_object() {
-		let create_info = RenderEngineCreateInfo::new()
-			.with_spirv_compiler();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
 		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 
@@ -178,9 +180,11 @@ mod tests {
 	#[test]
 	/// Ensure that `RenderObject::update_descriptor()` is working as expected for uniform buffers.
 	fn update_descriptor_uniform_buffer() {
-		let create_info = RenderEngineCreateInfo::new()
-			.with_spirv_compiler();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
 		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 
@@ -200,9 +204,11 @@ mod tests {
 	#[test]
 	/// Ensure that `RenderObject::update_descriptor()` is working as expected for combined image samplers.
 	fn update_descriptor_combined_image_sampler() {
-		let create_info = RenderEngineCreateInfo::new()
-			.with_spirv_compiler();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
 		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 
@@ -224,9 +230,11 @@ mod tests {
 	#[test]
 	/// Ensure that `RenderObject::update_descriptor()` is returning `Err(())` as expected on incorrect descriptor submission.
 	fn update_descriptor_incorrect_descriptor_type() {
-		let create_info = RenderEngineCreateInfo::new()
-			.with_spirv_compiler();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let flags = RenderEngineFlags {
+			feature_spirv_compiler: true,
+			..Default::default()
+		};
+		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
 		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
 

@@ -1,56 +1,112 @@
 
+use sdl2::Sdl;
+use shaderc::Compiler;
 use vulkano::{
-    Version, 
-    device::{DeviceExtensions, DeviceFeatures}, 
-    instance::InstanceExtensions
+	Version, 
+	device::{DeviceExtensions, DeviceFeatures}, 
+	instance::InstanceExtensions, 
+	swapchain::Surface,
 };
 
-#[derive(Debug)]
-pub struct RenderEngineCreateInfo {
-    pub(super) app_name: Option<String>,
-    pub(super) app_vers: Version,
-
-    pub(super) instance_extensions: InstanceExtensions,
-    pub(super) device_extensions: DeviceExtensions,
-    pub(super) device_features: DeviceFeatures,
-
-    pub(super) flags: u64,
+pub struct RenderEngineFlags {
+	pub feature_spirv_compiler: bool,
+	pub feature_windowing: bool,
 }
 
-#[repr(u64)]
-#[derive(Debug)]
-pub(super) enum RenderEngineCreateInfoFlags {
-    InitSpirvCompiler = 0x0000_0001,
+impl RenderEngineFlags {
+	pub fn empty() -> Self {
+		RenderEngineFlags { 
+			feature_spirv_compiler: false, 
+			feature_windowing: false,
+		}
+	}
+
+	pub(super) fn generate_spirv_compiler(&self) -> Option<Compiler> {
+		if self.feature_spirv_compiler {
+			return Some(Compiler::new().unwrap());
+		}
+		return None;
+	}
+
+	pub(super) fn generate_sdl(&self) -> Option<Sdl> {
+		if self.feature_windowing {
+			return Some(sdl2::init().unwrap());
+		}
+		return None;
+	}
 }
 
-impl RenderEngineCreateInfo {
-    pub fn new() -> Self {
-        RenderEngineCreateInfo {
-            app_name: None,
-            app_vers: Version { major: 0, minor: 1, patch: 0 },
+impl Default for RenderEngineFlags {
+	fn default() -> Self {
+		Self::empty()
+	}
+}
 
-            instance_extensions: InstanceExtensions {
-				..InstanceExtensions::empty()
-			},
-            device_extensions: DeviceExtensions {
-				..DeviceExtensions::empty()
-			},
-            device_features: DeviceFeatures {
-				dynamic_rendering: true,
-				..DeviceFeatures::empty()
-			},
+#[inline]
+pub(crate) fn get_eng_name() -> &'static str {
+	env!("CARGO_PKG_NAME")
+}
 
-            flags: 0x0000_0000 
-        }
-    }
+#[inline]
+pub(crate) fn get_eng_version() -> Version {
+	let major = env!("CARGO_PKG_VERSION_MAJOR").parse().unwrap();
+	let minor = env!("CARGO_PKG_VERSION_MINOR").parse().unwrap();
+	let patch = env!("CARGO_PKG_VERSION_PATCH").parse().unwrap();
 
-    pub fn with_app_name(mut self, app_name: String) -> Self { self.app_name = Some(app_name); self }
-    pub fn with_app_vers(mut self, major: u32, minor: u32, patch: u32) -> Self { self.app_vers = Self::get_version(major, minor, patch); self }
+	get_version(major, minor, patch)
+}
 
-    pub fn with_spirv_compiler(mut self) -> Self { self.flags |= RenderEngineCreateInfoFlags::InitSpirvCompiler as u64; self }
+#[inline]
+pub(crate) fn get_version(major: u32, minor: u32, patch: u32) -> Version {
+	Version { major, minor, patch }
+}
 
-    pub(super) fn get_eng_name() -> Option<String> { Some(env!("CARGO_PKG_NAME").to_string()) }
-    pub(super) fn get_eng_vers() -> Version { Self::get_version(env!("CARGO_PKG_VERSION_MAJOR").parse().unwrap(), env!("CARGO_PKG_VERSION_MINOR").parse().unwrap(), env!("CARGO_PKG_VERSION_PATCH").parse().unwrap()) }
+pub(super) struct RenderThreadCreateInfo {
+	pub(super) app_name: Option<String>,
+	pub(super) app_vers: Version,
 
-    fn get_version(major: u32, minor: u32, patch: u32) -> Version { Version { major, minor, patch } }
+	pub(super) eng_name: Option<String>,
+	pub(super) eng_vers: Version,
+
+	pub(super) instance_extensions: InstanceExtensions,
+	pub(super) device_extensions: DeviceExtensions,
+	pub(super) device_features: DeviceFeatures,
+}
+
+impl RenderThreadCreateInfo {
+	pub(super) fn new(app_name: &str, app_vers: &[u32; 3], flags: &RenderEngineFlags, sdl: &Option<Sdl>) -> Self {
+		let mut instance_extensions = InstanceExtensions::empty();
+		let mut device_extensions = DeviceExtensions::empty();
+		let mut device_features = DeviceFeatures::empty();
+
+		// Needed in all cases.
+		device_extensions = device_extensions.union(&DeviceExtensions { khr_dynamic_rendering: true, ..Default::default() });
+		device_features = device_features.union(&DeviceFeatures { dynamic_rendering: true, ..Default::default() });
+
+		// features_spirv_compiler 
+		// does not need any changes.
+
+		// features_windowing
+		if flags.feature_windowing {
+			let video_subsytem = sdl.as_ref().unwrap().video().unwrap();
+			let window = video_subsytem.window("Render Engine", 1, 1)
+				.vulkan()
+				.hidden()
+				.build().unwrap();
+			instance_extensions = instance_extensions.union(&Surface::required_extensions(&window).unwrap());
+			drop(window);
+		}
+
+		RenderThreadCreateInfo {
+			app_name: Some(app_name.to_string()),
+			app_vers: get_version(app_vers[0], app_vers[1], app_vers[2]),
+
+			eng_name: Some(get_eng_name().to_string()),
+			eng_vers: get_eng_version(),
+
+			instance_extensions: instance_extensions,
+			device_extensions: device_extensions,
+			device_features: device_features,
+		}
+	}
 }

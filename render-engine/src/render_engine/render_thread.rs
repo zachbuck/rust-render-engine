@@ -33,8 +33,8 @@ use crate::{
 	mesh_data::mesh_data_internal::MeshDataInternal, 
 	pipeline::pipeline_internal::PipelineInternal, 
 	render_engine::{
-        RenderEngineCreateInfo, 
-        render_command::RenderEngineCommand, 
+        create_info::RenderThreadCreateInfo, 
+		render_command::RenderEngineCommand, 
 		render_resources::DefaultResources,
     }, 
 	render_surface::RenderSurface, 
@@ -71,7 +71,7 @@ pub(crate) struct RenderThread {
 }
 
 impl RenderThread {
-    pub(super) fn new(create_info: RenderEngineCreateInfo, command_channel: Receiver<RenderEngineCommand>) -> Result<Self, ()> {
+    pub(super) fn new(create_info: RenderThreadCreateInfo, command_channel: Receiver<RenderEngineCommand>) -> Result<Self, ()> {
         let library = VulkanLibrary::new().map_err(error_map!())?;
 
         let instance = Instance::new(
@@ -82,8 +82,8 @@ impl RenderThread {
                 application_name: create_info.app_name,
                 application_version: create_info.app_vers,
 
-                engine_name: RenderEngineCreateInfo::get_eng_name(),
-                engine_version: RenderEngineCreateInfo::get_eng_vers(),
+                engine_name: create_info.eng_name,
+                engine_version: create_info.eng_vers,
 
                 ..Default::default()
             }

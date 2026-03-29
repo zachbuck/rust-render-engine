@@ -88,15 +88,14 @@ impl ImageSurface {
 #[cfg(test)]
 mod tests {
     use crate::{
-		render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+		render_engine::{RenderEngine, RenderEngineFlags}, 
 		render_surface::image_surface::ImageSurface,
 	};
 
 	#[test]
 	/// Ensure that `ImageSurface::new()` and `ImageSurface::drop()` are working as expected.
 	fn new_image_surface() {
-		let create_info = RenderEngineCreateInfo::new();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine = RenderEngine::new("Image Surface Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
 		let image_surface = ImageSurface::new(&engine, 100, 100).unwrap().unwrap();
 		drop(image_surface);
@@ -105,8 +104,7 @@ mod tests {
 	#[test]
 	/// Ensure that `ImageSurface::get_image_surface_data()` is working as expected.
 	fn get_image_surface_data() {
-		let create_info = RenderEngineCreateInfo::new();
-		let engine = RenderEngine::new(create_info).unwrap();
+		let engine = RenderEngine::new("Image Surface Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
 		let image_surface = ImageSurface::new(&engine, 100, 100).unwrap().unwrap();
 

@@ -8,7 +8,7 @@ use image::{ImageBuffer, Rgba, open};
 use render_engine::{
 	mesh_data::{MeshData, Vertex3D}, 
 	pipeline::Pipeline, 
-	render_engine::{RenderEngine, RenderEngineCreateInfo}, 
+	render_engine::{RenderEngine, RenderEngineFlags}, 
 	render_surface::image_surface::ImageSurface, 
 	renderable::render_object::RenderObject, 
 	shader::{Shader, ShaderType}
@@ -31,11 +31,11 @@ const TEST_IMAGE_PATH: &str = "./tests/basic_triangle/test.png";
 
 #[test]
 fn render_scene() {
-	let create_info = RenderEngineCreateInfo::new()
-		.with_app_name("Basic Triangle".to_string())
-		.with_app_vers(0, 1, 0)
-		.with_spirv_compiler();
-	let engine = RenderEngine::new(create_info).unwrap();
+	let flags = RenderEngineFlags {
+		feature_spirv_compiler: true,
+		..Default::default()
+	};
+	let engine = RenderEngine::new("Basic Triangle", [0, 1, 0], flags).unwrap();
 
 	let image_surface = ImageSurface::new(&engine, 100, 100).unwrap().unwrap();
 
