@@ -37,21 +37,21 @@ use crate::{
 #[derive(Debug)]
 pub(crate) enum ImageSurfaceCommand {
 	CreateImageSurface {
-		channel: SyncSender<Result<Arc<ImageSurface>, ()>>,
+		channel: 			SyncSender<Result<Arc<ImageSurface>, ()>>,
 
-		x_size: u32,
-		y_size: u32,
-		command_channel: Arc<Sender<RenderEngineCommand>>,
+		x_size: 			u32,
+		y_size: 			u32,
+		command_channel: 	Arc<Sender<RenderEngineCommand>>,
 	},
 	DropImageSurface {
-		uuid: Uuid
+		uuid: 				Uuid
 	},
 
 	ReadImageSurfaceData {
-		uuid: Uuid,
+		uuid: 				Uuid,
 
-		func_send: SyncSender<Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send>>,
-		fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>,
+		func_send: 			SyncSender<Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send>>,
+		fut_send: 			SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>,
 	}
 }
 
@@ -112,7 +112,7 @@ impl RenderThread {
 	fn read_image_surface_data(&mut self, uuid: Uuid, fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>) ->  Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send> {
 		let queue = self.get_transfer_queue();
 		
-		let image_surface = self.get_image_surface(&uuid).unwrap();
+		let image_surface = Self::get_image_surface(&self.render_surfaces, &uuid).unwrap();
 
 		let result = Buffer::from_iter(
 			self.buffer_allocator.clone(),

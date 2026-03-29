@@ -40,19 +40,19 @@ use crate::{
 #[derive(Debug)]
 pub(crate) enum TextureCommand {
 	CreateTexture {
-		send: SyncSender<Result<Arc<Texture>, ()>>,
-		fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>,
+		send: 				SyncSender<Result<Arc<Texture>, ()>>,
+		fut_send: 			SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>,
 
-		x_size: u32,
-		y_size: u32,
-		data: Box<[u8]>,
-		command_channel: Arc<Sender<RenderEngineCommand>>,
+		x_size: 			u32,
+		y_size: 			u32,
+		data: 				Box<[u8]>,
+		command_channel: 	Arc<Sender<RenderEngineCommand>>,
 	},
 	GetTextures {
-		send: SyncSender<Result<Box<[Arc<Texture>]>, ()>>,
+		send: 				SyncSender<Result<Box<[Arc<Texture>]>, ()>>,
 	},
 	DropTexture {
-		uuid: Uuid,
+		uuid: 				Uuid,
 	}
 }
 

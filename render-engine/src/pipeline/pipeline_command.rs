@@ -51,16 +51,16 @@ use crate::{
 #[derive(Debug)]
 pub(crate) enum PipelineCommand {
 	CreatePipeline {
-		sender: SyncSender<Result<Arc<Pipeline>, ()>>,
+		sender: 			SyncSender<Result<Arc<Pipeline>, ()>>,
 
-		shaders: Box<[Arc<Shader>]>,
-		command_channel: Arc<Sender<RenderEngineCommand>>,
+		shaders: 			Box<[Arc<Shader>]>,
+		command_channel: 	Arc<Sender<RenderEngineCommand>>,
 	},
 	GetPipelines {
-		sender: SyncSender<Result<Box<[Arc<Pipeline>]>, ()>>,
+		sender: 			SyncSender<Result<Box<[Arc<Pipeline>]>, ()>>,
 	},
 	DropPipeline {
-		uuid: Uuid,
+		uuid: 				Uuid,
 	},
 }
 

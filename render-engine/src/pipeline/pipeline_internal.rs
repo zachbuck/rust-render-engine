@@ -34,4 +34,10 @@ impl RenderThread {
 	pub(crate) fn get_pipeline<'a>(pipelines: &'a HashMap<Uuid, PipelineInternal>, uuid: &Uuid, ) -> Option<&'a PipelineInternal> {
 		pipelines.get(uuid)
 	}
+
+	#[inline]
+	#[expect(dead_code)]
+	pub(crate) fn get_mut_pipeline<'a>(pipelines: &'a mut HashMap<Uuid, PipelineInternal>, uuid: &Uuid) -> Option<&'a mut PipelineInternal> {
+		pipelines.get_mut(uuid)
+	}
 }

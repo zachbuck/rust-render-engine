@@ -1,5 +1,5 @@
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use uuid::Uuid;
 use vulkano::{
@@ -80,7 +80,13 @@ impl RenderSurface for ImageSurfaceInternal {
 
 impl RenderThread {
 	#[inline]
-	pub(crate) fn get_image_surface(&self, uuid: &Uuid) -> Option<&ImageSurfaceInternal> {
-		self.get_render_surface(uuid)?.as_any().downcast_ref()
+	pub(crate) fn get_image_surface<'a>(render_surfaces: &'a HashMap<Uuid, Box<dyn RenderSurface>>, uuid: &Uuid) -> Option<&'a ImageSurfaceInternal> {
+		Self::get_render_surface(render_surfaces, uuid)?.as_any().downcast_ref()
+	}
+
+	#[inline]
+	#[expect(dead_code)]
+	pub(crate) fn get_mut_image_surface<'a>(render_surfaces: &'a mut HashMap<Uuid, Box<dyn RenderSurface>>, uuid: &Uuid) -> Option<&'a mut ImageSurfaceInternal> {
+		Self::get_mut_render_surface(render_surfaces, uuid)?.as_mut_any().downcast_mut()
 	}
 }

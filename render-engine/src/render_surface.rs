@@ -1,7 +1,6 @@
 
 use std::{
-	any::Any, 
-	sync::Arc,
+	any::Any, collections::HashMap, sync::Arc
 };
 
 use uuid::Uuid;
@@ -29,18 +28,17 @@ pub(crate) trait RenderSurface: Any {
 	fn end_rendering(&mut self, builder: AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, future: Box<dyn GpuFuture + Send>, queue: Arc<Queue>) -> Result<Box<dyn GpuFuture + Send>, ()>;
 
 	fn as_any(&self) -> &dyn Any;
-	#[expect(unused)]
 	fn as_mut_any(&mut self) -> &mut dyn Any;
 }
 
 impl RenderThread {
 	#[inline]
-	pub(crate) fn get_render_surface(&self, uuid: &Uuid) -> Option<&dyn RenderSurface> {
-		self.render_surfaces.get(uuid).map(|rs| rs.as_ref())
+	pub(crate) fn get_render_surface<'a>(render_surfaces: &'a HashMap<Uuid, Box<dyn RenderSurface>>, uuid: &Uuid) -> Option<&'a dyn RenderSurface> {
+		render_surfaces.get(uuid).map(|b| b.as_ref())
 	}
 
 	#[inline]
-	pub(crate) fn get_mut_render_surface(&mut self, uuid: &Uuid) -> Option<&mut dyn RenderSurface> {
-		self.render_surfaces.get_mut(uuid).map(|rs| rs.as_mut())
+	pub(crate) fn get_mut_render_surface<'a>(render_surfaces: &'a mut HashMap<Uuid, Box<dyn RenderSurface>>, uuid: &Uuid) -> Option<&'a mut dyn RenderSurface> {
+		render_surfaces.get_mut(uuid).map(|b| b.as_mut())
 	}
 }

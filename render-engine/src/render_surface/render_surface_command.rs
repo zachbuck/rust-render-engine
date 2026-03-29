@@ -4,19 +4,24 @@ use std::sync::mpsc::SyncSender;
 use uuid::Uuid;
 use vulkano::{
 	command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage}, 
-	sync::{self, GpuFuture}
+	sync::{self, GpuFuture},
 };
 
-use crate::{macros::error_map, render_engine::{
-	render_command::RenderEngineCommand, render_resources::RenderResources, render_thread::RenderThread
-}};
+use crate::{
+	macros::error_map, 
+	render_engine::{
+		render_command::RenderEngineCommand, 
+		render_resources::RenderResources, 
+		render_thread::RenderThread,
+	}
+};
 
 #[derive(Debug)]
 pub(crate) enum RenderSurfaceCommand {
 	RenderRenderSurface {
-		sender: SyncSender<Result<(), ()>>,
+		sender: 	SyncSender<Result<(), ()>>,
 
-		uuid: Uuid
+		uuid: 		Uuid
 	}
 }
 
@@ -36,7 +41,7 @@ impl RenderThread {
 	fn render_render_surface(&mut self, uuid: Uuid) -> Result<(), ()> {
 		let queue = self.get_graphics_queue();
 
-		let render_surface = self.get_render_surface(&uuid).ok_or(())?;
+		let render_surface = Self::get_render_surface(&self.render_surfaces, &uuid).ok_or(())?;
 
 		let mut builder = AutoCommandBufferBuilder::primary(
 			self.command_allocator.clone(), 
@@ -54,7 +59,7 @@ impl RenderThread {
 
 		let future = self.graphics_future.take().unwrap();
 
-		let render_surface = self.get_mut_render_surface(&uuid).ok_or(())?;
+		let render_surface = Self::get_mut_render_surface(&mut self.render_surfaces, &uuid).ok_or(())?;
 
 		let result = render_surface.end_rendering(builder, future, queue);
 

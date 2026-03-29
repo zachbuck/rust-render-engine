@@ -35,24 +35,24 @@ use crate::{
 #[derive(Debug)]
 pub(crate) enum RenderObjectCommand {
 	CreateRenderObject {
-		sender: SyncSender<Result<Arc<RenderObject>, ()>>,
+		sender: 			SyncSender<Result<Arc<RenderObject>, ()>>,
 
-		mesh_data: Arc<MeshData>,
-		pipeline: Arc<Pipeline>,
-		command_channel: Arc<Sender<RenderEngineCommand>>,
+		mesh_data: 			Arc<MeshData>,
+		pipeline: 			Arc<Pipeline>,
+		command_channel: 	Arc<Sender<RenderEngineCommand>>,
 	},
 	DropRenderObject {
-		uuid: Uuid,
+		uuid: 				Uuid,
 	},
 
 	UpdateDescriptor {
-		sender: SyncSender<Result<(), ()>>,
+		sender: 			SyncSender<Result<(), ()>>,
 
-		uuid: Uuid,
-		set: u32,
-		binding: u32,
+		uuid: 				Uuid,
+		set: 				u32,
+		binding: 			u32,
 
-		data: DescriptorData,
+		data: 				DescriptorData,
 	},
 }
 

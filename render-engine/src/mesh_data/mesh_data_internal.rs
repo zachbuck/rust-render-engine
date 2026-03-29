@@ -1,13 +1,14 @@
 
-use std::sync::Weak;
+use std::{collections::HashMap, sync::Weak};
 
+use uuid::Uuid;
 use vulkano::{
 	buffer::Subbuffer, 
 	command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer}
 };
 
 use crate::{
-	macros::error_map, mesh_data::{MeshData, Vertex3D} 
+	macros::error_map, mesh_data::{MeshData, Vertex3D}, render_engine::render_thread::RenderThread 
 };
 
 #[derive(Debug)]
@@ -31,5 +32,19 @@ impl MeshDataInternal {
 	#[inline]
 	pub(crate) fn index_count(&self) -> u32 {
 		self.indices.len() as u32
+	}
+}
+
+impl RenderThread {
+	#[inline]
+	#[expect(dead_code)]
+	pub(crate) fn get_mesh_data<'a>(mesh_data: &'a HashMap<Uuid, MeshDataInternal>, uuid: &Uuid) -> Option<&'a MeshDataInternal> {
+		mesh_data.get(uuid)
+	}
+
+	#[inline]
+	#[expect(dead_code)]
+	pub(crate) fn get_mut_mesh_data<'a>(mesh_data: &'a mut HashMap<Uuid, MeshDataInternal>, uuid: &Uuid) -> Option<&'a mut MeshDataInternal> {
+		mesh_data.get_mut(uuid)
 	}
 }

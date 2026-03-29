@@ -70,7 +70,13 @@ impl Renderable for RenderObjectInternal {
 
 impl RenderThread {
 	#[inline]
+	#[expect(dead_code)]
+	pub(crate) fn get_render_object<'a>(renderables: &'a HashMap<Uuid, Box<dyn Renderable>>, uuid: &Uuid) -> Option<&'a RenderObjectInternal> {
+		Self::get_renderable(renderables, uuid)?.as_any().downcast_ref()
+	}
+
+	#[inline]
 	pub(crate) fn get_mut_render_object<'a>(renderables: &'a mut HashMap<Uuid, Box<dyn Renderable>>, uuid: &Uuid) -> Option<&'a mut RenderObjectInternal> {
-		renderables.get_mut(uuid)?.as_mut_any().downcast_mut()
+		Self::get_mut_renderable(renderables, uuid)?.as_mut_any().downcast_mut()
 	}
 }

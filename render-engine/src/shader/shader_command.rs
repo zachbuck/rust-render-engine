@@ -23,16 +23,16 @@ use crate::{
 #[derive(Debug)]
 pub(crate) enum ShaderCommand {
 	CreateShader {
-		sender: SyncSender<Result<Arc<Shader>, ()>>,
+		sender: 			SyncSender<Result<Arc<Shader>, ()>>,
 
-		binary: Box<[u32]>,
-		command_channel: Arc<Sender<RenderEngineCommand>>,
+		binary: 			Box<[u32]>,
+		command_channel: 	Arc<Sender<RenderEngineCommand>>,
 	},
 	GetShaders {
-		sender: SyncSender<Result<Box<[Arc<Shader>]>, ()>>,
+		sender: 			SyncSender<Result<Box<[Arc<Shader>]>, ()>>,
 	},
 	DropShader {
-		uuid: Uuid,
+		uuid: 				Uuid,
 	},
 }
 
