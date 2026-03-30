@@ -3,25 +3,29 @@ use std::{
 	fmt::{Debug, Formatter}, 
 	sync::{
 		Arc, 
-		mpsc::Receiver
+		mpsc::{Receiver, Sender}
 	}
 };
 
+use uuid::Uuid;
 use vulkano::sync::{
 	GpuFuture, 
 	future::FenceSignalFuture
 };
 
+use crate::render_engine::render_command::RenderEngineCommand;
+
 #[derive(Debug)]
 #[must_use]
 pub struct EngineFuture<T> {
-	future_type: EngineFutureType<T>,
+	pub(crate) future_type: EngineFutureType<T>,
 }
 
-enum EngineFutureType<T> {
+pub(crate) enum EngineFutureType<T> {
 	Immediate(T),
 	Single(Receiver<T>),
 	Function(Receiver<Box<dyn FnOnce() -> T + Send>>),
+	WindowSchenanigains(Box<dyn FnOnce(Uuid, Arc<Sender<RenderEngineCommand>>) -> T>, Receiver<(Uuid, Arc<Sender<RenderEngineCommand>>)>),
 
 	Composite(EngineWaitType, Box<EngineFuture<T>>), 
 }
@@ -36,6 +40,7 @@ impl<T> EngineFuture<T> {
 			EngineFutureType::Immediate(data) => data,
 			EngineFutureType::Single(channel) => channel.recv().unwrap(),
 			EngineFutureType::Function(channel) => channel.recv().unwrap()(),
+			EngineFutureType::WindowSchenanigains(func, channel) => {let temp = channel.recv().unwrap(); func(temp.0, temp.1)},
 
 			EngineFutureType::Composite(a, b) => { a.wait(); b.unwrap() }
 		}
@@ -87,6 +92,7 @@ impl<T> Debug for EngineFutureType<T> {
 			Self::Single(_) => write!(f, "Single"),
 			Self::Function(_) => write!(f, "Function"),
 			Self::Composite(a, b) => write!(f, "Composite<{:?}, {:?}>", a, b.future_type),
+			Self::WindowSchenanigains(_, _) => write!(f, "A:FJPWOEIURPOSAIDJFOIJDF"),
 		}
 	}
 }

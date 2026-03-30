@@ -57,6 +57,7 @@ pub(crate) struct RenderThread {
 
     pub(crate) render_surfaces: HashMap<Uuid, Box<dyn RenderSurface>>,
 
+	pub(crate) instance: Arc<Instance>,
     pub(crate) device: Arc<Device>,
     pub(crate) graphics_queue: Arc<Queue>,
     pub(crate) graphics_future: Option<Box<dyn GpuFuture + Send>>, 
@@ -170,6 +171,7 @@ impl RenderThread {
 
 			render_surfaces:        HashMap::new(),
 
+			instance:				instance.clone(),
 			device:             	device.clone(),
 			graphics_queue:     	graphics_queue,
 			graphics_future:    	Some(sync::now(device.clone()).boxed_send()),

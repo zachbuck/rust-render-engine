@@ -80,8 +80,8 @@ impl RenderThreadCreateInfo {
 		let mut device_features = DeviceFeatures::empty();
 
 		// Needed in all cases.
-		device_extensions = device_extensions.union(&DeviceExtensions { khr_dynamic_rendering: true, ..Default::default() });
-		device_features = device_features.union(&DeviceFeatures { dynamic_rendering: true, ..Default::default() });
+		device_extensions.khr_dynamic_rendering = true;
+		device_features.dynamic_rendering = true;
 
 		// features_spirv_compiler 
 		// does not need any changes.
@@ -95,6 +95,8 @@ impl RenderThreadCreateInfo {
 				.build().unwrap();
 			instance_extensions = instance_extensions.union(&Surface::required_extensions(&window).unwrap());
 			drop(window);
+
+			device_extensions.khr_swapchain = true;
 		}
 
 		RenderThreadCreateInfo {

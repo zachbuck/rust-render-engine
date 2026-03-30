@@ -19,6 +19,7 @@ use crate::{
 };
 
 pub mod image_surface;
+pub mod window_surface;
 
 pub(crate) mod render_surface_command;
 

@@ -9,11 +9,14 @@ use std::{
 
 use sdl2::Sdl;
 use shaderc::Compiler;
+use vulkano::instance::Instance;
 
 use crate::{
 	macros::error_map,
 	render_engine::{
-    	create_info::RenderThreadCreateInfo, render_command::RenderEngineCommand, render_thread::RenderThread
+    	create_info::RenderThreadCreateInfo, 
+		render_command::RenderEngineCommand, 
+		render_thread::RenderThread,
 	}
 };
 
@@ -29,8 +32,9 @@ pub struct RenderEngine {
     pub(crate) command_channel: Arc<Sender<RenderEngineCommand>>,
 
     pub(crate) spirv_compiler: Option<Compiler>,
-	#[expect(dead_code)]
 	pub(crate) sdl: Option<Sdl>,
+
+	pub(crate) instance: Arc<Instance>,
 }
 
 macro_rules! run_render_thread {
@@ -40,10 +44,9 @@ macro_rules! run_render_thread {
             if result.is_err() {
                 $init_channel.send(Err(unsafe { result.unwrap_err_unchecked() })).unwrap();
                 return
-            }
-            $init_channel.send(Ok(())).unwrap();
-
+			}
             let mut internal = result.unwrap();
+            $init_channel.send(Ok(internal.instance.clone())).unwrap();
 
             while !internal.should_close {
                 internal.process_command();
@@ -66,12 +69,15 @@ impl RenderEngine {
             .spawn(run_render_thread!(render_thread_create_info, command_r, init_s))
             .map_err(error_map!())?;
 
-        init_r.recv().unwrap()?;
+        let instance = init_r.recv().unwrap()?;
 
         Ok(RenderEngine {
             command_channel: Arc::new(command_s),
+
             spirv_compiler: spirv_compiler,
 			sdl: sdl,
+
+			instance: instance,
         })
     }
 }

@@ -7,7 +7,8 @@ use crate::{
     render_engine::render_thread::RenderThread, 
     render_surface::{
         image_surface::image_surface_commands::ImageSurfaceCommand, 
-        render_surface_command::RenderSurfaceCommand
+        render_surface_command::RenderSurfaceCommand, 
+		window_surface::window_surface_command::WindowSurfaceCommand
     }, 
     renderable::render_object::render_object_command::RenderObjectCommand, 
     shader::shader_command::ShaderCommand, 
@@ -27,6 +28,7 @@ pub(crate) enum RenderEngineCommand {
 
     RenderSurfaceCommand(RenderSurfaceCommand),
     ImageSurfaceCommand(ImageSurfaceCommand),
+	WindowSurfaceCommand(WindowSurfaceCommand),
 }
 
 impl RenderThread {
@@ -51,6 +53,7 @@ impl RenderThread {
 
             RenderEngineCommand::RenderSurfaceCommand(command) => self.process_render_surface_command(command),
             RenderEngineCommand::ImageSurfaceCommand(command) => self.process_image_surface_command(command),
+			RenderEngineCommand::WindowSurfaceCommand(command) => self.process_window_surface_command(command),
         }
     }
 
