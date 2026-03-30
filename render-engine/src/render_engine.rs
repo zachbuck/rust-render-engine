@@ -7,7 +7,7 @@ use std::{
 	thread::Builder as ThreadBuilder,
 };
 
-use sdl2::Sdl;
+use sdl2::{EventPump, Sdl, VideoSubsystem};
 use shaderc::Compiler;
 use vulkano::instance::Instance;
 
@@ -33,8 +33,14 @@ pub struct RenderEngine {
 
     pub(crate) spirv_compiler: Option<Compiler>,
 	pub(crate) sdl: Option<Sdl>,
+	pub(crate) sdl_resources: Option<SdlResources>,
 
 	pub(crate) instance: Arc<Instance>,
+}
+
+pub(crate) struct SdlResources {
+	pub(crate) event_pump: EventPump,
+	pub(crate) video: VideoSubsystem,
 }
 
 macro_rules! run_render_thread {
@@ -62,8 +68,9 @@ impl RenderEngine {
 
 		let spirv_compiler = flags.generate_spirv_compiler();
 		let sdl = flags.generate_sdl();
+		let sdl_resources = SdlResources::from_sdl(&sdl);
 
-		let render_thread_create_info = RenderThreadCreateInfo::new(app_name, &app_version, &flags, &sdl);
+		let render_thread_create_info = RenderThreadCreateInfo::new(app_name, &app_version, &flags, &sdl_resources);
         ThreadBuilder::new()
             .name("Render Thread".to_string())
             .spawn(run_render_thread!(render_thread_create_info, command_r, init_s))
@@ -76,16 +83,32 @@ impl RenderEngine {
 
             spirv_compiler: spirv_compiler,
 			sdl: sdl,
+			sdl_resources: sdl_resources,
 
 			instance: instance,
         })
     }
+
+
 }
 
 impl Drop for RenderEngine {
     fn drop(&mut self) {
         self.command_channel.send(RenderEngineCommand::Exit).unwrap();
     }
+}
+
+impl SdlResources {
+	fn from_sdl(sdl: &Option<Sdl>) -> Option<Self> {
+		if sdl.is_none() { return None }
+
+		let sdl = sdl.as_ref().unwrap();
+
+		Some(SdlResources {
+			event_pump: sdl.event_pump().unwrap(),
+			video: sdl.video().unwrap(),
+		})
+	}
 }
 
 #[cfg(test)]

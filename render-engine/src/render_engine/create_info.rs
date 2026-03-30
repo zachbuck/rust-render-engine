@@ -8,6 +8,8 @@ use vulkano::{
 	swapchain::Surface,
 };
 
+use crate::render_engine::SdlResources;
+
 pub struct RenderEngineFlags {
 	pub feature_spirv_compiler: bool,
 	pub feature_windowing: bool,
@@ -74,7 +76,7 @@ pub(super) struct RenderThreadCreateInfo {
 }
 
 impl RenderThreadCreateInfo {
-	pub(super) fn new(app_name: &str, app_vers: &[u32; 3], flags: &RenderEngineFlags, sdl: &Option<Sdl>) -> Self {
+	pub(super) fn new(app_name: &str, app_vers: &[u32; 3], flags: &RenderEngineFlags, sdl: &Option<SdlResources>) -> Self {
 		let mut instance_extensions = InstanceExtensions::empty();
 		let mut device_extensions = DeviceExtensions::empty();
 		let mut device_features = DeviceFeatures::empty();
@@ -88,7 +90,7 @@ impl RenderThreadCreateInfo {
 
 		// features_windowing
 		if flags.feature_windowing {
-			let video_subsytem = sdl.as_ref().unwrap().video().unwrap();
+			let video_subsytem = &sdl.as_ref().unwrap().video;
 			let window = video_subsytem.window("Render Engine", 1, 1)
 				.vulkan()
 				.hidden()

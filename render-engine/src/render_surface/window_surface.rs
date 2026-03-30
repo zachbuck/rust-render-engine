@@ -4,14 +4,14 @@ use std::sync::{
 	mpsc::{Sender, sync_channel},
 };
 
-use sdl2::video::Window;
+use sdl2::{event::Event, keyboard::Keycode, sys::KeyCode, video::Window};
 use uuid::Uuid;
 use vulkano::swapchain::Surface;
 
 use crate::{
 	render_engine::{
 		RenderEngine, 
-		engine_future::{EngineFuture, EngineFutureType}, 
+		engine_future::EngineFuture, 
 		render_command::RenderEngineCommand,
 	}, 
 	render_surface::{render_surface_command::RenderSurfaceCommand, window_surface::window_surface_command::WindowSurfaceCommand},
@@ -31,7 +31,7 @@ pub struct WindowSurface {
 
 impl WindowSurface {
 	pub fn new(render_engine: &RenderEngine, width: u32, height: u32, title: &str) -> Arc<WindowSurface> {
-		let video = render_engine.sdl.as_ref().unwrap().video().unwrap();
+		let video = &render_engine.sdl_resources.as_ref().unwrap().video;
 		let window = video.window(title, width, height).vulkan().build().unwrap();
 
 		let surface = unsafe { Surface::from_window_ref(render_engine.instance.clone(), &window).unwrap() };
@@ -67,6 +67,18 @@ impl WindowSurface {
 		).unwrap();
 
 		EngineFuture::new_single(recv)
+	}
+
+	pub fn should_close(render_engine: &mut RenderEngine) -> bool {
+		let event_pump = &mut render_engine.sdl_resources.as_mut().unwrap().event_pump;
+		for event in event_pump.poll_iter() {
+			match event {
+				Event::Quit{..} => return true,
+				Event::KeyDown{keycode: Some(Keycode::Escape), ..} => return true,
+				_ => continue,
+			}
+		}
+		return false;
 	}
 }
 
