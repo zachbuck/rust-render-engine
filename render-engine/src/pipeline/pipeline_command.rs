@@ -73,8 +73,12 @@ impl Into<RenderEngineCommand> for PipelineCommand {
 impl RenderThread {
 	pub(crate) fn process_pipeline_command(&mut self, command: PipelineCommand) {
 		match command {
-			PipelineCommand::CreatePipeline { sender, shaders , command_channel} => { let _ = sender.send(self.create_pipeline(shaders, command_channel)); },
-			PipelineCommand::GetPipelines { sender } => { let _ = sender.send(self.get_pipelines()); },
+			PipelineCommand::CreatePipeline { sender, shaders , command_channel} => { 
+				let _ = sender.send(self.create_pipeline(shaders, command_channel)); 
+			},
+			PipelineCommand::GetPipelines { sender } => { 
+				let _ = sender.send(self.get_pipelines()); 
+			},
 			PipelineCommand::DropPipeline { uuid } => self.drop_pipeline(uuid),
 		}
 	}

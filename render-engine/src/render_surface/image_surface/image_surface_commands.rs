@@ -51,7 +51,7 @@ pub(crate) enum ImageSurfaceCommand {
 		uuid: 				Uuid,
 
 		func_send: 			SyncSender<Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send>>,
-		fut_send: 			SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>,
+		fut_send: 			SyncSender<Option<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>>,
 	}
 }
 
@@ -64,9 +64,15 @@ impl Into<RenderEngineCommand> for ImageSurfaceCommand {
 impl RenderThread {
 	pub(crate) fn process_image_surface_command(&mut self, command: ImageSurfaceCommand) {
 		match command {
-			ImageSurfaceCommand::CreateImageSurface { channel, x_size, y_size, command_channel } => { let _ = channel.send(self.create_image_surface(x_size, y_size, command_channel)); },
+			ImageSurfaceCommand::CreateImageSurface { channel, x_size, y_size, command_channel } => { 
+				let _ = channel.send(self.create_image_surface(x_size, y_size, command_channel)); 
+			},
 			ImageSurfaceCommand::DropImageSurface { uuid } => self.drop_image_surface(uuid),
-			ImageSurfaceCommand::ReadImageSurfaceData { uuid, func_send, fut_send } => { let _ = func_send.send(self.read_image_surface_data(uuid, fut_send)) ;},
+			ImageSurfaceCommand::ReadImageSurfaceData { uuid, func_send, fut_send } => { 
+				let (func, fut) = self.read_image_surface_data(uuid);
+				let _ = func_send.send(func);
+				let _ = fut_send.send(fut);
+			},
 		}
 	}
 
@@ -109,7 +115,7 @@ impl RenderThread {
 		self.render_surfaces.remove(&uuid);
 	}
 
-	fn read_image_surface_data(&mut self, uuid: Uuid, fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>) ->  Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send> {
+	fn read_image_surface_data(&mut self, uuid: Uuid) ->  (Box<dyn FnOnce() -> Result<Box<[u8]>, ()> + Send>, Option<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>) {
 		let queue = self.get_transfer_queue();
 		
 		let image_surface = Self::get_mut_image_surface(&mut self.render_surfaces, &uuid).unwrap();
@@ -126,7 +132,7 @@ impl RenderThread {
 			},
 			(0..image_surface.image.image().extent()[0] * image_surface.image.image().extent()[1] * 4).map(|_| 0u8),
 		);
-		if result.is_err() { return Box::new(|| Err(())); } 
+		if result.is_err() { return (Box::new(|| Err(())), None); } 
 
 		let buffer = result.unwrap();
 
@@ -135,32 +141,32 @@ impl RenderThread {
 			queue.queue_family_index(), 
 			CommandBufferUsage::OneTimeSubmit	
 		);
-		if result.is_err() { return Box::new(|| Err(())); }
+		if result.is_err() { return (Box::new(|| Err(())), None); }
 
 		let mut builder = result.unwrap();
 
 		let result = builder.copy_image_to_buffer(CopyImageToBufferInfo::image_buffer(image_surface.image.image().clone(), buffer.clone()));
-		if result.is_err() { return Box::new(|| Err(())) }
+		if result.is_err() { return (Box::new(|| Err(())), None) }
 		let result = builder.build();
-		if result.is_err() { return Box::new(|| Err(())) }
+		if result.is_err() { return (Box::new(|| Err(())), None) }
 
 		let mut future = self.transfer_future.take().unwrap();
 		future.cleanup_finished();
 
 		let result = future.then_execute(queue.clone(), result.unwrap()).map(|f| f.boxed_send());
-		if result.is_err() { self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); return Box::new(|| Err(())) }
+		if result.is_err() { self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); return (Box::new(|| Err(())), None) }
 		let future = result.unwrap();
 		let result = future.then_signal_fence_and_flush().map(|f| Arc::new(f));
-		if result.is_err() {  self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); return Box::new(|| Err(())) }
+		if result.is_err() {  self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); return (Box::new(|| Err(())), None) }
 		let future = result.unwrap();
-
-		let _ = fut_send.send(future.clone());
 
 		self.transfer_future = Some(future.clone().boxed_send());
 		image_surface.operation_future = Some(future.clone());
 
-		return Box::new(move || {
-			Ok(buffer.read().unwrap().to_owned().into_boxed_slice())
-		})
+		return (Box::new(move || {
+				Ok(buffer.read().unwrap().to_owned().into_boxed_slice())
+			}),
+			None,
+		)
 	}
 }

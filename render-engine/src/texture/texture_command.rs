@@ -40,8 +40,8 @@ use crate::{
 #[derive(Debug)]
 pub(crate) enum TextureCommand {
 	CreateTexture {
+		fut_send: 			SyncSender<Option<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>>,
 		send: 				SyncSender<Result<Arc<Texture>, ()>>,
-		fut_send: 			SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>,
 
 		x_size: 			u32,
 		y_size: 			u32,
@@ -65,13 +65,19 @@ impl Into<RenderEngineCommand> for TextureCommand {
 impl RenderThread {
 	pub(crate) fn process_texture_command(&mut self, command: TextureCommand) {
 		match command {
-			TextureCommand::CreateTexture { send, fut_send, x_size, y_size, data, command_channel } => { let _ = send.send(self.create_texture(fut_send, x_size, y_size, data, command_channel)); },
-			TextureCommand::GetTextures { send } => { let _ = send.send(self.get_textures()); },
+			TextureCommand::CreateTexture { send, fut_send, x_size, y_size, data, command_channel } => { 
+				let result = self.create_texture(x_size, y_size, data, command_channel);
+				let _ = fut_send.send(result.as_ref().map(|(_, b)| Some(b.clone())).unwrap_or(None));
+				let _ = send.send(result.map(|(a, _)| a.clone()));
+			},
+			TextureCommand::GetTextures { send } => { 
+				let _ = send.send(self.get_textures()); 
+			},
 			TextureCommand::DropTexture { uuid } => self.drop_texture(uuid),
 		}
 	}
 
-	fn create_texture(&mut self, fut_send: SyncSender<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>, x_size: u32, y_size: u32, data: Box<[u8]>, command_channel: Arc<Sender<RenderEngineCommand>>) -> Result<Arc<Texture>, ()> {
+	fn create_texture(&mut self, x_size: u32, y_size: u32, data: Box<[u8]>, command_channel: Arc<Sender<RenderEngineCommand>>) -> Result<(Arc<Texture>, Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>), ()> {
 		let uuid = Uuid::now_v7();
 
 		let buffer = Buffer::from_iter(
@@ -122,9 +128,7 @@ impl RenderThread {
 			.then_execute(queue, command_buffer).map_err(|_| { self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); () })?.boxed_send()
 			.then_signal_fence_and_flush().map_err(|_| { self.transfer_future = Some(sync::now(self.device.clone()).boxed_send()); () })?);
 
-		let _ = fut_send.send(future.clone());
-
-		self.transfer_future = Some(future.boxed_send());
+		self.transfer_future = Some(future.clone().boxed_send());
 
 		let reference = Arc::new(Texture { uuid, command_channel, y_size, x_size });
 
@@ -147,7 +151,7 @@ impl RenderThread {
 
 		self.textures.insert(uuid, internal);
 
-		return Ok(reference);
+		return Ok((reference, future.clone()));
 	}
 
 	fn get_textures(&mut self) -> Result<Box<[Arc<Texture>]>, ()> {

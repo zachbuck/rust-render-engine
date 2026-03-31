@@ -30,8 +30,9 @@ impl<T> EngineFuture<T> for WaitingEngineFuture<T> {
 }
 
 enum EngineWaitType {
-	GpuChannel(Receiver<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>),
+	GpuChannel(Receiver<Option<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>>),
 	GpuFuture(Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>),
+	Complete,
 }
 
 impl EngineWaitType {
@@ -39,12 +40,19 @@ impl EngineWaitType {
 		match wait {
 			EngineWaitType::GpuChannel(receiver) => {
 				let fence = receiver.recv().unwrap();
-				*wait = EngineWaitType::GpuFuture(fence);
-				EngineWaitType::wait(wait);
+				if fence.is_none() { 
+					*wait = EngineWaitType::Complete;
+					EngineWaitType::wait(wait);
+				} else {
+					let fence = fence.unwrap();
+					*wait = EngineWaitType::GpuFuture(fence);
+					EngineWaitType::wait(wait);
+				}
 			},
 			EngineWaitType::GpuFuture(fence) => {
 				fence.wait(None).unwrap();
 			},
+			EngineWaitType::Complete => { return }
 		}
 	}
 
@@ -54,18 +62,25 @@ impl EngineWaitType {
 				let result = receiver.try_recv();
 				if result.as_ref().is_err_and(|e| *e == TryRecvError::Empty) { return false; }
 				let fence = result.unwrap();
-				*wait = EngineWaitType::GpuFuture(fence);
-				EngineWaitType::is_complete(wait)
+				if fence.is_none() { 
+					*wait = EngineWaitType::Complete;
+					EngineWaitType::is_complete(wait)
+				} else {
+					let fence = fence.unwrap();
+					*wait = EngineWaitType::GpuFuture(fence);
+					EngineWaitType::is_complete(wait)
+				}
 			},
 			EngineWaitType::GpuFuture(fence) => {
 				fence.is_signaled().unwrap()
 			},
+			EngineWaitType::Complete => { true }
 		}
 	}
 }
 
 impl<T: 'static> EngineFutureBuilder<T> {
-	pub(crate) fn with_gpu_future(self, recv: Receiver<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>) -> Self {
+	pub(crate) fn with_gpu_future(self, recv: Receiver<Option<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>>) -> Self {
 		let engine_future = Box::new(WaitingEngineFuture { condition: EngineWaitType::GpuChannel(recv), future: self.engine_future });
 		EngineFutureBuilder { engine_future: engine_future }
 	}

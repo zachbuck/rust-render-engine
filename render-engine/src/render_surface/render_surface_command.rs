@@ -34,7 +34,9 @@ impl Into<RenderEngineCommand> for RenderSurfaceCommand {
 impl RenderThread {
 	pub(crate) fn process_render_surface_command(&mut self, command: RenderSurfaceCommand) {
 		match command {
-			RenderSurfaceCommand::RenderRenderSurface { sender, uuid } => { let _ = sender.send(self.render_render_surface(uuid)); },
+			RenderSurfaceCommand::RenderRenderSurface { sender, uuid } => { 
+				let _ = sender.send(self.render_render_surface(uuid)); 
+			},
 		}
 	}
 

@@ -47,8 +47,12 @@ impl Into<RenderEngineCommand> for MeshDataCommand {
 impl RenderThread {
 	pub(crate) fn process_mesh_data_command(&mut self, command: MeshDataCommand) {
 		match command {
-			MeshDataCommand::CreateMeshData { sender, vertices, indices, command_channel } => { let _ = sender.send(self.create_mesh_data(&vertices, &indices, command_channel)); },
-			MeshDataCommand::GetMeshData { sender } => { let _ = sender.send(self.get_all_mesh_data()); },
+			MeshDataCommand::CreateMeshData { sender, vertices, indices, command_channel } => { 
+				let _ = sender.send(self.create_mesh_data(&vertices, &indices, command_channel)); 
+			},
+			MeshDataCommand::GetMeshData { sender } => { 
+				let _ = sender.send(self.get_all_mesh_data()); 
+			},
 			MeshDataCommand::DropMeshData { uuid } => self.drop_mesh_data(uuid),
 		}
 	}

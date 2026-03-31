@@ -45,8 +45,12 @@ impl Into<RenderEngineCommand> for ShaderCommand {
 impl RenderThread {
 	pub(crate) fn process_shader_command(&mut self, command: ShaderCommand) {
 		match command {
-			ShaderCommand::CreateShader { sender, binary , command_channel} => { let _ = sender.send(self.create_shader(binary.as_ref(), command_channel)); },
-			ShaderCommand::GetShaders { sender } => { let _ = sender.send(self.get_shaders()); }
+			ShaderCommand::CreateShader { sender, binary , command_channel} => { 
+				let _ = sender.send(self.create_shader(binary.as_ref(), command_channel)); 
+			},
+			ShaderCommand::GetShaders { sender } => { 
+				let _ = sender.send(self.get_shaders()); 
+			}
 			ShaderCommand::DropShader { uuid } => self.drop_shader(uuid),
 		}
 	}

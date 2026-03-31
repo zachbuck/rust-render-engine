@@ -35,8 +35,12 @@ pub(crate) enum WindowSurfaceCommand {
 impl RenderThread {
 	pub(crate) fn process_window_surface_command(&mut self, command: WindowSurfaceCommand) {
 		match command {
-			WindowSurfaceCommand::CreateWindowSurface { sender, command_channel, surface, window_extent } => { let _ = sender.send(self.create_window_surface(command_channel, surface, window_extent)); },
-			WindowSurfaceCommand::DropWindowSurface { sender, uuid } => { let _ = sender.send(self.drop_window_surface(uuid)); },
+			WindowSurfaceCommand::CreateWindowSurface { sender, command_channel, surface, window_extent } => { 
+				let _ = sender.send(self.create_window_surface(command_channel, surface, window_extent)); 
+			},
+			WindowSurfaceCommand::DropWindowSurface { sender, uuid } => { 
+				let _ = sender.send(self.drop_window_surface(uuid)); 
+			},
 		}
 	}
 

@@ -65,10 +65,14 @@ impl Into<RenderEngineCommand> for RenderObjectCommand {
 impl RenderThread {
 	pub(crate) fn process_render_object_command(&mut self, command: RenderObjectCommand) {
 		match command {
-			RenderObjectCommand::CreateRenderObject { sender, mesh_data, pipeline, command_channel } => {let _ = sender.send(self.create_render_object(mesh_data, pipeline, command_channel));},
+			RenderObjectCommand::CreateRenderObject { sender, mesh_data, pipeline, command_channel } => {
+				let _ = sender.send(self.create_render_object(mesh_data, pipeline, command_channel));
+			},
 			RenderObjectCommand::DropRenderObject { uuid } => self.drop_render_object(uuid),
 
-			RenderObjectCommand::UpdateDescriptor { sender, uuid, set, binding, data } => {let _ = sender.send(self.update_descriptor(uuid, set, binding, data));},
+			RenderObjectCommand::UpdateDescriptor { sender, uuid, set, binding, data } => {
+				let _ = sender.send(self.update_descriptor(uuid, set, binding, data));
+			},
 		}
 	}
 
