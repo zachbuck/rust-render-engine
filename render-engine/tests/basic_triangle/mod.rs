@@ -33,7 +33,6 @@ const FRAGMENT_PATH: &str = "./tests/basic_triangle/fragment.glsl.frag";
 
 const TEST_IMAGE_PATH: &str = "./tests/basic_triangle/test.png";
 
-#[test]
 pub fn render_scene() {
 	let flags = RenderEngineFlags {
 		feature_spirv_compiler: true,

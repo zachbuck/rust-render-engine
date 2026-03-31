@@ -48,8 +48,7 @@ const FLIP_MATRIX: [[f32; 4]; 4] = [
 const UNIT_TEST_IMAGE_PATH: &str = "./tests/rotated_triangle/unit_matrix_test.png";
 const FLIP_TEST_IMAGE_PATH: &str = "./tests/rotated_triangle/flip_matrix_test.png";
 
-#[test]
-fn render_scene() {
+pub fn render_scene() {
 	let flags = RenderEngineFlags {
 		feature_spirv_compiler: true,
 		..Default::default()

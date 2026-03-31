@@ -40,8 +40,7 @@ const TEXTURE_PATH: &str = "./tests/texture_quad/texture.png";
 
 const TEST_IMAGE_PATH: &str = "./tests/texture_quad/test.png";
 
-#[test]
-fn render_scene() {
+pub fn render_scene() {
 	let flags = RenderEngineFlags {
 		feature_spirv_compiler: true,
 		..Default::default()
