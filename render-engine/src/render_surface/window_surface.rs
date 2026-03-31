@@ -30,7 +30,7 @@ pub struct WindowSurface {
 }
 
 impl WindowSurface {
-	pub fn new(render_engine: &RenderEngine, width: u32, height: u32, title: &str) -> Arc<WindowSurface> {
+	pub fn new(render_engine: &RenderEngine, width: u32, height: u32, title: &str) -> impl EngineFuture<Result<Arc<WindowSurface>, ()>> {
 		let video = &render_engine.sdl_resources.as_ref().unwrap().video;
 		let window = video.window(title, width, height).vulkan().build().unwrap();
 
@@ -47,13 +47,9 @@ impl WindowSurface {
 			}.into()
 		).unwrap();
 
-		let (uuid, sender) = recv.recv().unwrap();
-		Arc::new(WindowSurface {
-			uuid: uuid,
-			command_channel: sender,
-			window: window,
-			surface: surface,
-		})
+		EngineFutureBuilder::new_channel(recv)
+			.then_transform(Box::new(move |(uuid, command_channel)| Ok(Arc::new(WindowSurface { uuid, command_channel, window: window.clone(), surface: surface.clone() }))))
+			.build()
 	}
 
 	pub fn render_all(&self) -> impl EngineFuture<Result<(), ()>> {
