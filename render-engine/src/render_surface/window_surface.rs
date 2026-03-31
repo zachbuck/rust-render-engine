@@ -1,10 +1,10 @@
 
 use std::sync::{
 	Arc, 
-	mpsc::{Sender, sync_channel},
+	mpsc::{Receiver, Sender, TryRecvError, sync_channel},
 };
 
-use sdl2::{event::Event, keyboard::Keycode, video::Window};
+use sdl2::{event::Event, video::Window};
 use uuid::Uuid;
 use vulkano::swapchain::Surface;
 
@@ -27,16 +27,20 @@ pub struct WindowSurface {
 
 	window: Window,
 	surface: Arc<Surface>,
+
+	event_channel: Receiver<Event>,
 }
 
 impl WindowSurface {
-	pub fn new(render_engine: &RenderEngine, width: u32, height: u32, title: &str) -> impl EngineFuture<Result<Arc<WindowSurface>, ()>> {
+	pub fn new(render_engine: &mut RenderEngine, width: u32, height: u32, title: &str) -> impl EngineFuture<Result<Arc<WindowSurface>, ()>> {
 		let video = &render_engine.sdl_resources.as_ref().unwrap().video;
 		let window = video.window(title, width, height).vulkan().build().unwrap();
 
 		let surface = unsafe { Surface::from_window_ref(render_engine.instance.clone(), &window).unwrap() };
 
 		let (send, recv) = sync_channel(1);
+		let (event_send, event_recv) = sync_channel(render_engine.flags.event_buffer_size as usize);
+		render_engine.event_senders.insert(window.id(), event_send);
 
 		render_engine.command_channel.send(
 			WindowSurfaceCommand::CreateWindowSurface { 
@@ -48,7 +52,7 @@ impl WindowSurface {
 		).unwrap();
 
 		EngineFutureBuilder::new_channel(recv)
-			.then_transform(Box::new(move |(uuid, command_channel)| Ok(Arc::new(WindowSurface { uuid, command_channel, window: window.clone(), surface: surface.clone() }))))
+			.then_transform(Box::new(move |(uuid, command_channel)| Ok(Arc::new(WindowSurface { uuid, command_channel, window: window, surface: surface, event_channel: event_recv }))))
 			.build()
 	}
 
@@ -66,16 +70,13 @@ impl WindowSurface {
 			.build()
 	}
 
-	pub fn should_close(render_engine: &mut RenderEngine) -> bool {
-		let event_pump = &mut render_engine.sdl_resources.as_mut().unwrap().event_pump;
-		for event in event_pump.poll_iter() {
-			match event {
-				Event::Quit{..} => return true,
-				Event::KeyDown{keycode: Some(Keycode::Escape), ..} => return true,
-				_ => continue,
-			}
+	pub fn poll_event(&self) -> Option<Event> {
+		let result = self.event_channel.try_recv();
+		match result {
+			Ok(e) => return Some(e),
+			Err(TryRecvError::Disconnected) => panic!(),
+			Err(TryRecvError::Empty) => return None,
 		}
-		return false;
 	}
 }
 

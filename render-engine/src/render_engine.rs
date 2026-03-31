@@ -1,13 +1,19 @@
 
 use std::{
+	collections::{HashMap, HashSet}, 
 	sync::{
         Arc, 
-        mpsc::{Sender, channel, sync_channel},
+        mpsc::{Sender, SyncSender, TrySendError, channel, sync_channel},
     }, 
 	thread::Builder as ThreadBuilder,
 };
 
-use sdl2::{EventPump, Sdl, VideoSubsystem};
+use sdl2::{
+	EventPump, 
+	Sdl, 
+	VideoSubsystem, 
+	event::Event,
+};
 use shaderc::Compiler;
 use vulkano::instance::Instance;
 
@@ -30,6 +36,8 @@ mod create_info;
 
 pub struct RenderEngine {
     pub(crate) command_channel: Arc<Sender<RenderEngineCommand>>,
+	pub(crate) flags: RenderEngineFlags,
+	pub(crate) event_senders: HashMap<u32, SyncSender<Event>>,
 
     pub(crate) spirv_compiler: Option<Compiler>,
 	pub(crate) sdl_resources: Option<SdlResources>,
@@ -79,6 +87,8 @@ impl RenderEngine {
 
         Ok(RenderEngine {
             command_channel: Arc::new(command_s),
+			flags: flags,
+			event_senders: HashMap::new(),
 
             spirv_compiler: spirv_compiler,
 			sdl_resources: sdl_resources,
@@ -87,7 +97,31 @@ impl RenderEngine {
         })
     }
 
+	pub fn poll_events(&mut self) {
+		let event_pump = &mut self.sdl_resources.as_mut().unwrap().event_pump;
+		let mut outdated_senders = HashSet::with_capacity(self.event_senders.len());
 
+		for event in event_pump.poll_iter() {
+			if let Some(id) = event.get_window_id() {
+				let sender = self.event_senders.get(&id).unwrap();
+				let result = sender.try_send(event);
+				if let Err(TrySendError::Disconnected(_)) = result {
+					outdated_senders.insert(*&id);
+				}
+			} else {
+				for (id, sender) in &self.event_senders {
+					let result = sender.try_send(event.clone());
+					if let Err(TrySendError::Disconnected(_)) = result {
+						outdated_senders.insert(*id);
+					}
+				}
+			}
+		}
+
+		for id in outdated_senders {
+			self.event_senders.remove(&id);
+		}
+	}
 }
 
 impl Drop for RenderEngine {

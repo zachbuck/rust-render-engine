@@ -10,9 +10,19 @@ use vulkano::{
 
 use crate::render_engine::SdlResources;
 
+/// Flags for the creation of a `RenderEngine`
 pub struct RenderEngineFlags {
+	/// Controls if a SPIR-V compiler is initizlized with the `RenderEngine`.
 	pub feature_spirv_compiler: bool,
+
+	/// Controls if features related to windowing are available.
 	pub feature_windowing: bool,
+	/// The size of the buffer of each window for events that are polled by the `RenderEngine`.
+	/// 
+	/// Any events that overflow the buffer will be dropped.
+	/// 
+	/// Defaults to `32`.
+	pub event_buffer_size: u32,
 }
 
 impl RenderEngineFlags {
@@ -20,6 +30,7 @@ impl RenderEngineFlags {
 		RenderEngineFlags { 
 			feature_spirv_compiler: false, 
 			feature_windowing: false,
+			event_buffer_size: 32,
 		}
 	}
 

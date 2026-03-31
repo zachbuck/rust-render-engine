@@ -26,6 +26,7 @@
 - seperate samplers from textures?
 - allow for descriptor arrays
 - add different sampling options for textures
+- make engine generate SPIR-V compiler when needed
 
 ## In Progress
 
