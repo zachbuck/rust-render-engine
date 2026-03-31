@@ -7,21 +7,20 @@
 - Switch to non-dynamic rendering? (tbh not really worth)
 - Better Errors
 - Cameras, Projection
-- Windows
 - Viewports
 - Descriptors Generally
 - push constants
-- caching of shaders / pipelines
+- caching of pipelines
 - several frames in flight / several queues
 - matrix tools
 - compute shaders
 - particles
 - split spir-v compiler thread?
+- Audio?
 
 ## Smaller Tasks
 
-- Reimplement try_unwrap for `EngineFuture`
-- Add documentations
+- Add documentation
 - better transfer queue selection
 - let mesh_data have several buffers for vertices
 - seperate samplers from textures?
@@ -30,4 +29,4 @@
 
 ## In Progress
 
-- Uniforms
+- Events
