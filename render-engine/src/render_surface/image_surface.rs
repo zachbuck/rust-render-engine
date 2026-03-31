@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture, render_command::RenderEngineCommand
+		engine_future::{EngineFuture, EngineFutureBuilder}, render_command::RenderEngineCommand
 	}, 
 	render_surface::{
 		image_surface::image_surface_commands::ImageSurfaceCommand, 
@@ -39,7 +39,7 @@ impl Drop for ImageSurface {
 }
 
 impl ImageSurface {
-	pub fn new(render_engine: &RenderEngine, x_size: u32, y_size: u32) -> EngineFuture<Result<Arc<ImageSurface>, ()>> {
+	pub fn new(render_engine: &RenderEngine, x_size: u32, y_size: u32) -> impl EngineFuture<Result<Arc<ImageSurface>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -51,10 +51,11 @@ impl ImageSurface {
 			}.into()
 		).unwrap();
 
-		EngineFuture::new_single(recv)
+		EngineFutureBuilder::new_channel(recv)
+			.build()
 	}
 
-	pub fn render_all(&self) -> EngineFuture<Result<(), ()>> {
+	pub fn render_all(&self) -> impl EngineFuture<Result<(), ()>> {
 		let (send, recv) = sync_channel(1);
 
 		self.command_channel.send(
@@ -64,10 +65,11 @@ impl ImageSurface {
 			}.into()
 		).unwrap();
 
-		EngineFuture::new_single(recv)
+		EngineFutureBuilder::new_channel(recv)
+			.build()
 	}
 
-	pub fn get_image_surface_data(&self) -> EngineFuture<Result<Box<[u8]>, ()>> {
+	pub fn get_image_surface_data(&self) -> impl EngineFuture<Result<Box<[u8]>, ()>> {
 		let (func_send, func_recv) = sync_channel(1);
 		let (send, recv) = sync_channel(1);
 
@@ -80,15 +82,21 @@ impl ImageSurface {
 			}.into()
 		).unwrap();
 
-		return EngineFuture::new_function(func_recv)
-			.with_wait_condition(recv.into());
+		EngineFutureBuilder::new_channel(func_recv)
+			.with_gpu_future(recv)
+			.then_transform(Box::new(|f| f()))
+			.build()
 	}
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-		render_engine::{RenderEngine, RenderEngineFlags}, 
+		render_engine::{
+			engine_future::EngineFuture,
+			RenderEngine, 
+			RenderEngineFlags
+		}, 
 		render_surface::image_surface::ImageSurface,
 	};
 
@@ -97,7 +105,7 @@ mod tests {
 	fn new_image_surface() {
 		let engine = RenderEngine::new("Image Surface Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
-		let image_surface = ImageSurface::new(&engine, 100, 100).unwrap().unwrap();
+		let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
 		drop(image_surface);
 	}
 
@@ -106,11 +114,11 @@ mod tests {
 	fn get_image_surface_data() {
 		let engine = RenderEngine::new("Image Surface Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
-		let image_surface = ImageSurface::new(&engine, 100, 100).unwrap().unwrap();
+		let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
 
-		image_surface.render_all().unwrap().unwrap();
+		image_surface.render_all().wait().unwrap();
 
-		let data = image_surface.get_image_surface_data().unwrap().unwrap();
+		let data = image_surface.get_image_surface_data().wait().unwrap();
 		assert!(data.len() == 100 * 100 * 4);
 		for i in 0..100 * 100 * 4 {
 			if i % 4 == 3 {

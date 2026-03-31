@@ -11,7 +11,7 @@ use crate::{
 	pipeline::Pipeline, 
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture, render_command::RenderEngineCommand,
+		engine_future::{EngineFuture, EngineFutureBuilder}, render_command::RenderEngineCommand,
 	}, 
 	renderable::{
 		descriptor_set_data::DescriptorData, 
@@ -31,7 +31,7 @@ pub struct RenderObject {
 }
 
 impl RenderObject {
-	pub fn new(render_engine: &RenderEngine, mesh_data: Arc<MeshData>, pipeline: Arc<Pipeline>) -> EngineFuture<Result<Arc<Self>, ()>> {
+	pub fn new(render_engine: &RenderEngine, mesh_data: Arc<MeshData>, pipeline: Arc<Pipeline>) -> impl EngineFuture<Result<Arc<Self>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -43,15 +43,16 @@ impl RenderObject {
 			}.into()
 		).unwrap();
 
-		EngineFuture::new_single(recv)
+		EngineFutureBuilder::new_channel(recv)
+			.build()
 	}
 
-	pub fn update_descriptor(&self, set: u32, binding: u32, data: DescriptorData) -> EngineFuture<Result<(), ()>> {
+	pub fn update_descriptor(&self, set: u32, binding: u32, data: DescriptorData) -> impl EngineFuture<Result<(), ()>> {
 		let result = self.pipeline.descriptor_requirements.descriptors.iter().find(|((s, b), _, _)| *s == set && *b == binding);
-		if result.is_none() { return EngineFuture::new_immediate(Err(())); }
+		if result.is_none() { return EngineFutureBuilder::new_immediate(Err(())).build(); }
 		let (_, descriptor_type, _) = result.unwrap();
 
-		if !data.compatable_with(descriptor_type) { return EngineFuture::new_immediate(Err(())) }
+		if !data.compatable_with(descriptor_type) { return EngineFutureBuilder::new_immediate(Err(())).build(); }
 
 		let (send, recv) = sync_channel(1);
 
@@ -65,7 +66,8 @@ impl RenderObject {
 			}.into()
 		).unwrap();
 
-		EngineFuture::new_single(recv)
+		EngineFutureBuilder::new_channel(recv)
+			.build()
 	}
 }
 
@@ -84,8 +86,15 @@ mod tests {
     use crate::{
 		mesh_data::{MeshData, Vertex3D}, 
 		pipeline::Pipeline, 
-		render_engine::{RenderEngine, RenderEngineFlags}, 
-		renderable::{descriptor_set_data::DescriptorData, render_object::RenderObject}, 
+		render_engine::{
+			engine_future::EngineFuture,
+			RenderEngine, 
+			RenderEngineFlags
+		}, 
+		renderable::{
+			descriptor_set_data::DescriptorData, 
+			render_object::RenderObject
+		}, 
 		shader::{Shader, ShaderType}, texture::Texture,
 	};
 	
@@ -162,17 +171,17 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
-		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap().unwrap();
+		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
 
-		let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
+		let render_object = RenderObject::new(&engine, mesh_data, pipeline).wait().unwrap();
 
 		drop(render_object);
 	}
@@ -186,19 +195,19 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
-		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_DESCRIPTOR_SOURCE).unwrap();
-		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap().unwrap();
+		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
 
-		let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
+		let render_object = RenderObject::new(&engine, mesh_data, pipeline).wait().unwrap();
 
-		render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(Box::new([0u8; 4 * 4 * 4]))).unwrap().unwrap();
+		render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(Box::new([0u8; 4 * 4 * 4]))).wait().unwrap();
 	}
 
 	#[test]
@@ -210,21 +219,21 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
-		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_DESCRIPTOR_SOURCE).unwrap();
-		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap().unwrap();
+		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
 
-		let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
+		let render_object = RenderObject::new(&engine, mesh_data, pipeline).wait().unwrap();
 
-		let texture = Texture::new(&engine, &TEXTURE_DATA, 100, 100).unwrap().unwrap();
+		let texture = Texture::new(&engine, &TEXTURE_DATA, 100, 100).wait().unwrap();
 
-		render_object.update_descriptor(0, 0, DescriptorData::CombinedImageSampler(texture)).unwrap().unwrap();
+		render_object.update_descriptor(0, 0, DescriptorData::CombinedImageSampler(texture)).wait().unwrap();
 	}
 
 	#[test]
@@ -236,19 +245,19 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
-		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_DESCRIPTOR_SOURCE).unwrap();
-		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap().unwrap();
+		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
 
-		let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
+		let render_object = RenderObject::new(&engine, mesh_data, pipeline).wait().unwrap();
 
-		let result = render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(Box::new([0u8; 4 * 4 * 4]))).unwrap();
+		let result = render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(Box::new([0u8; 4 * 4 * 4]))).wait();
 
 		assert!(result.is_err_and(|e| e == ()));
 	}

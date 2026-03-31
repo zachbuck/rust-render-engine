@@ -8,7 +8,11 @@ use image::{ImageBuffer, Rgba, open};
 use render_engine::{
 	mesh_data::{MeshData, Vertex3D}, 
 	pipeline::Pipeline, 
-	render_engine::{RenderEngine, RenderEngineFlags}, 
+	render_engine::{
+		engine_future::EngineFuture,
+		RenderEngine, 
+		RenderEngineFlags
+	}, 
 	render_surface::image_surface::ImageSurface, 
 	renderable::{
 		descriptor_set_data::DescriptorData, render_object::RenderObject
@@ -44,34 +48,34 @@ fn render_scene() {
 	};
 	let engine = RenderEngine::new("Texture Quad Test", [0, 1, 0], flags).unwrap();
 
-	let image_surface = ImageSurface::new(&engine, 200, 200).unwrap().unwrap();
+	let image_surface = ImageSurface::new(&engine, 200, 200).wait().unwrap();
 	
-	let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+	let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
 	let mut file = File::open(VERTEX_PATH).unwrap();
 	let mut source = String::new();
 	file.read_to_string(&mut source).unwrap();
 	let binary = Shader::compile(&engine, VERTEX_PATH, ShaderType::Vertex, &source).unwrap();
-	let vertex_shader = Shader::new(&engine, binary).unwrap().unwrap();
+	let vertex_shader = Shader::new(&engine, binary).wait().unwrap();
 
 	let mut file = File::open(FRAGMENT_PATH).unwrap();
 	let mut source = String::new();
 	file.read_to_string(&mut source).unwrap();
 	let binary = Shader::compile(&engine, FRAGMENT_PATH, ShaderType::Fragment, &source).unwrap();
-	let fragment_shader = Shader::new(&engine, binary).unwrap().unwrap();
+	let fragment_shader = Shader::new(&engine, binary).wait().unwrap();
 
-	let pipeline = Pipeline::new(&engine, &vec![vertex_shader, fragment_shader]).unwrap().unwrap();
+	let pipeline = Pipeline::new(&engine, &vec![vertex_shader, fragment_shader]).wait().unwrap();
 
  	let texture_data = open(TEXTURE_PATH).unwrap().into_rgba8();
-	let texture = Texture::new(&engine, &texture_data, texture_data.width(), texture_data.height()).unwrap().unwrap();
+	let texture = Texture::new(&engine, &texture_data, texture_data.width(), texture_data.height()).wait().unwrap();
 
-	let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
+	let render_object = RenderObject::new(&engine, mesh_data, pipeline).wait().unwrap();
 
-	render_object.update_descriptor(0, 0, DescriptorData::CombinedImageSampler(texture)).unwrap().unwrap();
+	render_object.update_descriptor(0, 0, DescriptorData::CombinedImageSampler(texture)).wait().unwrap();
 
-	image_surface.render_all().unwrap().unwrap();
+	image_surface.render_all().wait().unwrap();
 
-	let image_data = image_surface.get_image_surface_data().unwrap().unwrap();
+	let image_data = image_surface.get_image_surface_data().wait().unwrap();
 	let image = ImageBuffer::<Rgba<u8>, _>::from_raw(200, 200, image_data).unwrap();
 
 	let test_image = open(TEST_IMAGE_PATH).unwrap().into_rgba8();

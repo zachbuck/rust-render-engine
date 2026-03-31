@@ -13,7 +13,7 @@ use crate::{
 	pipeline::pipeline_command::PipelineCommand, 
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture, render_command::RenderEngineCommand
+		engine_future::{EngineFuture, EngineFutureBuilder}, render_command::RenderEngineCommand
 	}, 
 	shader::{Shader, ShaderType, descriptor_requirements::DescriptorRequirements}
 };
@@ -31,7 +31,7 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-	pub fn new(render_engine: &RenderEngine, shaders: &[Arc<Shader>]) -> EngineFuture<Result<Arc<Pipeline>, ()>> {
+	pub fn new(render_engine: &RenderEngine, shaders: &[Arc<Shader>]) -> impl EngineFuture<Result<Arc<Pipeline>, ()>> {
 		// Do some error checking on the input to make sure that this will link into a valid GraphicsPipeline
 		// 1. Only one of each stage
 		// 2. Must contain Vertex Shader
@@ -41,18 +41,18 @@ impl Pipeline {
 		let mut stages = HashSet::new();
 		for shader in shaders {
 			if stages.contains(&shader.shader_type) {
-				return EngineFuture::new_immediate(Err(()));
+				return EngineFutureBuilder::new_immediate(Err(())).build();
 			}
 
 			stages.insert(shader.shader_type);
 		}
 
 		if !stages.contains(&ShaderType::Vertex) {
-			return EngineFuture::new_immediate(Err(()));
+			return EngineFutureBuilder::new_immediate(Err(())).build();
 		}
 
 		if !DescriptorRequirements::test_compatibility(&shaders.iter().map(|s| s.descriptor_requirements.clone()).collect::<Vec<_>>()) {
-			return EngineFuture::new_immediate(Err(()));
+			return EngineFutureBuilder::new_immediate(Err(())).build();
 		}
 
 		let (send, recv) = sync_channel(1);
@@ -67,10 +67,10 @@ impl Pipeline {
 			}.into()
 		).unwrap();
 
-		return EngineFuture::new_single(recv);
+		EngineFutureBuilder::new_channel(recv).build()
 	}
 
-	pub fn get_all(render_engine: &RenderEngine) -> EngineFuture<Result<Box<[Arc<Pipeline>]>, ()>> {
+	pub fn get_all(render_engine: &RenderEngine) -> impl EngineFuture<Result<Box<[Arc<Pipeline>]>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -79,7 +79,8 @@ impl Pipeline {
 			}.into()
 		).unwrap();
 		
-		EngineFuture::new_single(recv)
+		EngineFutureBuilder::new_channel(recv)
+			.build()
 	}
 }
 
@@ -99,7 +100,11 @@ mod tests {
 
     use crate::{
 		pipeline::Pipeline, 
-		render_engine::{RenderEngine, RenderEngineFlags}, 
+		render_engine::{
+			engine_future::EngineFuture,
+			RenderEngine, 
+			RenderEngineFlags
+		}, 
 		shader::{Shader, ShaderType},
 	};
 
@@ -168,16 +173,16 @@ mod tests {
 		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap().unwrap();
+		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
 
 		drop(pipeline);
 
-		let pipeline_list = Pipeline::get_all(&engine).unwrap().unwrap();
+		let pipeline_list = Pipeline::get_all(&engine).wait().unwrap();
 		assert!(pipeline_list.len() == 0);
 	}
 
@@ -193,15 +198,15 @@ mod tests {
 		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
 		let vertex_2_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-		let vertex_2_shader = Shader::new(&engine, vertex_2_binary).unwrap().unwrap();
+		let vertex_2_shader = Shader::new(&engine, vertex_2_binary).wait().unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let result = Pipeline::new(&engine, &[vertex_shader, vertex_2_shader, fragment_shader]).unwrap();
+		let result = Pipeline::new(&engine, &[vertex_shader, vertex_2_shader, fragment_shader]).wait();
 
 		assert!(result.is_err_and(|e| e == ()));
 	}
@@ -218,9 +223,9 @@ mod tests {
 		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let result = Pipeline::new(&engine, &[fragment_shader]).unwrap();
+		let result = Pipeline::new(&engine, &[fragment_shader]).wait();
 
 		assert!(result.is_err_and(|e| e == ()));
 	}
@@ -237,12 +242,12 @@ mod tests {
 		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_DESCRIPTOR_SOURCE).unwrap();
-		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_DESCRIPTOR_SOURCE).unwrap();
-		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let result = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap();
+		let result = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait();
 
 		assert!(result.is_err_and(|e| e == ()));
 	}
@@ -257,14 +262,14 @@ mod tests {
 		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
-		let vertex_shader = Shader::new(&engine, vertex_binary).unwrap().unwrap();
+		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
-		let fragment_shader = Shader::new(&engine, fragment_binary).unwrap().unwrap();
+		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap().unwrap();
+		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
 
-		let pipeline_list = Pipeline::get_all(&engine).unwrap().unwrap();
+		let pipeline_list = Pipeline::get_all(&engine).wait().unwrap();
 
 		assert!(pipeline_list.len() == 1);
 		assert!(Arc::ptr_eq(&pipeline, &pipeline_list[0]));

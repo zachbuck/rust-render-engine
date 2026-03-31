@@ -8,7 +8,11 @@ use image::{ImageBuffer, Rgba, open};
 use render_engine::{
 	mesh_data::{MeshData, Vertex3D}, 
 	pipeline::Pipeline, 
-	render_engine::{RenderEngine, RenderEngineFlags}, 
+	render_engine::{
+		engine_future::EngineFuture,
+		RenderEngine, 
+		RenderEngineFlags
+	}, 
 	render_surface::image_surface::ImageSurface, 
 	renderable::{descriptor_set_data::DescriptorData, render_object::RenderObject}, 
 	shader::{Shader, ShaderType},
@@ -52,25 +56,25 @@ fn render_scene() {
 	};
 	let engine = RenderEngine::new("Rotated Triangle", [0, 1, 0], flags).unwrap();
 
-	let image_surface = ImageSurface::new(&engine, 100, 100).unwrap().unwrap();
+	let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
 
-	let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+	let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
 	let mut file = File::open(VERTEX_PATH).unwrap();
 	let mut source = String::new();
 	file.read_to_string(&mut source).unwrap();
 	let binary = Shader::compile(&engine, VERTEX_PATH, ShaderType::Vertex, &source).unwrap();
-	let vertex_shader = Shader::new(&engine, binary).unwrap().unwrap();
+	let vertex_shader = Shader::new(&engine, binary).wait().unwrap();
 
 	let mut file = File::open(FRAGMENT_PATH).unwrap();
 	let mut source = String::new();
 	file.read_to_string(&mut source).unwrap();
 	let binary = Shader::compile(&engine, FRAGMENT_PATH, ShaderType::Fragment, &source).unwrap();
-	let fragment_shader = Shader::new(&engine, binary).unwrap().unwrap();
+	let fragment_shader = Shader::new(&engine, binary).wait().unwrap();
 
-	let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).unwrap().unwrap();
+	let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
 
-	let render_object = RenderObject::new(&engine, mesh_data, pipeline).unwrap().unwrap();
+	let render_object = RenderObject::new(&engine, mesh_data, pipeline).wait().unwrap();
 
 	let mut data = Box::new([0u8; 4 * 4 * 4]);
 	for x in 0..4 {
@@ -82,11 +86,11 @@ fn render_scene() {
 		}
 	}
 
-	render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(data)).unwrap().unwrap();
+	render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(data)).wait().unwrap();
 
-	image_surface.render_all().unwrap().unwrap();
+	image_surface.render_all().wait().unwrap();
 
-	let unit_image_data = image_surface.get_image_surface_data().unwrap().unwrap();
+	let unit_image_data = image_surface.get_image_surface_data().wait().unwrap();
 	let image = ImageBuffer::<Rgba<u8>, _>::from_raw(image_surface.x_size, image_surface.y_size, unit_image_data).unwrap();
 	
 	let test_image = open(UNIT_TEST_IMAGE_PATH).unwrap().into_rgba8();
@@ -108,11 +112,11 @@ fn render_scene() {
 		}
 	}
 
-	render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(data)).unwrap().unwrap();
+	render_object.update_descriptor(0, 0, DescriptorData::UniformBuffer(data)).wait().unwrap();
 
-	image_surface.render_all().unwrap().unwrap();
+	image_surface.render_all().wait().unwrap();
 
-	let flip_image_data = image_surface.get_image_surface_data().unwrap().unwrap();
+	let flip_image_data = image_surface.get_image_surface_data().wait().unwrap();
 	let image = ImageBuffer::<Rgba<u8>, _>::from_raw(image_surface.x_size, image_surface.y_size, flip_image_data).unwrap();
 	let test_image = open(FLIP_TEST_IMAGE_PATH).unwrap().into_rgba8();
 

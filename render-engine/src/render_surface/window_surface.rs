@@ -4,14 +4,14 @@ use std::sync::{
 	mpsc::{Sender, sync_channel},
 };
 
-use sdl2::{event::Event, keyboard::Keycode, sys::KeyCode, video::Window};
+use sdl2::{event::Event, keyboard::Keycode, video::Window};
 use uuid::Uuid;
 use vulkano::swapchain::Surface;
 
 use crate::{
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture, 
+		engine_future::{EngineFuture, EngineFutureBuilder}, 
 		render_command::RenderEngineCommand,
 	}, 
 	render_surface::{render_surface_command::RenderSurfaceCommand, window_surface::window_surface_command::WindowSurfaceCommand},
@@ -56,7 +56,7 @@ impl WindowSurface {
 		})
 	}
 
-	pub fn render_all(&self) -> EngineFuture<Result<(), ()>> {
+	pub fn render_all(&self) -> impl EngineFuture<Result<(), ()>> {
 		let (send, recv) = sync_channel(1);
 
 		self.command_channel.send(
@@ -66,7 +66,8 @@ impl WindowSurface {
 			}.into()
 		).unwrap();
 
-		EngineFuture::new_single(recv)
+		EngineFutureBuilder::new_channel(recv)
+			.build()
 	}
 
 	pub fn should_close(render_engine: &mut RenderEngine) -> bool {

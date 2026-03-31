@@ -15,7 +15,7 @@ use crate::{
 	macros::error_map, 
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture, 
+		engine_future::{EngineFuture, EngineFutureBuilder}, 
 		render_command::RenderEngineCommand,
 	}, 
 	shader::{
@@ -59,10 +59,10 @@ impl Shader {
 			None
 		).map_err(error_map!())?;
 
-		return Ok(artifact.as_binary().to_owned().into_boxed_slice());
+		Ok(artifact.as_binary().to_owned().into_boxed_slice())
 	}
 
-	pub fn new(render_engine: &RenderEngine, binary: Box<[u32]>) -> EngineFuture<Result<Arc<Self>, ()>> {
+	pub fn new(render_engine: &RenderEngine, binary: Box<[u32]>) -> impl EngineFuture<Result<Arc<Self>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -73,10 +73,11 @@ impl Shader {
 			}.into()
 		).unwrap();
 
-		return EngineFuture::new_single(recv);
+		EngineFutureBuilder::new_channel(recv)
+			.build()
 	}
 
-	pub fn get_all(render_engine: &RenderEngine) -> EngineFuture<Result<Box<[Arc<Shader>]>, ()>> {
+	pub fn get_all(render_engine: &RenderEngine) -> impl EngineFuture<Result<Box<[Arc<Shader>]>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -85,7 +86,8 @@ impl Shader {
 			}.into()
 		).unwrap();
 		
-		EngineFuture::new_single(recv)
+		EngineFutureBuilder::new_channel(recv)
+			.build()
 	}
 }
 
@@ -132,7 +134,11 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-		render_engine::{RenderEngine, RenderEngineFlags}, 
+		render_engine::{
+			engine_future::EngineFuture,
+			RenderEngine, 
+			RenderEngineFlags
+		}, 
 		shader::{Shader, ShaderType},
 	};
 
@@ -243,11 +249,11 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Shader Test", [0, 1, 0], engine_flags).unwrap();
 
-		let shader = Shader::new(&engine, Box::new(VERTEX_BINARY)).unwrap().unwrap();
+		let shader = Shader::new(&engine, Box::new(VERTEX_BINARY)).wait().unwrap();
 
 		drop(shader);
 
-		let shader_list = Shader::get_all(&engine).unwrap().unwrap();
+		let shader_list = Shader::get_all(&engine).wait().unwrap();
 
 		assert!(shader_list.len() == 0);
 	}
@@ -261,9 +267,9 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Shader Test", [0, 1, 0], engine_flags).unwrap();
 
-		let shader = Shader::new(&engine, Box::new(VERTEX_BINARY)).unwrap().unwrap();
+		let shader = Shader::new(&engine, Box::new(VERTEX_BINARY)).wait().unwrap();
 
-		let shader_list = Shader::get_all(&engine).unwrap().unwrap();
+		let shader_list = Shader::get_all(&engine).wait().unwrap();
 
 		assert!(shader_list.len() == 1);
 		assert!(Arc::ptr_eq(&shader, &shader_list[0]));

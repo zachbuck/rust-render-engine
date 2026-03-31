@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture, 
+		engine_future::{EngineFuture, EngineFutureBuilder}, 
 		render_command::RenderEngineCommand,
 	}, 
 	texture::texture_command::TextureCommand,
@@ -38,7 +38,7 @@ impl Drop for Texture {
 }
 
 impl Texture {
-	pub fn new(render_engine: &RenderEngine, data: &[u8], x_size: u32, y_size: u32) -> EngineFuture<Result<Arc<Texture>, ()>> {
+	pub fn new(render_engine: &RenderEngine, data: &[u8], x_size: u32, y_size: u32) -> impl EngineFuture<Result<Arc<Texture>, ()>> {
 		let (fut_send, fut_recv) = sync_channel(1);
 		let (send, recv) = sync_channel(1);
 		
@@ -53,11 +53,12 @@ impl Texture {
 			}.into()
 		).unwrap();
 
-		EngineFuture::new_single(recv)
-			.with_wait_condition(fut_recv.into())
+		EngineFutureBuilder::new_channel(recv)
+			.with_gpu_future(fut_recv)
+			.build()
 	}
 
-	pub fn get_all(render_engine: &RenderEngine) -> EngineFuture<Result<Box<[Arc<Texture>]>, ()>> {
+	pub fn get_all(render_engine: &RenderEngine) -> impl EngineFuture<Result<Box<[Arc<Texture>]>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -66,7 +67,8 @@ impl Texture {
 			}.into()
 		).unwrap();
 
-		EngineFuture::new_single(recv)
+		EngineFutureBuilder::new_channel(recv)
+			.build()
 	}
 }
 
@@ -75,7 +77,11 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-		render_engine::{RenderEngine, RenderEngineFlags}, 
+		render_engine::{
+			engine_future::EngineFuture,
+			RenderEngine, 
+			RenderEngineFlags
+		}, 
 		texture::Texture,
 	};
 
@@ -86,11 +92,11 @@ mod tests {
 	fn new_texture() {
 		let engine = RenderEngine::new("Texture Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
-		let texture = Texture::new(&engine, &TEXTURE_DATA, 100, 100).unwrap().unwrap();
+		let texture = Texture::new(&engine, &TEXTURE_DATA, 100, 100).wait().unwrap();
 
 		drop(texture);
 
-		let texture_list = Texture::get_all(&engine).unwrap().unwrap();
+		let texture_list = Texture::get_all(&engine).wait().unwrap();
 
 		assert!(texture_list.len() == 0);
 	}
@@ -100,9 +106,9 @@ mod tests {
 	fn get_all() {
 		let engine = RenderEngine::new("Texture Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
-		let texture = Texture::new(&engine, &TEXTURE_DATA, 100, 100).unwrap().unwrap();
+		let texture = Texture::new(&engine, &TEXTURE_DATA, 100, 100).wait().unwrap();
 
-		let texture_list = Texture::get_all(&engine).unwrap().unwrap();
+		let texture_list = Texture::get_all(&engine).wait().unwrap();
 
 		assert!(texture_list.len() == 1);
 		assert!(Arc::ptr_eq(&texture, &texture_list[0]));

@@ -14,7 +14,7 @@ use crate::{
 	mesh_data::mesh_data_command::MeshDataCommand, 
 	render_engine::{
 		RenderEngine, 
-		engine_future::EngineFuture, render_command::RenderEngineCommand,
+		engine_future::{EngineFuture, EngineFutureBuilder}, render_command::RenderEngineCommand,
 	},
 };
 
@@ -41,7 +41,7 @@ pub struct Vertex3D {
 }
 
 impl MeshData {
-	pub fn new(render_engine: &RenderEngine, vertices: Vec<Vertex3D>, indices: Vec<u16>) -> EngineFuture<Result<Arc<Self>, ()>> {
+	pub fn new(render_engine: &RenderEngine, vertices: Vec<Vertex3D>, indices: Vec<u16>) -> impl EngineFuture<Result<Arc<Self>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -54,10 +54,11 @@ impl MeshData {
 			}.into()
 		).unwrap();
 
-		return EngineFuture::new_single(recv);
+		EngineFutureBuilder::new_channel(recv)
+			.build()
 	}
 
-	pub fn get_all(render_engine: &RenderEngine) -> EngineFuture<Result<Box<[Arc<MeshData>]>, ()>> {
+	pub fn get_all(render_engine: &RenderEngine) -> impl EngineFuture<Result<Box<[Arc<MeshData>]>, ()>> {
 		let (send, recv) = sync_channel(1);
 
 		render_engine.command_channel.send(
@@ -66,7 +67,8 @@ impl MeshData {
 			}.into()
 		).unwrap();
 
-		EngineFuture::new_single(recv)
+		EngineFutureBuilder::new_channel(recv)
+			.build()
 	}
 }
 
@@ -87,7 +89,11 @@ mod tests {
 
     use crate::{
 		mesh_data::{MeshData, Vertex3D}, 
-		render_engine::{RenderEngine, RenderEngineFlags}
+		render_engine::{
+			engine_future::EngineFuture,
+			RenderEngine, 
+			RenderEngineFlags
+		}
 	};
 
 	const VERTICES: [Vertex3D; 4] = [
@@ -107,11 +113,11 @@ mod tests {
 	fn new_mesh_data() {
 		let engine = RenderEngine::new("Mesh Data Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
-		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
 		drop(mesh_data);
 
-		let mesh_data_list = MeshData::get_all(&engine).unwrap().unwrap();
+		let mesh_data_list = MeshData::get_all(&engine).wait().unwrap();
 		assert!(mesh_data_list.len() == 0);
 	}
 
@@ -120,9 +126,9 @@ mod tests {
 	fn get_all() {
 		let engine = RenderEngine::new("Mesh Data Test", [0, 1, 0], RenderEngineFlags::empty()).unwrap();
 
-		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).unwrap().unwrap();
+		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
-		let mesh_data_list = MeshData::get_all(&engine).unwrap().unwrap();
+		let mesh_data_list = MeshData::get_all(&engine).wait().unwrap();
 
 		assert!(mesh_data_list.len() == 1);
 		assert!(Arc::ptr_eq(&mesh_data, &mesh_data_list[0]));

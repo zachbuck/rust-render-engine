@@ -32,7 +32,6 @@ pub struct RenderEngine {
     pub(crate) command_channel: Arc<Sender<RenderEngineCommand>>,
 
     pub(crate) spirv_compiler: Option<Compiler>,
-	pub(crate) sdl: Option<Sdl>,
 	pub(crate) sdl_resources: Option<SdlResources>,
 
 	pub(crate) instance: Arc<Instance>,
@@ -82,7 +81,6 @@ impl RenderEngine {
             command_channel: Arc::new(command_s),
 
             spirv_compiler: spirv_compiler,
-			sdl: sdl,
 			sdl_resources: sdl_resources,
 
 			instance: instance,

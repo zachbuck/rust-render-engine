@@ -9,25 +9,24 @@ use vulkano::sync::{
 	future::FenceSignalFuture,
 };
 
-use crate::render_engine::engine_future::EngineFuture;
+use crate::render_engine::engine_future::{EngineFuture, EngineFutureBuilder};
 
 pub struct WaitingEngineFuture<T> {
 	condition: EngineWaitType,
-	future: dyn EngineFuture<T>,
+	future: Box<dyn EngineFuture<T>>,
 }
 
 impl<T> EngineFuture<T> for WaitingEngineFuture<T> {
 	fn wait(&mut self) -> T {
-		todo!()
+		EngineWaitType::wait(&mut self.condition);
+		self.future.wait()
 	}
 
 	fn try_wait(&mut self) -> Result<T, ()> {
-		todo!()
+		let done = EngineWaitType::is_complete(&mut self.condition);
+		if !done { return Err(()) }
+		self.future.try_wait()
 	}
-}
-
-impl<T> WaitingEngineFuture<T> {
-
 }
 
 enum EngineWaitType {
@@ -65,8 +64,9 @@ impl EngineWaitType {
 	}
 }
 
-impl EngineWaitType {
-	fn new_gpu_future(channel: Receiver<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>) -> Self {
-		EngineWaitType::GpuChannel(channel)
+impl<T: 'static> EngineFutureBuilder<T> {
+	pub(crate) fn with_gpu_future(self, recv: Receiver<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>) -> Self {
+		let engine_future = Box::new(WaitingEngineFuture { condition: EngineWaitType::GpuChannel(recv), future: self.engine_future });
+		EngineFutureBuilder { engine_future: engine_future }
 	}
 }
