@@ -30,7 +30,6 @@ pub(super) struct RenderInfo {
 
 impl WindowSurfaceInternal {
 	pub(super) fn get_image_views(images: &[Arc<Image>]) -> Result<Box<[Arc<ImageView>]>, ()> {
-		println!("Image Count: {:?}", images.len());
 		let mut out = Vec::with_capacity(images.len());
 		for i in 0..images.len(){ 
 			out.push(ImageView::new_default(images[i].clone()).map_err(error_map!())?);
