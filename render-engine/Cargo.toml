@@ -1,6 +1,6 @@
 [package]
 name = "render-engine"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
@@ -11,5 +11,5 @@ vulkano = "0.35.2"
 uuid = { version = "1.22.0", features = ["v7"] }
 glam = "0.32.1"
 
-# [dev-dependencies]
+[dev-dependencies]
 image = "0.25.10"
