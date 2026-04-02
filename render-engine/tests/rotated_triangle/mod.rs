@@ -71,7 +71,7 @@ pub fn render_scene() {
 	let binary = Shader::compile(&engine, FRAGMENT_PATH, ShaderType::Fragment, &source).unwrap();
 	let fragment_shader = Shader::new(&engine, binary).wait().unwrap();
 
-	let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
+	let pipeline = Pipeline::new(&image_surface, &[vertex_shader, fragment_shader]).wait().unwrap();
 
 	let render_object = RenderObject::new(&engine, mesh_data, pipeline).wait().unwrap();
 

@@ -84,18 +84,12 @@ impl Drop for RenderObject {
 #[cfg(test)]
 mod tests {
     use crate::{
-		mesh_data::{MeshData, Vertex3D}, 
-		pipeline::Pipeline, 
-		render_engine::{
-			engine_future::EngineFuture,
-			RenderEngine, 
-			RenderEngineFlags
-		}, 
-		renderable::{
+		mesh_data::{MeshData, Vertex3D}, pipeline::Pipeline, render_engine::{
+			RenderEngine, RenderEngineFlags, engine_future::EngineFuture
+		}, render_surface::image_surface::ImageSurface, renderable::{
 			descriptor_set_data::DescriptorData, 
 			render_object::RenderObject
-		}, 
-		shader::{Shader, ShaderType}, texture::Texture,
+		}, shader::{Shader, ShaderType}, texture::Texture
 	};
 	
 	const VERTICES: [Vertex3D; 4] = [
@@ -171,6 +165,8 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
+		let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
+
 		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
@@ -179,7 +175,7 @@ mod tests {
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
 		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
+		let pipeline = Pipeline::new(&image_surface, &[vertex_shader, fragment_shader]).wait().unwrap();
 
 		let render_object = RenderObject::new(&engine, mesh_data, pipeline).wait().unwrap();
 
@@ -195,6 +191,8 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
+		let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
+
 		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_DESCRIPTOR_SOURCE).unwrap();
@@ -203,7 +201,7 @@ mod tests {
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
 		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
+		let pipeline = Pipeline::new(&image_surface, &[vertex_shader, fragment_shader]).wait().unwrap();
 
 		let render_object = RenderObject::new(&engine, mesh_data, pipeline).wait().unwrap();
 
@@ -219,6 +217,8 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
+		let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
+
 		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
@@ -227,7 +227,7 @@ mod tests {
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_DESCRIPTOR_SOURCE).unwrap();
 		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
+		let pipeline = Pipeline::new(&image_surface, &[vertex_shader, fragment_shader]).wait().unwrap();
 
 		let render_object = RenderObject::new(&engine, mesh_data, pipeline).wait().unwrap();
 
@@ -245,6 +245,8 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Render Object Test", [0, 1, 0], flags).unwrap();
 
+		let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
+
 		let mesh_data = MeshData::new(&engine, VERTICES.to_vec(), INDICES.to_vec()).wait().unwrap();
 
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
@@ -253,7 +255,7 @@ mod tests {
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_DESCRIPTOR_SOURCE).unwrap();
 		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
+		let pipeline = Pipeline::new(&image_surface, &[vertex_shader, fragment_shader]).wait().unwrap();
 
 		let render_object = RenderObject::new(&engine, mesh_data, pipeline).wait().unwrap();
 

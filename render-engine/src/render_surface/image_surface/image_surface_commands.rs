@@ -6,18 +6,9 @@ use std::sync::{
 
 use uuid::Uuid;
 use vulkano::{
-	buffer::{Buffer, BufferCreateInfo, BufferUsage}, 
-	command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, CopyImageToBufferInfo}, 
-	format::Format, 
-	image::{
-		Image, 
-		ImageCreateInfo, 
-		ImageType, 
-		ImageUsage, 
-		view::ImageView
-	}, 
-	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}, 
-	sync::{
+	buffer::{Buffer, BufferCreateInfo, BufferUsage}, command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, CopyImageToBufferInfo}, format::Format, image::{
+		Image, ImageCreateInfo, ImageLayout, ImageType, ImageUsage, view::ImageView
+	}, memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}, render_pass::{AttachmentDescription, AttachmentLoadOp, AttachmentReference, AttachmentStoreOp, Framebuffer, FramebufferCreateInfo, RenderPass, RenderPassCreateInfo, SubpassDescription}, sync::{
 		self, GpuFuture, future::FenceSignalFuture
 	}
 };
@@ -79,6 +70,48 @@ impl RenderThread {
 	fn create_image_surface(&mut self, x_size: u32, y_size: u32, command_channel: Arc<Sender<RenderEngineCommand>>) -> Result<Arc<ImageSurface>, ()> {
 		let uuid = Uuid::now_v7();
 
+		let render_pass = RenderPass::new(
+			self.device.clone(), 
+			RenderPassCreateInfo {
+				attachments: vec![
+					AttachmentDescription {
+						format: Format::R8G8B8A8_UNORM,
+						load_op: AttachmentLoadOp::Clear,
+						store_op: AttachmentStoreOp::Store,
+						final_layout: ImageLayout::ColorAttachmentOptimal,
+						..Default::default()
+					},
+					AttachmentDescription {
+						format: Format::D32_SFLOAT,
+						load_op: AttachmentLoadOp::Clear,
+						store_op: AttachmentStoreOp::DontCare,
+						final_layout: ImageLayout::DepthStencilAttachmentOptimal,
+						..Default::default()
+					}
+				],
+				subpasses: vec![
+					SubpassDescription {
+						color_attachments: vec![
+							Some(AttachmentReference {
+								attachment: 0,
+								layout: ImageLayout::ColorAttachmentOptimal,
+								..Default::default()
+							})
+						],
+						depth_stencil_attachment: Some(
+							AttachmentReference {
+								attachment: 1,
+								layout: ImageLayout::DepthStencilAttachmentOptimal,
+								..Default::default()
+							}
+						),
+						..Default::default()
+					}
+				],
+				..Default::default()
+			}
+		).map_err(error_map!())?;
+
 		let image = Image::new(
 			self.buffer_allocator.clone(),
 			ImageCreateInfo {
@@ -96,8 +129,35 @@ impl RenderThread {
 
 		let image_view = ImageView::new_default(image).map_err(error_map!())?;
 
+		let depth_image = Image::new(
+			self.buffer_allocator.clone(), 
+			ImageCreateInfo {
+				image_type: ImageType::Dim2d,
+				format: Format::D32_SFLOAT,
+				extent: [x_size, y_size, 1],
+				usage: ImageUsage::DEPTH_STENCIL_ATTACHMENT,
+				..Default::default()
+			}, 
+			AllocationCreateInfo {
+				memory_type_filter: MemoryTypeFilter::PREFER_DEVICE,
+				..Default::default()
+			}
+		).map_err(error_map!())?;
+
+		let depth_image_view =ImageView::new_default(depth_image).map_err(error_map!())?;
+
+		let framebuffer = Framebuffer::new(
+			render_pass.clone(), 
+			FramebufferCreateInfo {
+				attachments: vec![image_view, depth_image_view],
+				extent: [x_size, y_size],
+				..Default::default()
+			}
+		).map_err(error_map!())?;
+
 		let internal = Box::new(ImageSurfaceInternal {
-			image: image_view,
+			render_pass: render_pass.clone(),
+			framebuffer: framebuffer,
 			operation_future: None,
 		});
 
@@ -106,6 +166,9 @@ impl RenderThread {
 		Ok(Arc::new(ImageSurface {
 			uuid: uuid,
 			command_channel,
+
+			render_pass: render_pass.clone(),
+
 			x_size: x_size,
 			y_size: y_size
 		}))
@@ -130,7 +193,7 @@ impl RenderThread {
 				memory_type_filter: MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_RANDOM_ACCESS,
 				..Default::default()
 			},
-			(0..image_surface.image.image().extent()[0] * image_surface.image.image().extent()[1] * 4).map(|_| 0u8),
+			(0..image_surface.framebuffer.attachments()[0].image().extent()[0] * image_surface.framebuffer.attachments()[0].image().extent()[1] * 4).map(|_| 0u8),
 		);
 		if result.is_err() { return (Box::new(|| Err(())), None); } 
 
@@ -145,7 +208,7 @@ impl RenderThread {
 
 		let mut builder = result.unwrap();
 
-		let result = builder.copy_image_to_buffer(CopyImageToBufferInfo::image_buffer(image_surface.image.image().clone(), buffer.clone()));
+		let result = builder.copy_image_to_buffer(CopyImageToBufferInfo::image_buffer(image_surface.framebuffer.attachments()[0].image().clone(), buffer.clone()));
 		if result.is_err() { return (Box::new(|| Err(())), None) }
 		let result = builder.build();
 		if result.is_err() { return (Box::new(|| Err(())), None) }

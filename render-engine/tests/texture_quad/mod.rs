@@ -63,7 +63,7 @@ pub fn render_scene() {
 	let binary = Shader::compile(&engine, FRAGMENT_PATH, ShaderType::Fragment, &source).unwrap();
 	let fragment_shader = Shader::new(&engine, binary).wait().unwrap();
 
-	let pipeline = Pipeline::new(&engine, &vec![vertex_shader, fragment_shader]).wait().unwrap();
+	let pipeline = Pipeline::new(&image_surface, &vec![vertex_shader, fragment_shader]).wait().unwrap();
 
  	let texture_data = open(TEXTURE_PATH).unwrap().into_rgba8();
 	let texture = Texture::new(&engine, &texture_data, texture_data.width(), texture_data.height()).wait().unwrap();

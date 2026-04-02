@@ -6,7 +6,7 @@ use std::sync::{
 
 use sdl2::{event::Event, video::Window};
 use uuid::Uuid;
-use vulkano::swapchain::Surface;
+use vulkano::{render_pass::RenderPass, swapchain::Surface};
 
 use crate::{
 	render_engine::{
@@ -14,7 +14,7 @@ use crate::{
 		engine_future::{EngineFuture, EngineFutureBuilder}, 
 		render_command::RenderEngineCommand,
 	}, 
-	render_surface::{render_surface_command::RenderSurfaceCommand, window_surface::window_surface_command::WindowSurfaceCommand},
+	render_surface::{RenderSurface, RenderSurfaceInfo, render_surface_command::RenderSurfaceCommand, window_surface::window_surface_command::WindowSurfaceCommand},
 };
 
 pub(crate) mod window_surface_command;
@@ -24,11 +24,11 @@ pub(crate) mod window_surface_internal;
 pub struct WindowSurface {
 	uuid: Uuid,
 	command_channel: Arc<Sender<RenderEngineCommand>>,
+	event_channel: Receiver<Event>,
 
 	window: Window,
 	surface: Arc<Surface>,
-
-	event_channel: Receiver<Event>,
+	render_pass: Arc<RenderPass>,
 }
 
 impl WindowSurface {
@@ -52,7 +52,7 @@ impl WindowSurface {
 		).unwrap();
 
 		EngineFutureBuilder::new_channel(recv)
-			.then_transform(Box::new(move |(uuid, command_channel)| Ok(Arc::new(WindowSurface { uuid, command_channel, window: window, surface: surface, event_channel: event_recv }))))
+			.then_transform(Box::new(move |(uuid, command_channel, render_pass)| Ok(Arc::new(WindowSurface { uuid, command_channel, event_channel: event_recv, window: window, surface: surface, render_pass }))))
 			.build()
 	}
 
@@ -93,4 +93,11 @@ impl Drop for WindowSurface {
 
 		recv.recv().unwrap();
 	}
+}
+
+impl RenderSurface for WindowSurface {}
+
+impl RenderSurfaceInfo for WindowSurface {
+	fn get_render_pass(&self) -> &Arc<RenderPass> { &self.render_pass }
+	fn get_command_sender(&self) -> &Arc<Sender<RenderEngineCommand>> { &self.command_channel }
 }

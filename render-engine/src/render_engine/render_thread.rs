@@ -37,7 +37,7 @@ use crate::{
 		render_command::RenderEngineCommand, 
 		render_resources::DefaultResources,
     }, 
-	render_surface::RenderSurface, 
+	render_surface::RenderSurfaceInternal, 
 	renderable::Renderable, 
 	shader::shader_internal::ShaderInternal, 
 	texture::texture_internal::TextureInternal,
@@ -55,7 +55,7 @@ pub(crate) struct RenderThread {
 
     pub(crate) renderables: HashMap<Uuid, Box<dyn Renderable>>,
 
-    pub(crate) render_surfaces: HashMap<Uuid, Box<dyn RenderSurface>>,
+    pub(crate) render_surfaces: HashMap<Uuid, Box<dyn RenderSurfaceInternal>>,
 
 	pub(crate) instance: Arc<Instance>,
     pub(crate) device: Arc<Device>,

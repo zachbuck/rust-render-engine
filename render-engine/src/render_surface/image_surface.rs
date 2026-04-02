@@ -5,6 +5,7 @@ use std::sync::{
 };
 
 use uuid::Uuid;
+use vulkano::render_pass::RenderPass;
 
 use crate::{
 	render_engine::{
@@ -12,8 +13,7 @@ use crate::{
 		engine_future::{EngineFuture, EngineFutureBuilder}, render_command::RenderEngineCommand
 	}, 
 	render_surface::{
-		image_surface::image_surface_commands::ImageSurfaceCommand, 
-		render_surface_command::RenderSurfaceCommand
+		RenderSurface, RenderSurfaceInfo, image_surface::image_surface_commands::ImageSurfaceCommand, render_surface_command::RenderSurfaceCommand
 	}
 };
 
@@ -23,6 +23,8 @@ pub(crate) mod image_surface_internal;
 pub struct ImageSurface {
 	uuid: Uuid,
 	command_channel: Arc<Sender<RenderEngineCommand>>,
+
+	render_pass: Arc<RenderPass>,
 
 	pub x_size: u32,
 	pub y_size: u32,
@@ -87,6 +89,13 @@ impl ImageSurface {
 			.then_transform(Box::new(|f| f()))
 			.build()
 	}
+}
+
+impl RenderSurface for ImageSurface {}
+
+impl RenderSurfaceInfo for ImageSurface {
+	fn get_render_pass(&self) -> &Arc<RenderPass> { &self.render_pass }
+	fn get_command_sender(&self) -> &Arc<Sender<RenderEngineCommand>> { &self.command_channel }
 }
 
 #[cfg(test)]

@@ -10,7 +10,6 @@ use std::{
 use foldhash::fast::RandomState;
 use uuid::Uuid;
 use vulkano::{
-	format::Format, 
 	pipeline::{
 		DynamicState, 
 		GraphicsPipeline, 
@@ -19,15 +18,15 @@ use vulkano::{
 		graphics::{
 			GraphicsPipelineCreateInfo, 
 			color_blend::ColorBlendState, 
+			depth_stencil::{DepthState, DepthStencilState}, 
 			input_assembly::InputAssemblyState, 
 			multisample::MultisampleState, 
 			rasterization::RasterizationState, 
-			subpass::PipelineRenderingCreateInfo, 
 			vertex_input::{Vertex, VertexDefinition}, 
 			viewport::ViewportState,
 		}, 
 		layout::{PipelineLayoutCreateFlags, PipelineLayoutCreateInfo},
-	},
+	}, render_pass::Subpass,
 };
 
 use crate::{
@@ -54,6 +53,7 @@ pub(crate) enum PipelineCommand {
 		sender: 			SyncSender<Result<Arc<Pipeline>, ()>>,
 
 		shaders: 			Box<[Arc<Shader>]>,
+		subpass:			Subpass,
 		command_channel: 	Arc<Sender<RenderEngineCommand>>,
 	},
 	GetPipelines {
@@ -73,8 +73,8 @@ impl Into<RenderEngineCommand> for PipelineCommand {
 impl RenderThread {
 	pub(crate) fn process_pipeline_command(&mut self, command: PipelineCommand) {
 		match command {
-			PipelineCommand::CreatePipeline { sender, shaders , command_channel} => { 
-				let _ = sender.send(self.create_pipeline(shaders, command_channel)); 
+			PipelineCommand::CreatePipeline { sender, shaders , subpass, command_channel} => { 
+				let _ = sender.send(self.create_pipeline(shaders, subpass, command_channel)); 
 			},
 			PipelineCommand::GetPipelines { sender } => { 
 				let _ = sender.send(self.get_pipelines()); 
@@ -83,7 +83,7 @@ impl RenderThread {
 		}
 	}
 
-	fn create_pipeline(&mut self, shaders: Box<[Arc<Shader>]>, engine: Arc<Sender<RenderEngineCommand>>) -> Result<Arc<Pipeline>, ()> {
+	fn create_pipeline(&mut self, shaders: Box<[Arc<Shader>]>, subpass: Subpass, engine: Arc<Sender<RenderEngineCommand>>) -> Result<Arc<Pipeline>, ()> {
 		let uuid = Uuid::now_v7();
 
 		let stages = shaders.iter()
@@ -99,10 +99,7 @@ impl RenderThread {
 		).unwrap();
 		let vertex_input_state = Vertex3D::per_vertex().definition(&vertex_shader.entry_point).map_err(error_map!())?;
 
-		let subpass = PipelineRenderingCreateInfo {
-			color_attachment_formats: vec![Some(Format::R8G8B8A8_UNORM)],
-			..Default::default()
-		}.into();
+		let subpass = subpass.into();
 
 		let descriptor_requirements = DescriptorRequirements::combine(&shaders.iter().map(|s| s.descriptor_requirements.clone()).collect::<Vec<_>>());
 
@@ -135,6 +132,10 @@ impl RenderThread {
 				}),
 				rasterization_state: Some(RasterizationState::default()),
 				multisample_state: Some(MultisampleState::default()),
+				depth_stencil_state: Some(DepthStencilState {
+					depth: Some(DepthState::simple()),
+					..Default::default()
+				}),
 				color_blend_state: Some(ColorBlendState {
 					attachments: vec![Default::default()],
 					..Default::default()

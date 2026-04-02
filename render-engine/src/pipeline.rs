@@ -10,12 +10,10 @@ use std::{
 use uuid::Uuid;
 
 use crate::{
-	pipeline::pipeline_command::PipelineCommand, 
-	render_engine::{
+	pipeline::pipeline_command::PipelineCommand, render_engine::{
 		RenderEngine, 
 		engine_future::{EngineFuture, EngineFutureBuilder}, render_command::RenderEngineCommand
-	}, 
-	shader::{Shader, ShaderType, descriptor_requirements::DescriptorRequirements}
+	}, render_surface::{RenderSurface}, shader::{Shader, ShaderType, descriptor_requirements::DescriptorRequirements}
 };
 
 pub(crate) mod pipeline_command;
@@ -31,7 +29,7 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-	pub fn new(render_engine: &RenderEngine, shaders: &[Arc<Shader>]) -> impl EngineFuture<Result<Arc<Pipeline>, ()>> {
+	pub fn new(render_surface: &dyn RenderSurface, shaders: &[Arc<Shader>]) -> impl EngineFuture<Result<Arc<Pipeline>, ()>> {
 		// Do some error checking on the input to make sure that this will link into a valid GraphicsPipeline
 		// 1. Only one of each stage
 		// 2. Must contain Vertex Shader
@@ -59,11 +57,14 @@ impl Pipeline {
 
 		let shaders = shaders.to_owned().into_boxed_slice();
 
-		render_engine.command_channel.send(
+		let command_channel = render_surface.get_command_sender();
+
+		command_channel.send(
 			PipelineCommand::CreatePipeline { 
 				sender: send, 
 				shaders: shaders,
-				command_channel: render_engine.command_channel.clone(),
+				subpass: render_surface.get_render_pass().clone().first_subpass(),
+				command_channel: command_channel.clone(),
 			}.into()
 		).unwrap();
 
@@ -99,13 +100,9 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-		pipeline::Pipeline, 
-		render_engine::{
-			engine_future::EngineFuture,
-			RenderEngine, 
-			RenderEngineFlags
-		}, 
-		shader::{Shader, ShaderType},
+		pipeline::Pipeline, render_engine::{
+			RenderEngine, RenderEngineFlags, engine_future::EngineFuture
+		}, render_surface::image_surface::ImageSurface, shader::{Shader, ShaderType}
 	};
 
 	const VERTEX_SOURCE: &str = "
@@ -172,13 +169,15 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
+		let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
+
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
 		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
 		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
+		let pipeline = Pipeline::new(&image_surface, &[vertex_shader, fragment_shader]).wait().unwrap();
 
 		drop(pipeline);
 
@@ -197,6 +196,8 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
+		let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
+
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
 		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
@@ -206,7 +207,7 @@ mod tests {
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
 		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let result = Pipeline::new(&engine, &[vertex_shader, vertex_2_shader, fragment_shader]).wait();
+		let result = Pipeline::new(&image_surface, &[vertex_shader, vertex_2_shader, fragment_shader]).wait();
 
 		assert!(result.is_err_and(|e| e == ()));
 	}
@@ -222,10 +223,12 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
+		let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
+
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
 		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let result = Pipeline::new(&engine, &[fragment_shader]).wait();
+		let result = Pipeline::new(&image_surface, &[fragment_shader]).wait();
 
 		assert!(result.is_err_and(|e| e == ()));
 	}
@@ -241,13 +244,15 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
+		let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
+
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_DESCRIPTOR_SOURCE).unwrap();
 		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_DESCRIPTOR_SOURCE).unwrap();
 		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let result = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait();
+		let result = Pipeline::new(&image_surface, &[vertex_shader, fragment_shader]).wait();
 
 		assert!(result.is_err_and(|e| e == ()));
 	}
@@ -261,13 +266,15 @@ mod tests {
 		};
 		let engine = RenderEngine::new("Pipeline Test", [0, 1, 0], engine_flags).unwrap();
 
+		let image_surface = ImageSurface::new(&engine, 100, 100).wait().unwrap();
+
 		let vertex_binary = Shader::compile(&engine, "vertex.glsl.vert", ShaderType::Vertex, VERTEX_SOURCE).unwrap();
 		let vertex_shader = Shader::new(&engine, vertex_binary).wait().unwrap();
 
 		let fragment_binary = Shader::compile(&engine, "fragment.glsl.frag", ShaderType::Fragment, FRAGMENT_SOURCE).unwrap();
 		let fragment_shader = Shader::new(&engine, fragment_binary).wait().unwrap();
 
-		let pipeline = Pipeline::new(&engine, &[vertex_shader, fragment_shader]).wait().unwrap();
+		let pipeline = Pipeline::new(&image_surface, &[vertex_shader, fragment_shader]).wait().unwrap();
 
 		let pipeline_list = Pipeline::get_all(&engine).wait().unwrap();
 

@@ -53,7 +53,8 @@ impl RenderThread {
 
 		let render_surface = Self::get_mut_render_surface(&mut self.render_surfaces, &uuid).ok_or(())?;
 
-		render_surface.begin_rendering(&mut builder)?;
+		let result = render_surface.begin_rendering(&mut builder);
+		if result.as_ref().is_err_and(|e| *e ) { return Err(()) } else if result.is_err() { return Ok(()) }
 
 		let render_surface = Self::get_render_surface(&self.render_surfaces, &uuid).ok_or(())?;
 

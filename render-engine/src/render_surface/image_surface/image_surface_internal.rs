@@ -1,18 +1,16 @@
 
-use std::{collections::HashMap, sync::Arc};
+use std::{
+	collections::HashMap, 
+	sync::Arc,
+};
 
 use uuid::Uuid;
 use vulkano::{
-	command_buffer::{
-		AutoCommandBufferBuilder, 
-		PrimaryAutoCommandBuffer, 
-		RenderingAttachmentInfo, 
-		RenderingInfo
-	}, 
+	command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, RenderPassBeginInfo, SubpassBeginInfo, SubpassEndInfo}, 
 	device::Queue, 
-	image::view::ImageView, 
+	format::ClearValue, 
 	pipeline::graphics::viewport::{Scissor, Viewport}, 
-	render_pass::{AttachmentLoadOp, AttachmentStoreOp}, 
+	render_pass::{Framebuffer, RenderPass}, 
 	sync::{
 		GpuFuture, 
 		future::FenceSignalFuture
@@ -23,33 +21,36 @@ use crate::{
 	macros::error_map, render_engine::{
 		render_resources::RenderResources, 
 		render_thread::RenderThread
-	}, render_surface::RenderSurface, renderable::Renderable
+	}, 
+	render_surface::RenderSurfaceInternal, 
+	renderable::Renderable
 };
 
 pub(crate) struct ImageSurfaceInternal {
-	pub(crate) image: Arc<ImageView>,
+	pub(crate) render_pass: Arc<RenderPass>,
+	pub(crate) framebuffer: Arc<Framebuffer>,
 	pub(super) operation_future: Option<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>,
 }
 
-impl RenderSurface for ImageSurfaceInternal {
-	fn begin_rendering<'a>(&mut self, builder: &'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<&'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, ()> {
-		builder.begin_rendering(
-			RenderingInfo {
-				color_attachments: vec![
-					Some(RenderingAttachmentInfo {
-						load_op: AttachmentLoadOp::Clear,
-						store_op: AttachmentStoreOp::Store,
-						clear_value: Some([0.0, 0.0, 0.0, 1.0].into()),
-						..RenderingAttachmentInfo::image_view(self.image.clone())
-					})
+impl RenderSurfaceInternal for ImageSurfaceInternal {
+	fn begin_rendering<'a>(&mut self, builder: &'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<&'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, bool> {
+		let extents = self.framebuffer.extent();
+
+		builder.begin_render_pass(
+			RenderPassBeginInfo {
+				render_pass: self.render_pass.clone(),
+				clear_values: vec![
+					Some([0.0, 0.0, 0.0, 1.0].into()),
+					Some(ClearValue::Depth(1.0)),
 				],
-				..Default::default()
-			}
-		).map_err(error_map!())?;
+				..RenderPassBeginInfo::framebuffer(self.framebuffer.clone())
+			}, 
+			SubpassBeginInfo::default()
+		).unwrap();
 
 		builder
-			.set_scissor_with_count(vec![ Scissor { offset: [0, 0], extent: [self.image.image().extent()[0], self.image.image().extent()[1]] } ].into()).map_err(error_map!())?
-			.set_viewport_with_count(vec![Viewport { offset: [0.0, 0.0], extent: [self.image.image().extent()[0] as f32, self.image.image().extent()[1] as f32], depth_range: 0.0..=1.0 }].into()).map_err(error_map!())?;
+			.set_scissor_with_count(vec![ Scissor { offset: [0, 0], extent: extents } ].into()).map_err(|_| true)?
+			.set_viewport_with_count(vec![Viewport { offset: [0.0, 0.0], extent: [extents[0] as f32, extents[1] as f32], depth_range: 0.0..=1.0 }].into()).map_err(|_| true)?;
 
 		Ok(builder)
 	}
@@ -61,7 +62,7 @@ impl RenderSurface for ImageSurfaceInternal {
 	}
 
 	fn end_rendering(&mut self, mut builder: AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, mut future: Box<dyn GpuFuture + Send>, queue: Arc<Queue>) -> Result<Box<dyn GpuFuture + Send>, ()> {
-		builder.end_rendering().map_err(error_map!())?;
+		builder.end_render_pass(SubpassEndInfo::default()).map_err(error_map!())?;
 		let buffer = builder.build().map_err(error_map!())?;
 
 		if self.operation_future.is_some() {
@@ -86,12 +87,12 @@ impl RenderSurface for ImageSurfaceInternal {
 impl RenderThread {
 	#[inline]
 	#[expect(dead_code)]
-	pub(crate) fn get_image_surface<'a>(render_surfaces: &'a HashMap<Uuid, Box<dyn RenderSurface>>, uuid: &Uuid) -> Option<&'a ImageSurfaceInternal> {
+	pub(crate) fn get_image_surface<'a>(render_surfaces: &'a HashMap<Uuid, Box<dyn RenderSurfaceInternal>>, uuid: &Uuid) -> Option<&'a ImageSurfaceInternal> {
 		Self::get_render_surface(render_surfaces, uuid)?.as_any().downcast_ref()
 	}
 
 	#[inline]
-	pub(crate) fn get_mut_image_surface<'a>(render_surfaces: &'a mut HashMap<Uuid, Box<dyn RenderSurface>>, uuid: &Uuid) -> Option<&'a mut ImageSurfaceInternal> {
+	pub(crate) fn get_mut_image_surface<'a>(render_surfaces: &'a mut HashMap<Uuid, Box<dyn RenderSurfaceInternal>>, uuid: &Uuid) -> Option<&'a mut ImageSurfaceInternal> {
 		Self::get_mut_render_surface(render_surfaces, uuid)?.as_mut_any().downcast_mut()
 	}
 }

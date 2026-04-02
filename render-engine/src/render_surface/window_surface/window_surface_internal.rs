@@ -2,74 +2,117 @@
 use std::sync::Arc;
 
 use vulkano::{
-	command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, RenderingAttachmentInfo, RenderingInfo}, device::Queue, image::{
+	command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer, RenderPassBeginInfo, SubpassBeginInfo, SubpassEndInfo}, 
+	device::Queue, 
+	format::{ClearValue, Format}, 
+	image::{
 		Image, 
-		view::ImageView
-	}, pipeline::graphics::viewport::{Scissor, Viewport}, render_pass::{AttachmentLoadOp, AttachmentStoreOp}, swapchain::{Swapchain, SwapchainAcquireFuture, SwapchainPresentInfo, acquire_next_image}, sync::GpuFuture
+		ImageCreateInfo,  
+		ImageType, 
+		ImageUsage, 
+		view::ImageView,
+	}, 
+	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator}, 
+	pipeline::graphics::viewport::{Scissor, Viewport}, 
+	render_pass::{Framebuffer, FramebufferCreateInfo, RenderPass}, 
+	swapchain::{Swapchain, SwapchainAcquireFuture, SwapchainPresentInfo, acquire_next_image}, 
+	sync::{GpuFuture, future::FenceSignalFuture}
 };
 
 use crate::{
 	macros::error_map, 
 	render_engine::render_resources::RenderResources, 
-	render_surface::RenderSurface, 
+	render_surface::RenderSurfaceInternal, 
 	renderable::Renderable,
 };
 
 pub(crate) struct WindowSurfaceInternal {
+	pub(crate) render_pass: Arc<RenderPass>,
 	pub(super) swapchain: Arc<Swapchain>,
-	pub(super) images: Box<[Arc<ImageView>]>,
+	pub(super) framebuffers: Box<[(Arc<Framebuffer>, Option<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>)]>,
 
-	pub(super) render_info: Option<RenderInfo>,
+	pub(super) acquire_future: Option<SwapchainAcquireFuture>,
+	pub(super) image_index: Option<u32>,
 	pub(super) suboptimal: bool,
 }
 
-pub(super) struct RenderInfo {
-	acquire_future: SwapchainAcquireFuture,
-	image_index: u32,
-}
-
 impl WindowSurfaceInternal {
-	pub(super) fn get_image_views(images: &[Arc<Image>]) -> Result<Box<[Arc<ImageView>]>, ()> {
-		let mut out = Vec::with_capacity(images.len());
-		for i in 0..images.len(){ 
-			out.push(ImageView::new_default(images[i].clone()).map_err(error_map!())?);
-		}
-		return Ok(out.into_boxed_slice());
+	pub(super) fn get_frame_buffers(images: &[Arc<Image>], render_pass: &Arc<RenderPass>, allocator: &Arc<StandardMemoryAllocator>) -> Box<[(Arc<Framebuffer>, Option<Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>>)]> {
+		let extent = images[0].extent();
+
+		images.iter().map(|i| {
+			let d = Image::new(
+				allocator.clone(), 
+				ImageCreateInfo {
+					image_type: ImageType::Dim2d,
+					format: Format::D32_SFLOAT,
+					extent: extent,
+					usage: ImageUsage::DEPTH_STENCIL_ATTACHMENT,
+					..Default::default()
+				}, 
+				AllocationCreateInfo {
+					memory_type_filter: MemoryTypeFilter::PREFER_DEVICE,
+					..Default::default()
+				}
+			).unwrap();
+
+			(i, d)
+		}).map(|(i, d)| {
+			let iv = ImageView::new_default(i.clone()).unwrap();
+			let dv = ImageView::new_default(d).unwrap();
+
+			(iv, dv)
+		}).map(|(i, d)| {
+			let framebuffer = Framebuffer::new(
+				render_pass.clone(), 
+				FramebufferCreateInfo {
+					attachments: vec![i, d],
+					extent: [extent[0], extent[1]],
+					..Default::default()
+				}
+			).unwrap();
+
+			framebuffer
+		}).map(|f|
+			(f, None)
+		).collect::<Vec<_>>().into_boxed_slice()
 	}
 }
 
-impl RenderSurface for WindowSurfaceInternal {
-	fn begin_rendering<'a>(&mut self, builder: &'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<&'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, ()> {
+impl RenderSurfaceInternal for WindowSurfaceInternal {
+	fn begin_rendering<'a>(&mut self, builder: &'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<&'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, bool> {
 		if self.suboptimal {
-			todo!("MAKE THE WINDOW RECREATE THE SWAPCHAIN")
+			todo!()
 		}
 
-		let (image_index, suboptimal, acquire_future) = acquire_next_image(self.swapchain.clone(), None).map_err(error_map!())?;
-		self.render_info = Some(RenderInfo {
-				acquire_future: acquire_future,
-				image_index: image_index,
-			});
+		if self.image_index.is_some_and(|index| 
+			!self.framebuffers[index as usize].1.as_ref().map(|f| f.is_signaled().unwrap()).unwrap_or(true)
+		) { return Err(false); }
+
+		let (index, suboptimal, acquire_future) = acquire_next_image(self.swapchain.clone(), None).unwrap();
+		self.image_index = Some(index);
 		self.suboptimal = suboptimal;
-		
-		let image_view = &self.images[image_index as usize];
+		self.acquire_future = Some(acquire_future);
 
-		builder
-			.begin_rendering(RenderingInfo {
-				color_attachments: vec![
-					Some(RenderingAttachmentInfo {
-						load_op: AttachmentLoadOp::Clear,
-						store_op: AttachmentStoreOp::Store,
-						clear_value: Some([0.0, 0.0, 0.0, 1.0].into()),
-						..RenderingAttachmentInfo::image_view(image_view.clone())
-					})
+		let framebuffer = &self.framebuffers[index as usize].0;
+		let extent = framebuffer.extent();
+
+		builder.begin_render_pass(
+			RenderPassBeginInfo {
+				render_pass: self.render_pass.clone(),
+				clear_values: vec![
+					Some([0.0, 0.0, 0.0, 1.0].into()),
+					Some(ClearValue::Depth(1.0)),
 				],
-				..Default::default()
-			}).map_err(error_map!())?;
-
-		builder
-			.set_scissor_with_count(vec![ Scissor { offset: [0, 0], extent: [image_view.image().extent()[0], image_view.image().extent()[1]] } ].into()).map_err(error_map!())?
-			.set_viewport_with_count(vec![Viewport { offset: [0.0, 0.0], extent: [image_view.image().extent()[0] as f32, image_view.image().extent()[1] as f32], depth_range: 0.0..=1.0 }].into()).map_err(error_map!())?;
+				..RenderPassBeginInfo::framebuffer(framebuffer.clone())
+			}, 
+			SubpassBeginInfo::default()
+		).unwrap();
 			
+		builder
+			.set_scissor_with_count(vec![ Scissor { offset: [0, 0], extent: extent } ].into()).map_err(|_| true)?
+			.set_viewport_with_count(vec![Viewport { offset: [0.0, 0.0], extent: [extent[0] as f32, extent[1] as f32], depth_range: 0.0..=1.0 }].into()).map_err(|_| true)?;
+		
 		return Ok(builder)
 	}
 
@@ -78,16 +121,17 @@ impl RenderSurface for WindowSurfaceInternal {
 	}
 
 	fn end_rendering(&mut self, mut builder: AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, future: Box<dyn GpuFuture + Send>, queue: Arc<Queue>) -> Result<Box<dyn GpuFuture + Send>, ()> {
-		builder.end_rendering().map_err(error_map!())?;
+		builder.end_render_pass(SubpassEndInfo::default()).unwrap();
+
 		let command_buffer = builder.build().map_err(error_map!())?;
 
-		let render_info = self.render_info.take().unwrap();
-
-		let future = future
-			.join(render_info.acquire_future)
+		let future = Arc::new(future
+			.join(self.acquire_future.take().unwrap())
 			.then_execute(queue.clone(), command_buffer).map_err(error_map!())?
-			.then_swapchain_present(queue.clone(), SwapchainPresentInfo::swapchain_image_index(self.swapchain.clone(), render_info.image_index))
-			.then_signal_fence_and_flush().map_err(error_map!())?;
+			.then_swapchain_present(queue.clone(), SwapchainPresentInfo::swapchain_image_index(self.swapchain.clone(), self.image_index.unwrap())).boxed_send()
+			.then_signal_fence_and_flush().map_err(error_map!())?);
+	
+		self.framebuffers[self.image_index.unwrap() as usize].1 = Some(future.clone());
 
 		return Ok(future.boxed_send())
 	}
