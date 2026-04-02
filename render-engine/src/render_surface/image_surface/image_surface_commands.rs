@@ -183,6 +183,10 @@ impl RenderThread {
 		
 		let image_surface = Self::get_mut_image_surface(&mut self.render_surfaces, &uuid).unwrap();
 
+		if let Some(future) = image_surface.operation_future.as_ref() {
+			future.wait(None).unwrap();
+		}
+
 		let result = Buffer::from_iter(
 			self.buffer_allocator.clone(),
 			BufferCreateInfo {
@@ -229,7 +233,7 @@ impl RenderThread {
 		return (Box::new(move || {
 				Ok(buffer.read().unwrap().to_owned().into_boxed_slice())
 			}),
-			None,
+			Some(future.clone()),
 		)
 	}
 }
