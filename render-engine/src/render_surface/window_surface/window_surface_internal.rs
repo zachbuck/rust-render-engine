@@ -20,7 +20,7 @@ use vulkano::{
 };
 
 use crate::{
-	macros::{count_passings, error_map}, 
+	macros::error_map, 
 	render_engine::render_resources::RenderResources, 
 	render_surface::RenderSurfaceInternal, 
 	renderable::Renderable,
