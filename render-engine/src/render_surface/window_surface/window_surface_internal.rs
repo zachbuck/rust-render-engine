@@ -20,7 +20,7 @@ use vulkano::{
 };
 
 use crate::{
-	macros::error_map, 
+	macros::{count_passings, error_map}, 
 	render_engine::render_resources::RenderResources, 
 	render_surface::RenderSurfaceInternal, 
 	renderable::Renderable,
@@ -85,16 +85,18 @@ impl RenderSurfaceInternal for WindowSurfaceInternal {
 			todo!()
 		}
 
-		if self.image_index.is_some_and(|index| 
-			!self.framebuffers[index as usize].1.as_ref().map(|f| f.is_signaled().unwrap()).unwrap_or(true)
-		) { return Err(false); }
+		if self.acquire_future.is_none() {
+			let (index, suboptimal, acquire_future) = acquire_next_image(self.swapchain.clone(), None).unwrap();
+			self.image_index = Some(index);
+			self.suboptimal = suboptimal;
+			self.acquire_future = Some(acquire_future);
+		}
 
-		let (index, suboptimal, acquire_future) = acquire_next_image(self.swapchain.clone(), None).unwrap();
-		self.image_index = Some(index);
-		self.suboptimal = suboptimal;
-		self.acquire_future = Some(acquire_future);
+		let (framebuffer, future) = &mut self.framebuffers[self.image_index.unwrap() as usize];
 
-		let framebuffer = &self.framebuffers[index as usize].0;
+		if !future.as_ref().map(|f| f.is_signaled().unwrap()).unwrap_or(true) { return Err(false); }
+		future.as_mut().map(|f| f.cleanup_finished());
+
 		let extent = framebuffer.extent();
 
 		builder.begin_render_pass(

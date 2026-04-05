@@ -35,6 +35,7 @@ pub(crate) struct ImageSurfaceInternal {
 impl RenderSurfaceInternal for ImageSurfaceInternal {
 	fn begin_rendering<'a>(&mut self, builder: &'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<&'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, bool> {
 		if !self.operation_future.as_ref().map(|f| f.is_signaled().unwrap()).unwrap_or(true) { return Err(false) }
+		self.operation_future.as_mut().map(|f| f.cleanup_finished());
 
 		let extents = self.framebuffer.extent();
 

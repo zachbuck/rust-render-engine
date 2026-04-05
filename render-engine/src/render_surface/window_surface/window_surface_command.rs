@@ -9,7 +9,7 @@ use vulkano::{
 	format::Format, 
 	image::{ImageLayout, ImageUsage}, 
 	render_pass::{AttachmentDescription, AttachmentLoadOp, AttachmentReference, AttachmentStoreOp, RenderPass, RenderPassCreateInfo, SubpassDescription}, 
-	swapchain::{Surface, Swapchain, SwapchainCreateInfo}
+	swapchain::{PresentMode, Surface, Swapchain, SwapchainCreateInfo}
 };
 
 use crate::{
@@ -65,6 +65,7 @@ impl RenderThread {
 				image_extent: window_extent,
 				image_usage: ImageUsage::COLOR_ATTACHMENT,
 				composite_alpha: surface_capabilites.supported_composite_alpha.into_iter().next().unwrap(),
+				present_mode: PresentMode::Immediate,
 				..Default::default()
 			}
 		).map_err(error_map!()).unwrap();
