@@ -24,7 +24,7 @@ use crate::{
 		render_thread::RenderThread,
 	}, 
 	renderable::{
-		descriptor_set_data::{DescriptorData, DescriptorDataInternal, DescriptorDataType}, 
+		descriptor_set_data::{DescriptorData, DescriptorDataInternal}, 
 		render_object::{
 			RenderObject, 
 			render_object_internal::RenderObjectInternal,
@@ -141,11 +141,10 @@ impl RenderThread {
 		
 		match data {
 			DescriptorData::CombinedImageSampler(texture) => {
-				let data_type = &mut descriptor_data.descriptor_data;
-				if let DescriptorDataType::CombinedImageSampler(_, _) = data_type {
+				if let DescriptorDataInternal::CombinedImageSampler(_, _) = descriptor_data {
 					let texture = render_data.get_texture(&texture).unwrap();
 
-					*data_type = DescriptorDataType::CombinedImageSampler(texture.image.clone(), texture.sampler.clone());
+					*descriptor_data = DescriptorDataInternal::CombinedImageSampler(texture.image.clone(), texture.sampler.clone());
 				} else {
 					return Err(())
 				}
@@ -158,9 +157,7 @@ impl RenderThread {
 				}
 			},
 			DescriptorData::UniformBuffer(data) => {
-				let data_type = &mut descriptor_data.descriptor_data;
-
-				if let DescriptorDataType::UniformBuffer(_) = data_type {
+				if let DescriptorDataInternal::UniformBuffer(_) = descriptor_data {
 					let buf = Buffer::from_iter(
 						self.buffer_allocator.clone(), 
 						BufferCreateInfo {
@@ -174,7 +171,7 @@ impl RenderThread {
 						data.iter().map(|b| *b)
 					).map_err(error_map!())?;
 
-					*data_type = DescriptorDataType::UniformBuffer(buf);
+					*descriptor_data = DescriptorDataInternal::UniformBuffer(buf);
 				} else {
 					return Err(())
 				}

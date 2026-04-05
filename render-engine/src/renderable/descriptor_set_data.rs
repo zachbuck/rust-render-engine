@@ -23,12 +23,7 @@ pub enum DescriptorData {
 }
 
 #[derive(Debug)]
-pub(crate) struct DescriptorDataInternal {
-	pub(crate) descriptor_data: DescriptorDataType,
-}
-
-#[derive(Debug)]
-pub(crate) enum DescriptorDataType {
+pub(crate) enum DescriptorDataInternal {
 	CombinedImageSampler(Arc<ImageView>, Arc<Sampler>),
 	UniformBuffer(Subbuffer<[u8]>),
 }
@@ -54,12 +49,7 @@ impl DescriptorDataInternal {
 			DescriptorType::CombinedImageSampler => {
 				let texture = &default.texture;
 
-				let data_type = DescriptorDataType::CombinedImageSampler(
-					texture.image.clone(), 
-					texture.sampler.clone()
-				);
-
-				DescriptorDataInternal { descriptor_data: data_type }
+				DescriptorDataInternal::CombinedImageSampler(texture.image.clone(), texture.sampler.clone())
 			},
 
 			DescriptorType::UniformBuffer(uniforms) => {
@@ -76,22 +66,18 @@ impl DescriptorDataInternal {
 					UniformBufferElement::size(uniforms) as u64
 				).unwrap();
 
-				let data_type = DescriptorDataType::UniformBuffer(
-					buffer,
-				);
-
-				DescriptorDataInternal { descriptor_data: data_type }
+				DescriptorDataInternal::UniformBuffer(buffer)
 			},
 		}
 	}
 
 	pub(crate) fn get_descriptor_write((binding, descriptor): &(u32, DescriptorDataInternal)) -> WriteDescriptorSet{
-		let data = &descriptor.descriptor_data;
+		let data = &descriptor;
 		match data {
-			DescriptorDataType::CombinedImageSampler(image_view, sampler) => {
+			DescriptorDataInternal::CombinedImageSampler(image_view, sampler) => {
 				WriteDescriptorSet::image_view_sampler(*binding, image_view.clone(), sampler.clone())
 			},
-			DescriptorDataType::UniformBuffer(subbuffer) => {
+			DescriptorDataInternal::UniformBuffer(subbuffer) => {
 				WriteDescriptorSet::buffer(*binding, subbuffer.clone())
 			},
 		}
