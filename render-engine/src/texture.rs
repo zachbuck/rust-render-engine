@@ -29,11 +29,11 @@ pub struct Texture {
 
 impl Drop for Texture {
 	fn drop(&mut self) {
-		self.command_channel.send(
+		let _ = self.command_channel.send(
 			TextureCommand::DropTexture { 
 				uuid: self.uuid,
 			}.into()
-		).unwrap();
+		);
 	}
 }
 

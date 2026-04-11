@@ -93,11 +93,11 @@ impl Shader {
 
 impl Drop for Shader {
 	fn drop(&mut self) {
-		self.command_channel.send(
+		let _ = self.command_channel.send(
 			ShaderCommand::DropShader { 
 				uuid: self.uuid,
 			}.into()
-		).unwrap();
+		);
 	}
 }
 

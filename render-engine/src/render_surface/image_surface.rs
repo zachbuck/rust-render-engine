@@ -32,11 +32,11 @@ pub struct ImageSurface {
 
 impl Drop for ImageSurface {
 	fn drop(&mut self) {
-		self.command_channel.send(
+		let _ = self.command_channel.send(
 			ImageSurfaceCommand::DropImageSurface { 
 				uuid: self.uuid
 			}.into()
-		).unwrap();
+		);
 	}
 }
 

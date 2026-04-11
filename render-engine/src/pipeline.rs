@@ -87,11 +87,11 @@ impl Pipeline {
 
 impl Drop for Pipeline {
 	fn drop(&mut self) {
-		self.command_channel.send(
+		let _ = self.command_channel.send(
 			PipelineCommand::DropPipeline { 
 				uuid: self.uuid 
 			}.into()
-		).unwrap()
+		);
 	}
 }
 
