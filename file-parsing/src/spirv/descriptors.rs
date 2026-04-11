@@ -1,7 +1,14 @@
 
-use std::{collections::HashMap, slice};
+use std::{
+	collections::HashMap, 
+	slice,
+};
 
-use crate::spirv::{Instruction, InstructionIterator, enumerants::{Decoration, StorageClass}};
+use crate::spirv::{
+	Instruction, 
+	InstructionIterator, 
+	enumerants::{Decoration, StorageClass},
+};
 
 #[derive(Debug)]
 pub struct SpirvDescriptors {
@@ -10,15 +17,18 @@ pub struct SpirvDescriptors {
 
 #[derive(Debug)]
 pub struct Descriptor {
-	name: String,
-	set: u32,
-	binding: u32,
-	r#type: DescriptorType,
+	pub name: String,
+	pub set: u32,
+	pub binding: u32,
+	pub r#type: DescriptorType,
 }
 
 #[derive(Debug)]
+#[derive(PartialEq, Eq)]
 pub enum DescriptorType {
 	Struct(Box<[DescriptorType]>),
+	Array(u32, Box<DescriptorType>),
+	DynamicArray(Box<DescriptorType>),
 
 	Float,
 	Vec2,
@@ -93,9 +103,9 @@ impl SpirvDescriptors {
 				Instruction::OpTypeStruct		=> { type_definitions.insert(instruction[0], DescriptorTypeInternal::Struct(instruction[1..].to_owned().into_boxed_slice())); },
 				Instruction::OpTypePointer		=> { type_definitions.insert(instruction[0], DescriptorTypeInternal::Pointer(StorageClass::get_storage_class(instruction[1]), instruction[2])); }
 
-				Instruction::OpConstantTrue		=> { constant_definitions.insert(instruction[0], DescriptorConstantInternal::True); },
-				Instruction::OpConstantFalse	=> { constant_definitions.insert(instruction[0], DescriptorConstantInternal::False); },
-				Instruction::OpConstant			=> { constant_definitions.insert(instruction[0], DescriptorConstantInternal::Typed(instruction[1], instruction[2..].to_owned().into_boxed_slice())); }
+				Instruction::OpConstantTrue		=> { constant_definitions.insert(instruction[1], DescriptorConstantInternal::True); },
+				Instruction::OpConstantFalse	=> { constant_definitions.insert(instruction[1], DescriptorConstantInternal::False); },
+				Instruction::OpConstant			=> { constant_definitions.insert(instruction[1], DescriptorConstantInternal::Typed(instruction[0], instruction[2..].to_owned().into_boxed_slice())); }
 				
 				Instruction::OpVariable			=> { variable_definitions.insert(instruction[1], (StorageClass::get_storage_class(instruction[2]), instruction[0])); }
 				_ => ()
@@ -109,14 +119,14 @@ impl SpirvDescriptors {
 			if let DescriptorTypeInternal::Pointer(_, i) = type_definitions.get(pointer_type_id).unwrap() {
 				type_id = i;
 			} else {
-				panic!()
+				unimplemented!()
 			}
 
 			let descriptor = Descriptor {
 				name: decorations.get(type_id).unwrap().0.as_ref().unwrap().trim_matches('\0').to_string(),
 				set: decorations.get(variable_id).unwrap().1.unwrap(),
 				binding: decorations.get(variable_id).unwrap().2.unwrap(),
-				r#type: Self::get_descriptor_type(type_id, &type_definitions),
+				r#type: Self::get_descriptor_type(type_id, &type_definitions, &constant_definitions),
 			};
 
 			descriptors.push(descriptor);
@@ -127,7 +137,7 @@ impl SpirvDescriptors {
 		}
 	}
 
-	fn get_descriptor_type(id: &u32, type_definitions: &HashMap<u32, DescriptorTypeInternal>) -> DescriptorType {
+	fn get_descriptor_type(id: &u32, type_definitions: &HashMap<u32, DescriptorTypeInternal>, constant_definitions: &HashMap<u32, DescriptorConstantInternal>) -> DescriptorType {
 		let current = type_definitions.get(id).unwrap();
 		match current {
 			DescriptorTypeInternal::Float(32) 		=> DescriptorType::Float,
@@ -136,7 +146,7 @@ impl SpirvDescriptors {
 			DescriptorTypeInternal::Int(32, true) 	=> DescriptorType::UInt,
 			DescriptorTypeInternal::Bool 			=> DescriptorType::Bool,
 			DescriptorTypeInternal::Vector(type_id, 2) => {
-				match Self::get_descriptor_type(type_id, type_definitions) {
+				match Self::get_descriptor_type(type_id, type_definitions, constant_definitions) {
 					DescriptorType::Float 	=> DescriptorType:: Vec2,
 					DescriptorType::Double 	=> DescriptorType::DVec2,
 					DescriptorType::Int 	=> DescriptorType::IVec2,
@@ -146,7 +156,7 @@ impl SpirvDescriptors {
 				}
 			},
 			DescriptorTypeInternal::Vector(type_id, 3) => {
-				match Self::get_descriptor_type(type_id, type_definitions) {
+				match Self::get_descriptor_type(type_id, type_definitions, constant_definitions) {
 					DescriptorType::Float 	=> DescriptorType:: Vec3,
 					DescriptorType::Double 	=> DescriptorType::DVec3,
 					DescriptorType::Int 	=> DescriptorType::IVec3,
@@ -156,7 +166,7 @@ impl SpirvDescriptors {
 				}
 			},
 			DescriptorTypeInternal::Vector(type_id, 4) => {
-				match Self::get_descriptor_type(type_id, type_definitions) {
+				match Self::get_descriptor_type(type_id, type_definitions, constant_definitions) {
 					DescriptorType::Float 	=> DescriptorType:: Vec4,
 					DescriptorType::Double 	=> DescriptorType::DVec4,
 					DescriptorType::Int 	=> DescriptorType::IVec4,
@@ -166,7 +176,7 @@ impl SpirvDescriptors {
 				}
 			},
 			DescriptorTypeInternal::Matrix(type_id, 2) => {
-				match Self::get_descriptor_type(type_id, type_definitions) {
+				match Self::get_descriptor_type(type_id, type_definitions, constant_definitions) {
 					DescriptorType:: Vec2 	=> DescriptorType:: Mat2,
 					DescriptorType::DVec2 	=> DescriptorType::DMat2,
 					DescriptorType::IVec2 	=> DescriptorType::IMat2,
@@ -176,7 +186,7 @@ impl SpirvDescriptors {
 				}
 			},
 			DescriptorTypeInternal::Matrix(type_id, 3) => {
-				match Self::get_descriptor_type(type_id, type_definitions) {
+				match Self::get_descriptor_type(type_id, type_definitions, constant_definitions) {
 					DescriptorType:: Vec3 	=> DescriptorType:: Mat3,
 					DescriptorType::DVec3 	=> DescriptorType::DMat3,
 					DescriptorType::IVec3 	=> DescriptorType::IMat3,
@@ -186,7 +196,7 @@ impl SpirvDescriptors {
 				}
 			},
 			DescriptorTypeInternal::Matrix(type_id, 4) => {
-				match Self::get_descriptor_type(type_id, type_definitions) {
+				match Self::get_descriptor_type(type_id, type_definitions, constant_definitions) {
 					DescriptorType:: Vec4 	=> DescriptorType:: Mat4,
 					DescriptorType::DVec4 	=> DescriptorType::DMat4,
 					DescriptorType::IVec4 	=> DescriptorType::IMat4,
@@ -196,8 +206,22 @@ impl SpirvDescriptors {
 				}
 			},
 			DescriptorTypeInternal::Struct(types) => {
-				DescriptorType::Struct(types.iter().map(|i| Self::get_descriptor_type(i, type_definitions)).collect::<Vec<_>>().into_boxed_slice())
-			}
+				DescriptorType::Struct(types.iter().map(|i| Self::get_descriptor_type(i, type_definitions, constant_definitions)).collect::<Vec<_>>().into_boxed_slice())
+			},
+			DescriptorTypeInternal::Array(type_id, length_id) => {
+				let length;
+				if let DescriptorConstantInternal::Typed(type_id, data) = constant_definitions.get(length_id).unwrap() {
+					if !(Self::get_descriptor_type(type_id, type_definitions, constant_definitions) == DescriptorType::Int) { unimplemented!() }
+					length = unsafe { i32::from_le_bytes(*slice::from_raw_parts(data.as_ptr() as *const u8, 4).as_array().unwrap()) as u32 };
+				} else {
+					unimplemented!()
+				}
+
+				DescriptorType::Array(length, Box::new(Self::get_descriptor_type(type_id, type_definitions, constant_definitions)))
+			},
+			DescriptorTypeInternal::RuntimeArray(type_id) => {
+				DescriptorType::DynamicArray(Box::new(Self::get_descriptor_type(type_id, type_definitions, constant_definitions)))
+			},
 			_ => unimplemented!()
 		}
 	}
@@ -214,6 +238,7 @@ enum DescriptorTypeInternal {
 	Array(u32, u32),			// Array(type_id, length_id)
 	RuntimeArray(u32),			// RuntimeArray(type_id)
 	Struct(Box<[u32]>), 		// Struct(Box<[component_id]>)
+	#[expect(dead_code)]
 	Pointer(StorageClass, u32),	// Pointer(storage_class, type_id)
 }
 
