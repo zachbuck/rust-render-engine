@@ -126,7 +126,9 @@ impl RenderEngine {
 
 impl Drop for RenderEngine {
     fn drop(&mut self) {
-        self.command_channel.send(RenderEngineCommand::Exit).unwrap();
+        let _ = self.command_channel.send(
+			RenderEngineCommand::Exit
+		);
     }
 }
 

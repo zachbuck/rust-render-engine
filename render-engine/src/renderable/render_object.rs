@@ -73,11 +73,11 @@ impl RenderObject {
 
 impl Drop for RenderObject {
 	fn drop(&mut self) {
-		self.command_channel.send(
+		let _ = self.command_channel.send(
 			RenderObjectCommand::DropRenderObject { 
 				uuid: self.uuid, 
 			}.into()
-		).unwrap();
+		);
 	}
 }
 

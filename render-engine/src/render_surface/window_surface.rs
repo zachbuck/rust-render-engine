@@ -84,12 +84,13 @@ impl Drop for WindowSurface {
 	fn drop(&mut self) {
 		let (send, recv) = sync_channel(1);
 
-		self.command_channel.send(
+		let result = self.command_channel.send(
 			WindowSurfaceCommand::DropWindowSurface {
 				sender: send,
 				uuid: self.uuid,
 			}.into()
-		).unwrap();
+		);
+		if result.is_err() { return; }
 
 		recv.recv().unwrap();
 	}

@@ -74,11 +74,11 @@ impl MeshData {
 
 impl Drop for MeshData {
 	fn drop(&mut self) {
-		self.command_channel.send(
+		let _ = self.command_channel.send(
 			MeshDataCommand::DropMeshData { 
 				uuid: self.uuid 
 			}.into()
-		).unwrap();
+		);
 	}
 }
 
