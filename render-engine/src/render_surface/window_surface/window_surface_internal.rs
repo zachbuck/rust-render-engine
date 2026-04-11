@@ -123,6 +123,8 @@ impl RenderSurfaceInternal for WindowSurfaceInternal {
 	}
 
 	fn end_rendering(&mut self, mut builder: AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, future: Box<dyn GpuFuture + Send>, queue: Arc<Queue>) -> Result<Box<dyn GpuFuture + Send>, ()> {
+		crate::macros::count_passings!("FPS");
+		
 		builder.end_render_pass(SubpassEndInfo::default()).unwrap();
 
 		let command_buffer = builder.build().map_err(error_map!())?;
