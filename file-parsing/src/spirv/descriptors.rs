@@ -212,7 +212,7 @@ impl SpirvDescriptors {
 				let length;
 				if let DescriptorConstantInternal::Typed(type_id, data) = constant_definitions.get(length_id).unwrap() {
 					if !(Self::get_descriptor_type(type_id, type_definitions, constant_definitions) == DescriptorType::Int) { unimplemented!() }
-					length = unsafe { i32::from_le_bytes(*slice::from_raw_parts(data.as_ptr() as *const u8, 4).as_array().unwrap()) as u32 };
+					length = unsafe { i32::from_le_bytes(slice::from_raw_parts(data.as_ptr() as *const u8, 4).try_into().unwrap()) as u32 };
 				} else {
 					unimplemented!()
 				}
