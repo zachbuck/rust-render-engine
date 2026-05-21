@@ -1,8 +1,4 @@
 
 [workspace]
 resolver = "3"
-members = ["file-parsing","render-engine"]
-
-[profile.samply]
-inherits = "release"
-debug = true
+members = ["render-engine", "vulkan"]
