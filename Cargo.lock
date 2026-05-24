@@ -127,10 +127,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "vulkan"
-version = "0.1.0"
-
-[[package]]
 name = "wasm-bindgen"
 version = "0.2.121"
 source = "registry+https://github.com/rust-lang/crates.io-index"

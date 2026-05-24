@@ -1,0 +1,11 @@
+[package]
+name = "render-engine"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+uuid = "1.23.1"
+
+[features]
+default = ["vulkan"]
+vulkan = []
