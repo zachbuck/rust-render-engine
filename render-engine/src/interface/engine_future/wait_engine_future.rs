@@ -107,3 +107,10 @@ impl WaitCondition for ImmediateWait {
 	fn wait(&mut self) -> () { () }
 	fn is_finished(&mut self) -> bool { true }
 }
+
+impl<R> WaitFutureResponse<R> {
+	pub fn send(self, condition: Box<dyn WaitCondition>) -> R {
+		let _ = self.sender.send(condition);
+		self.response
+	}
+}

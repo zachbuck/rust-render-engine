@@ -38,3 +38,9 @@ impl<T> EngineFuture<T> for ChannelEngineFuture<T> {
 		Ok(response.unwrap())
 	}
 }
+
+impl<T> ChannelEngineResponse<T> {
+	pub fn send(self, data: T) {
+		let _ = self.channel.send(data);
+	}
+}

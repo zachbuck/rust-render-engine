@@ -38,3 +38,9 @@ impl<T> EngineFuture<T> for FunctionEngineFuture<T> {
 		Ok(response.unwrap()())
 	}
 }
+
+impl<T> FunctionEngineResponse<T> {
+	pub fn send(self, function: Box<dyn FnOnce() -> T>) {
+		let _ = self.channel.send(function);
+	}
+}
