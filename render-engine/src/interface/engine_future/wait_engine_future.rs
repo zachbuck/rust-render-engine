@@ -24,6 +24,8 @@ pub trait WaitCondition {
 	fn is_finished(&mut self) -> bool;
 }
 
+pub struct ImmediateWait;
+
 pub struct WaitFutureResponse<R> {
 	sender: SyncSender<Box<dyn WaitCondition>>,
 	response: R,
@@ -99,4 +101,9 @@ impl WaitConditionState {
 			},
 		}
 	}
+}
+
+impl WaitCondition for ImmediateWait {
+	fn wait(&mut self) -> () { () }
+	fn is_finished(&mut self) -> bool { true }
 }
