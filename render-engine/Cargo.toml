@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-uuid = "1.23.1"
+uuid = { version = "1.23.1", features = ["v7"] }
+vulkano = "0.35.2"
 
 [features]
 default = ["vulkan"]

@@ -109,8 +109,8 @@ impl WaitCondition for ImmediateWait {
 }
 
 impl<R> WaitFutureResponse<R> {
-	pub fn send(self, condition: Box<dyn WaitCondition>) -> R {
+	pub fn send(&self, condition: Box<dyn WaitCondition>) -> &R {
 		let _ = self.sender.send(condition);
-		self.response
+		&self.response
 	}
 }

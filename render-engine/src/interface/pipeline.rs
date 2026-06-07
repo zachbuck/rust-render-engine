@@ -1,18 +1,26 @@
 
-use std::sync::Arc;
+use std::sync::{Arc, mpsc::Sender};
+
+use uuid::Uuid;
 
 use crate::interface::{
-	RenderEngine,
+	engine_command::{EngineCommand, PipelineCommand},
 	engine_future::{
 		EngineFuture,
-		immediate_engine_future::ImmediateEngineFuture,
+		channel_engine_future::ChannelEngineFuture,
+		transform_engine_future::TransformEngineFuture,
 	}, 
 	shader::{Shader, ShaderStage},
+	surface::Surface,
 };
 
 pub struct GraphicsPipeline {
+	pub surface: Arc<dyn Surface>,
 	pub stages: ShaderStages,
 	pub shaders: Box<[Arc<Shader>]>,
+
+	pub(crate) uuid: Uuid,
+	command_channel: Sender<EngineCommand>,
 }
 
 pub struct ShaderStages {
@@ -20,14 +28,37 @@ pub struct ShaderStages {
 }
 
 impl GraphicsPipeline {
-	pub fn new(render_engine: &RenderEngine, shaders: &[&Arc<Shader>]) -> impl EngineFuture<Result<Arc<Self>, ()>> {
-		todo!() as ImmediateEngineFuture<_>
+	pub fn new<T>(surface: &Arc<T>, shaders: Box<[Arc<Shader>]>) -> impl EngineFuture<Result<Arc<Self>, ()>> 
+	where T: Surface + 'static {
+		let mut stages = ShaderStages::empty();
+		let mut uuids = Vec::with_capacity(shaders.len());
+		for shader in &shaders {
+			stages.add(shader.stage);
+			uuids.push(shader.uuid);
+		}
+
+		let command_channel = surface.get_command_channel().clone();
+		let surface_copy = surface.clone();
+		let (future, response) = TransformEngineFuture::new(
+			ChannelEngineFuture::new(), 
+			Box::new(|result: Result<_, _>| result.map(|(uuid,)| {
+				Arc::new(GraphicsPipeline { surface: surface_copy, uuid, stages, shaders, command_channel })
+			})),
+		);
+
+		let command = PipelineCommand::CreatePipeline { surface: *surface.get_uuid(), shaders: uuids.into_boxed_slice(), response };
+		let command = EngineCommand::PipelineCommand(Box::new(command));
+		let _ = surface.get_command_channel().send(command);
+
+		return future
 	}
 }
 
 impl Drop for GraphicsPipeline {
 	fn drop(&mut self) {
-		todo!()
+		let command = PipelineCommand::DropPipeline { uuid: self.uuid };
+		let command = EngineCommand::PipelineCommand(Box::new(command));
+		let _ = self.command_channel.send(command);
 	}
 }
 

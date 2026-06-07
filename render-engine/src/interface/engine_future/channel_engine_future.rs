@@ -40,7 +40,7 @@ impl<T> EngineFuture<T> for ChannelEngineFuture<T> {
 }
 
 impl<T> ChannelEngineResponse<T> {
-	pub fn send(self, data: T) {
+	pub fn send(&self, data: T) {
 		let _ = self.channel.send(data);
 	}
 }

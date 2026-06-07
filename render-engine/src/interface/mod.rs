@@ -1,7 +1,17 @@
 
-use std::sync::mpsc::Sender;
+use std::{
+	sync::mpsc::{Sender, channel},
+	thread::Builder as ThreadBuilder,
+};
 
-use crate::interface::engine_commands::EngineCommand;
+use crate::{
+	interface::{
+		engine_command::EngineCommand,
+		engine_future::EngineFuture, 
+		engine_future::channel_engine_future::ChannelEngineFuture,
+	}, 
+	vulkan::render_engine::render_thread as v_render_thread
+};
 
 pub mod data_format;
 pub mod engine_future;
@@ -12,10 +22,12 @@ pub mod render_target;
 pub mod shader;
 pub mod surface;
 
-pub(crate) mod engine_commands;
+pub(crate) mod engine_command;
 
 pub struct RenderEngine {
-	command_channel: Sender<EngineCommand>
+	pub backend: RenderingBackend,
+	
+	command_channel: Sender<EngineCommand>,
 }
 
 pub struct RenderEngineCreateInfo {
@@ -24,19 +36,41 @@ pub struct RenderEngineCreateInfo {
 	pub backend: RenderingBackend,
 }
 
+#[derive(Clone, Copy)]
 pub enum RenderingBackend {
 	Vulkan,
 }
 
 impl RenderEngine {
 	pub fn new(create_info: RenderEngineCreateInfo) -> Result<Self, ()> {
-		todo!()
+		let (sender, receiver) = channel();
+		let (future, response) = ChannelEngineFuture::new();
+
+		let engine = RenderEngine {
+			command_channel: sender,
+			backend: create_info.backend,
+		};
+
+		let thread = ThreadBuilder::new()
+			.name("Render Thread".to_string());
+
+		let result;
+		match create_info.backend {
+			RenderingBackend::Vulkan => {
+				result = thread.spawn(move || v_render_thread!(create_info, receiver, response));
+			},
+		}
+		result.map_err(|_| ())?;
+
+		if let Err(()) = future.unwrap() { return Err(()) }
+
+		Ok(engine)
 	}
 }
 
 impl Drop for RenderEngine {
 	fn drop(&mut self) {
-		todo!()
+		let _ = self.command_channel.send(EngineCommand::DropEngine);
 	}
 }
 
