@@ -1,0 +1,42 @@
+
+use uuid::Uuid;
+
+use crate::engine_future::channel_engine_future::ChannelEngineResponse;
+
+#[derive(Debug)]
+pub enum EngineCommand {
+	ProcessRenderInstructionBuffer {
+		instructions: Box<[RenderInstruction]>,
+		response: ChannelEngineResponse<Result<(), ()>>,
+	},
+	
+	WindowSurfaceCommand(Box<WindowSurfaceCommand>),
+
+	DropRenderThread,
+}
+
+#[derive(Debug)]
+pub enum RenderInstruction {
+	BeginRendering {
+		uuid: Uuid,
+	},
+	EndRendering,
+}
+
+#[derive(Debug)]
+pub enum WindowSurfaceCommand {
+	CreateWindowSurface {
+		title: 		String,
+		dimensions: (u32, u32),
+
+		response:	ChannelEngineResponse<Result<(Uuid,), ()>>,
+	},
+
+	DropWindowSurface {
+		uuid: 		Uuid,
+	},
+}
+
+impl Into<EngineCommand> for WindowSurfaceCommand {
+	fn into(self) -> EngineCommand { EngineCommand::WindowSurfaceCommand(Box::new(self)) }
+}

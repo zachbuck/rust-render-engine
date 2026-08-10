@@ -1,0 +1,9 @@
+[package]
+name = "render-engine"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sdl3 = { version = "0.18.4", features = ["raw-window-handle", "build-from-source"] }
+uuid.workspace = true
+vulkano = "0.35.0"
