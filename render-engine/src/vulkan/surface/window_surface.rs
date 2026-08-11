@@ -36,6 +36,7 @@ use vulkano::{
 
 use crate::{
 	engine_command::WindowSurfaceCommand, 
+	surface::window_surface::WindowSurfaceCreateInfo, 
 	vulkan::{
 		render_thread::{Operation, OperationType, RenderThread}, 
 		surface::Surface
@@ -59,6 +60,8 @@ pub struct WindowSurface {
 	index: 				Option<u32>,
 	recreate_swapchain: bool,
 	acquire_future:		Option<SwapchainAcquireFuture>,
+
+	clear_color:		[f32; 4],
 }
 
 impl Surface for WindowSurface {
@@ -83,7 +86,7 @@ impl Surface for WindowSurface {
 			.begin_render_pass(
 				RenderPassBeginInfo {
 					clear_values: vec![
-						Some(ClearValue::Float([0.0, 1.0, 0.0, 1.0])),
+						Some(ClearValue::Float(self.clear_color)),
 					], // TODO: Add Clear Values
 					..RenderPassBeginInfo::framebuffer(framebuffer.clone())
 				},
@@ -148,15 +151,15 @@ impl Surface for WindowSurface {
 impl RenderThread {
 	pub fn process_window_surface_command(&mut self, command: Box<WindowSurfaceCommand>) -> () {
 		match *command {
-			WindowSurfaceCommand::CreateWindowSurface { title, dimensions, response } => response.send(self.create_window_surface(title, dimensions)),
+			WindowSurfaceCommand::CreateWindowSurface { create_info, response } => response.send(self.create_window_surface(create_info)),
 			WindowSurfaceCommand::DropWindowSurface { uuid } => self.drop_window_surface(uuid),
 		}
 	}
 
-	fn create_window_surface(&mut self, title: String, dimensions: (u32, u32)) -> Result<(Uuid,), ()> {
+	fn create_window_surface(&mut self, create_info: WindowSurfaceCreateInfo) -> Result<(Uuid,), ()> {
 		let uuid = Uuid::now_v7();
 
-		let window = WindowBuilder::new(&self.video, &title, dimensions.0, dimensions.1)
+		let window = WindowBuilder::new(&self.video, &create_info.title, create_info.dimensions[0], create_info.dimensions[1])
 			.build().map_err(|_| ())?;
 
 		let vulkan_surface = unsafe { VSurface::from_window_ref(self.instance.clone(), &window).map_err(|_| ())? };
@@ -254,6 +257,8 @@ impl RenderThread {
 			index: 				None,
 			recreate_swapchain: false,
 			acquire_future: 	None,
+
+			clear_color:		create_info.clear_color,
 		}));
 
 		Ok((uuid,))

@@ -1,7 +1,10 @@
 
 use uuid::Uuid;
 
-use crate::engine_future::channel_engine_future::ChannelEngineResponse;
+use crate::{
+	engine_future::channel_engine_future::ChannelEngineResponse, 
+	surface::window_surface::WindowSurfaceCreateInfo,
+};
 
 #[derive(Debug)]
 pub enum EngineCommand {
@@ -26,8 +29,7 @@ pub enum RenderInstruction {
 #[derive(Debug)]
 pub enum WindowSurfaceCommand {
 	CreateWindowSurface {
-		title: 		String,
-		dimensions: (u32, u32),
+		create_info: WindowSurfaceCreateInfo,
 
 		response:	ChannelEngineResponse<Result<(Uuid,), ()>>,
 	},

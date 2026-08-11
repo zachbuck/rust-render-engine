@@ -22,8 +22,15 @@ pub struct WindowSurface {
 	command_channel: 	Sender<EngineCommand>,
 }
 
+#[derive(Debug)]
+pub struct WindowSurfaceCreateInfo {
+	pub title: 			String,
+	pub dimensions: 	[u32; 2],
+	pub clear_color: 	[f32; 4],
+}
+
 impl WindowSurface {
-	pub fn new(render_engine: &Arc<RenderEngine>, title: String, dimensions: (u32, u32)) -> impl EngineFuture<Result<Arc<WindowSurface>, ()>> {
+	pub fn new(render_engine: &Arc<RenderEngine>, create_info: WindowSurfaceCreateInfo) -> impl EngineFuture<Result<Arc<WindowSurface>, ()>> {
 		let command_channel = render_engine.command_channel.clone();
 		let (future, response) = ThenTransformFuture::new(
 			ChannelEngineFuture::new(), 
@@ -38,9 +45,8 @@ impl WindowSurface {
 		);
 
 		render_engine.command_channel.send(WindowSurfaceCommand::CreateWindowSurface { 
-			title:		title, 
-			dimensions:	dimensions, 
-			response: 	response, 
+			create_info: 	create_info,
+			response: 		response, 
 		}.into()).unwrap();
 
 		return future
@@ -57,4 +63,14 @@ impl Surface for WindowSurface {}
 
 impl SurfaceInfo for WindowSurface {
 	fn get_uuid(&self) -> &Uuid { &self.uuid }
+}
+
+impl Default for WindowSurfaceCreateInfo {
+	fn default() -> Self {
+		WindowSurfaceCreateInfo {
+			title:			"My Window".to_string(),
+			dimensions:		[800, 600],
+			clear_color: 	[0.0, 0.0, 0.0, 1.0],
+		}
+	}
 }

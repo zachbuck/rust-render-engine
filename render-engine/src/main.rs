@@ -8,13 +8,13 @@ use render_engine::{
 	engine_future::EngineFuture, 
 	render_engine::{RenderEngine, RenderEngineBackend, RenderEngineCreateInfo}, 
 	render_instruction_buffer::RenderInstructionBufferBuilder, 
-	surface::window_surface::WindowSurface,
+	surface::window_surface::{WindowSurface, WindowSurfaceCreateInfo},
 };
 
 fn main() -> () {
 	let render_engine = RenderEngine::new(RenderEngineCreateInfo::with_backend(RenderEngineBackend::Vulkan)).unwrap();
 	
-	let window = WindowSurface::new(&render_engine, "New Window".to_string(), (800, 600)).wait().unwrap();
+	let window = WindowSurface::new(&render_engine, WindowSurfaceCreateInfo::default()).wait().unwrap();
 
 	let builder = RenderInstructionBufferBuilder::begin(&window);
 
