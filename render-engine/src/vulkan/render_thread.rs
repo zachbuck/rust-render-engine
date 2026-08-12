@@ -38,29 +38,31 @@ use vulkano::{
 use crate::{
 	engine_command::{EngineCommand, RenderInstruction}, 
 	render_engine::RenderEngineCreateInfo, 
-	vulkan::surface::Surface,
+	vulkan::{
+		mesh_data::MeshData, 
+		surface::Surface,
+	},
 };
 
 pub struct RenderThread {
-	command_channel: 	Receiver<EngineCommand>,
-	should_close:		bool,
+	command_channel: 		Receiver<EngineCommand>,
+	should_close:			bool,
 
-	pub surfaces:		HashMap<Uuid, Box<dyn Surface>>,
+	pub mesh_data:			HashMap<Uuid, MeshData>,
 
-	pub video:			VideoSubsystem,
+	pub surfaces:			HashMap<Uuid, Box<dyn Surface>>,
 
-	pub instance:		Arc<Instance>,
-	pub device:			Arc<Device>,
-	graphics_queue: 	Arc<Queue>,
-	graphics_operation: Operation,
-	#[expect(unused)]
-	transfer_queue: 	Arc<Queue>,
-	#[expect(unused)]
-	transfer_operation: Operation,
+	pub video:				VideoSubsystem,
 
-	#[expect(unused)]
-	buffer_allocator:	Arc<StandardMemoryAllocator>,
-	command_allocator:	Arc<StandardCommandBufferAllocator>,
+	pub instance:			Arc<Instance>,
+	pub device:				Arc<Device>,
+	pub graphics_queue: 	Arc<Queue>,
+	pub graphics_operation: Operation,
+	pub transfer_queue: 	Arc<Queue>,
+	pub transfer_operation: Operation,
+
+	pub buffer_allocator:	Arc<StandardMemoryAllocator>,
+	pub command_allocator:	Arc<StandardCommandBufferAllocator>,
 }
 
 #[derive(Clone)]
@@ -109,6 +111,8 @@ impl RenderThread {
 			command_channel: 	command_channel,
 			should_close:		false,
 
+			mesh_data:			HashMap::new(),
+
 			surfaces:			HashMap::new(),
 
 			video:				video,
@@ -135,6 +139,7 @@ impl RenderThread {
 
 			match command {
 				EngineCommand::ProcessRenderInstructionBuffer { instructions, response } => response.send(self.process_render_instruction_buffer(instructions)),
+				EngineCommand::MeshDataCommand(command) => self.process_mesh_data_command(command),
 				EngineCommand::WindowSurfaceCommand(command) => self.process_window_surface_command(command),
 				EngineCommand::DropRenderThread => { self.should_close = true; }
 			}
@@ -240,7 +245,6 @@ impl Operation {
 		}
 	}
 
-	#[expect(unused)]
 	pub fn transfer(future: Arc<FenceSignalFuture<Box<dyn GpuFuture + Send>>>) -> Self {
 		Operation {
 			operation_type: OperationType::Transfer,
@@ -251,6 +255,12 @@ impl Operation {
 	pub fn needs_semaphore(&self, operation_type: OperationType) -> bool {
 		if self.future.is_none() { return false }
 		operation_type != self.operation_type
+	}
+
+	pub fn wait(&self) -> () {
+		if self.future.is_some() {
+			let _ = self.future.as_ref().unwrap().wait(None);
+		}
 	}
 
 	pub fn cleanup_finished(&mut self) -> () {

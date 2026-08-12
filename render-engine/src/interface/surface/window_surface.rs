@@ -44,10 +44,10 @@ impl WindowSurface {
 			}),
 		);
 
-		render_engine.command_channel.send(WindowSurfaceCommand::CreateWindowSurface { 
+		let _ = render_engine.command_channel.send(WindowSurfaceCommand::CreateWindowSurface { 
 			create_info: 	create_info,
 			response: 		response, 
-		}.into()).unwrap();
+		}.into());
 
 		return future
 	}

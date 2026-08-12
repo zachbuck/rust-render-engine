@@ -53,10 +53,10 @@ impl RenderEngine {
 	pub fn submit_render_instructions(&self, buffer: RenderInstructionBuffer) -> impl EngineFuture<Result<(), ()>> {
 		let (future, response) = ChannelEngineFuture::new();
 
-		self.command_channel.send(EngineCommand::ProcessRenderInstructionBuffer { 
+		let _ = self.command_channel.send(EngineCommand::ProcessRenderInstructionBuffer { 
 			instructions: 	buffer.buffer, 
 			response: 		response,
-		}).unwrap();
+		});
 
 		return future;
 	}

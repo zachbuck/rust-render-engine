@@ -5,21 +5,41 @@ use std::{
 };
 
 use render_engine::{
+	data_formats::Vertex3D, 
 	engine_future::EngineFuture, 
+	mesh_data::MeshData, 
 	render_engine::{RenderEngine, RenderEngineBackend, RenderEngineCreateInfo}, 
 	render_instruction_buffer::RenderInstructionBufferBuilder, 
 	surface::window_surface::{WindowSurface, WindowSurfaceCreateInfo},
 };
 
+const VERTICES: [Vertex3D; 3] = [
+	Vertex3D { position: [ 0.5,-0.5, 0.5], normal: [ 0.0, 0.0, 0.0], uv: [ 0.0, 0.0] },
+	Vertex3D { position: [ 0.0, 0.5, 0.5], normal: [ 0.0, 0.0, 0.0], uv: [ 0.0, 0.0] },
+	Vertex3D { position: [-0.5,-0.5, 0.5], normal: [ 0.0, 0.0, 0.0], uv: [ 0.0, 0.0] },
+];
+
+const INDICES: [u32; 3] = [
+	0, 1, 2,
+];
+
 fn main() -> () {
 	let render_engine = RenderEngine::new(RenderEngineCreateInfo::with_backend(RenderEngineBackend::Vulkan)).unwrap();
 	
-	let window = WindowSurface::new(&render_engine, WindowSurfaceCreateInfo::default()).wait().unwrap();
+	let window = WindowSurface::new(
+		&render_engine,
+		WindowSurfaceCreateInfo {
+			clear_color: [0.0, 1.0, 0.0, 1.0],
+			..Default::default()
+		},
+	).wait().unwrap();
+
+	let vertices = Box::new(VERTICES);
+	let indices = Box::new(INDICES);
+	let mesh_data = MeshData::new(&render_engine, vertices, indices).wait().unwrap();
 
 	let builder = RenderInstructionBufferBuilder::begin(&window);
-
 	let instruction_buffer = builder.build();
-
 	render_engine.submit_render_instructions(instruction_buffer).wait().unwrap();
 
 	thread::sleep(Duration::from_secs(5));
