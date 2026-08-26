@@ -39,15 +39,21 @@ pub fn derive_enum_from_backing_type(tokens: TokenStream) -> TokenStream {
 		.find(|v| v.attrs.iter().find(
 			|a| a.path().is_ident("default")
 		).is_some())
-		.unwrap()
-		.ident;
+		.map(|v| v.ident.clone());
+
+	let default_line;
+	if default_variant.is_some() {
+		default_line = quote! {_ => #enum_name::#default_variant,}
+	} else {
+		default_line = quote! {_ => todo!(),}
+	}
 
 	let expanded = quote! {
 		impl From<#backing_type> for #enum_name {
 			fn from(value: #backing_type) -> #enum_name {
 				match value {
 					#enum_vars
-					_ => #enum_name::#default_variant,
+					#default_line
 				}
 			}
 		}
