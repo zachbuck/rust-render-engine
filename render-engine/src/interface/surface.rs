@@ -19,4 +19,15 @@ where T: SurfaceInfo {
 	fn get_uuid(&self) -> &Uuid { self.as_ref().get_uuid() }
 }
 
+#[derive(Debug)]
+pub struct RenderPassCreateInfo {
 
+}
+
+impl Default for RenderPassCreateInfo {
+	fn default() -> Self {
+		RenderPassCreateInfo {
+
+		}
+	}
+}

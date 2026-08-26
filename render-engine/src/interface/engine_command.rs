@@ -4,7 +4,10 @@ use uuid::Uuid;
 use crate::{
 	data_formats::Vertex3D, 
 	engine_future::channel_engine_future::ChannelEngineResponse, 
-	surface::window_surface::WindowSurfaceCreateInfo,
+	surface::{
+		RenderPassCreateInfo, 
+		window_surface::WindowSurfaceCreateInfo,
+	},
 };
 
 #[derive(Debug)]
@@ -15,6 +18,8 @@ pub enum EngineCommand {
 	},
 	
 	MeshDataCommand(Box<MeshDataCommand>),
+	#[expect(unused)]
+	ShaderCommand(Box<ShaderCommand>),
 	WindowSurfaceCommand(Box<WindowSurfaceCommand>),
 
 	DropRenderThread,
@@ -42,24 +47,42 @@ pub enum MeshDataCommand {
 	},
 }
 
+impl Into<EngineCommand> for MeshDataCommand {
+	fn into(self) -> EngineCommand { EngineCommand::MeshDataCommand(Box::new(self)) }
+}
+
+#[derive(Debug)]
+pub enum ShaderCommand {
+	CreateShader {
+		source: 	Box<[u32]>,
+
+		response:	ChannelEngineResponse<Result<(Uuid,), ()>>
+	},
+
+	DropShader {
+		uuid:		Uuid,
+	}
+}
+
+impl Into<EngineCommand> for ShaderCommand {
+	fn into(self) -> EngineCommand { EngineCommand::ShaderCommand(Box::new(self)) }
+}
+
 #[derive(Debug)]
 pub enum WindowSurfaceCommand {
 	CreateWindowSurface {
-		create_info: WindowSurfaceCreateInfo,
+		create_info: 		WindowSurfaceCreateInfo,
+		#[expect(unused)]
+		render_pass_info: 	RenderPassCreateInfo,
 
-		response:	ChannelEngineResponse<Result<(Uuid,), ()>>,
+		response:			ChannelEngineResponse<Result<(Uuid,), ()>>,
 	},
 
 	DropWindowSurface {
-		uuid: 		Uuid,
+		uuid: 				Uuid,
 	},
-}
-
-impl Into<EngineCommand> for MeshDataCommand {
-	fn into(self) -> EngineCommand { EngineCommand::MeshDataCommand(Box::new(self)) }
 }
 
 impl Into<EngineCommand> for WindowSurfaceCommand {
 	fn into(self) -> EngineCommand { EngineCommand::WindowSurfaceCommand(Box::new(self)) }
 }
-

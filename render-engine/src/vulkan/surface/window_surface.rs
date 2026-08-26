@@ -146,12 +146,14 @@ impl Surface for WindowSurface {
 
 		return Ok(frame_operation.clone());
 	}
+
+	fn get_renderpass(&self) -> &Arc<RenderPass> { &self.render_pass }
 }
 
 impl RenderThread {
 	pub fn process_window_surface_command(&mut self, command: Box<WindowSurfaceCommand>) -> () {
 		match *command {
-			WindowSurfaceCommand::CreateWindowSurface { create_info, response } => response.send(self.create_window_surface(create_info)),
+			WindowSurfaceCommand::CreateWindowSurface { create_info, render_pass_info: _, response } => response.send(self.create_window_surface(create_info)),
 			WindowSurfaceCommand::DropWindowSurface { uuid } => self.drop_window_surface(uuid),
 		}
 	}
@@ -265,6 +267,7 @@ impl RenderThread {
 	}
 
 	fn drop_window_surface(&mut self, uuid: Uuid) -> () {
-		self.surfaces.remove(&uuid);
+		let _window_surface = self.surfaces.remove(&uuid).unwrap();
+		// TODO: drop renderpass objects as needed, and unneeded pipelines.
 	}
 }

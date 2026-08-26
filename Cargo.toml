@@ -1,7 +1,7 @@
 
 [workspace]
 resolver = "3"
-members = ["render-engine"]
+members = ["macros","render-engine"]
 
 [workspace.dependencies]
 uuid = { version = "1.24.0", features = ["v7"] }

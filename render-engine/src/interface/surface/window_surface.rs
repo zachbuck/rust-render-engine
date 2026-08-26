@@ -14,7 +14,7 @@ use crate::{
 		then_transform_future::ThenTransformFuture,
 	}, 
 	render_engine::RenderEngine, 
-	surface::{Surface, SurfaceInfo},
+	surface::{RenderPassCreateInfo, Surface, SurfaceInfo},
 };
 
 pub struct WindowSurface {
@@ -30,7 +30,7 @@ pub struct WindowSurfaceCreateInfo {
 }
 
 impl WindowSurface {
-	pub fn new(render_engine: &Arc<RenderEngine>, create_info: WindowSurfaceCreateInfo) -> impl EngineFuture<Result<Arc<WindowSurface>, ()>> {
+	pub fn new(render_engine: &Arc<RenderEngine>, create_info: WindowSurfaceCreateInfo, render_pass_info: RenderPassCreateInfo) -> impl EngineFuture<Result<Arc<WindowSurface>, ()>> {
 		let command_channel = render_engine.command_channel.clone();
 		let (future, response) = ThenTransformFuture::new(
 			ChannelEngineFuture::new(), 
@@ -45,8 +45,9 @@ impl WindowSurface {
 		);
 
 		let _ = render_engine.command_channel.send(WindowSurfaceCommand::CreateWindowSurface { 
-			create_info: 	create_info,
-			response: 		response, 
+			create_info: 		create_info,
+			render_pass_info: 	render_pass_info,
+			response: 			response, 
 		}.into());
 
 		return future

@@ -3,6 +3,7 @@ use std::{
 	collections::{HashMap, HashSet}, 
 	sync::{
 		Arc, 
+		Weak, 
 		mpsc::{Receiver, TryRecvError},
 	},
 };
@@ -13,8 +14,7 @@ use sdl3::{
 };
 use uuid::Uuid;
 use vulkano::{
-	Version, 
-	VulkanLibrary, 
+	Version, VulkanLibrary, 
 	command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo}, 
 	device::{
 		Device, 
@@ -25,9 +25,9 @@ use vulkano::{
 		QueueCreateInfo, 
 		QueueFlags, 
 		physical::{PhysicalDevice, PhysicalDeviceType},
-	}, 
-	instance::{Instance, InstanceCreateInfo, InstanceExtensions}, 
+	}, instance::{Instance, InstanceCreateInfo, InstanceExtensions}, 
 	memory::allocator::StandardMemoryAllocator, 
+	render_pass::RenderPass, 
 	swapchain::Surface as VSurface, 
 	sync::{
 		GpuFuture, 
@@ -49,6 +49,15 @@ pub struct RenderThread {
 	should_close:			bool,
 
 	pub mesh_data:			HashMap<Uuid, MeshData>,
+	#[expect(unused)]
+	pub shader_modules:		HashMap<Uuid, ()>,
+	#[expect(unused)]
+	pub pipelines:			HashMap<Uuid, ()>,
+
+	#[expect(unused)]
+	pub render_passes: 		Vec<(Weak<RenderPass>, Uuid)>,
+	#[expect(unused)]
+	pub linked_pipelines:	HashMap<Uuid, HashMap<Uuid, ()>>,
 
 	pub surfaces:			HashMap<Uuid, Box<dyn Surface>>,
 
@@ -112,6 +121,11 @@ impl RenderThread {
 			should_close:		false,
 
 			mesh_data:			HashMap::new(),
+			shader_modules:		HashMap::new(),
+			pipelines:			HashMap::new(),
+			
+			render_passes:		Vec::new(),
+			linked_pipelines:	HashMap::new(),
 
 			surfaces:			HashMap::new(),
 
@@ -140,6 +154,7 @@ impl RenderThread {
 			match command {
 				EngineCommand::ProcessRenderInstructionBuffer { instructions, response } => response.send(self.process_render_instruction_buffer(instructions)),
 				EngineCommand::MeshDataCommand(command) => self.process_mesh_data_command(command),
+				EngineCommand::ShaderCommand(_command) => todo!(),
 				EngineCommand::WindowSurfaceCommand(command) => self.process_window_surface_command(command),
 				EngineCommand::DropRenderThread => { self.should_close = true; }
 			}

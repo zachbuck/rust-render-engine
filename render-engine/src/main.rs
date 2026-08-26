@@ -10,7 +10,10 @@ use render_engine::{
 	mesh_data::MeshData, 
 	render_engine::{RenderEngine, RenderEngineBackend, RenderEngineCreateInfo}, 
 	render_instruction_buffer::RenderInstructionBufferBuilder, 
-	surface::window_surface::{WindowSurface, WindowSurfaceCreateInfo},
+	surface::{
+		RenderPassCreateInfo, 
+		window_surface::{WindowSurface, WindowSurfaceCreateInfo},
+	},
 };
 
 const VERTICES: [Vertex3D; 3] = [
@@ -32,11 +35,12 @@ fn main() -> () {
 			clear_color: [0.0, 1.0, 0.0, 1.0],
 			..Default::default()
 		},
+		RenderPassCreateInfo::default(),
 	).wait().unwrap();
 
 	let vertices = Box::new(VERTICES);
 	let indices = Box::new(INDICES);
-	let mesh_data = MeshData::new(&render_engine, vertices, indices).wait().unwrap();
+	let _mesh_data = MeshData::new(&render_engine, vertices, indices).wait().unwrap();
 
 	let builder = RenderInstructionBufferBuilder::begin(&window);
 	let instruction_buffer = builder.build();
