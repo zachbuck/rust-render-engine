@@ -1,4 +1,6 @@
 
+use std::fmt::Debug;
+
 pub mod compiler;
 mod enumerations;
 pub mod interpreter;
@@ -14,5 +16,12 @@ impl<T, W, E> WarningResult<T, W, E> {
 			result,
 			warnings,
 		}
+	}
+}
+
+impl<T, W, E> WarningResult<T, W, E> 
+where E: Debug {
+	pub fn unwrap(self) -> T {
+		self.result.unwrap()
 	}
 }
