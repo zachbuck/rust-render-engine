@@ -22,7 +22,7 @@ pub struct SpirvShader {
 	pub binary: Box<[u32]>,
 	pub shader_stage: ShaderStage,
 	pub inputs:	Box<[DataType]>,
-	pub uniform_layout: (),
+	pub uniform_layout: Box<[DescriptorSet]>,
 }
 
 #[derive(Clone, Copy)]
@@ -31,6 +31,16 @@ pub enum ShaderStage {
 	Unknown,
 	Vertex,
 	Fragment,
+}
+
+pub struct DescriptorSet {
+	pub set: u32,
+	pub bindings: Box<[DescriptorBinding]>
+}
+
+pub struct DescriptorBinding {
+	pub binding: u32,
+	pub data_type: DataType,
 }
 
 impl Compiler {
@@ -65,13 +75,14 @@ impl Compiler {
 
 		let binary = artifact.as_binary().to_owned().into_boxed_slice();
 
-
+		let inputs = Vec::new().into_boxed_slice();
+		let uniform_layout = Vec::new().into_boxed_slice();
 
 		let shader = SpirvShader {
 			binary: 		binary,
 			shader_stage: 	shader_type,
-			inputs:			todo!(),
-			uniform_layout:	(),
+			inputs:			inputs,
+			uniform_layout:	uniform_layout,
 		};
 
 		let warnings;
@@ -89,11 +100,14 @@ impl SpirvShader {
 	pub unsafe fn from_binary(binary: Box<[u32]>) -> Self {
 		let stage = Interpreter::get_shader_stage(&binary);
 
+		let inputs = Vec::new().into_boxed_slice();
+		let uniform_layout = Vec::new().into_boxed_slice();
+
 		SpirvShader {
 			binary: 		binary,
 			shader_stage: 	stage,
-			inputs:			todo!(),
-			uniform_layout:	(),
+			inputs:			inputs,
+			uniform_layout:	uniform_layout,
 		}
 	}
 }

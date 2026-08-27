@@ -1,5 +1,8 @@
 
 pub enum DataType {
+	Array { element_type: Box<DataType>, count: usize },
+	Struct { elements: Box<[DataType]> },
+
 	Float,
 	Vec2,
 	Vec3,
