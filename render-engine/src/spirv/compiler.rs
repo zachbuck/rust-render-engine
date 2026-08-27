@@ -7,7 +7,12 @@ use shaderc::{
 	TargetEnv,
 };
 
-use crate::spirv::{WarningResult, enumerations::ExecutionModel};
+use crate::spirv::{
+	WarningResult, 
+	data_type::DataType, 
+	enumerations::ExecutionModel, 
+	interpreter::Interpreter,
+};
 
 pub struct Compiler {
 	compiler: SpirvCompiler,
@@ -15,7 +20,9 @@ pub struct Compiler {
 
 pub struct SpirvShader {
 	pub binary: Box<[u32]>,
-	pub shader_stage: ShaderStage
+	pub shader_stage: ShaderStage,
+	pub inputs:	Box<[DataType]>,
+	pub uniform_layout: (),
 }
 
 #[derive(Clone, Copy)]
@@ -56,9 +63,15 @@ impl Compiler {
 		if result.is_err() { return WarningResult::new(Err(unsafe { result.unwrap_err_unchecked() }), Vec::new()) }
 		let artifact = result.unwrap();
 
+		let binary = artifact.as_binary().to_owned().into_boxed_slice();
+
+
+
 		let shader = SpirvShader {
-			binary: 		artifact.as_binary().to_owned().into_boxed_slice(),
+			binary: 		binary,
 			shader_stage: 	shader_type,
+			inputs:			todo!(),
+			uniform_layout:	(),
 		};
 
 		let warnings;
@@ -73,10 +86,14 @@ impl Compiler {
 }
 
 impl SpirvShader {
-	pub unsafe fn from_binary(binary: Box<[u32]>, stage: ShaderStage) -> Self {
+	pub unsafe fn from_binary(binary: Box<[u32]>) -> Self {
+		let stage = Interpreter::get_shader_stage(&binary);
+
 		SpirvShader {
 			binary: 		binary,
 			shader_stage: 	stage,
+			inputs:			todo!(),
+			uniform_layout:	(),
 		}
 	}
 }

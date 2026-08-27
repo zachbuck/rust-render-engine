@@ -2,6 +2,7 @@
 use std::fmt::Debug;
 
 pub mod compiler;
+pub mod data_type;
 mod enumerations;
 pub mod interpreter;
 
