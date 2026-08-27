@@ -28,10 +28,8 @@ pub fn derive_enum_from_backing_type(tokens: TokenStream) -> TokenStream {
 	enum_vars.extend(
 		enum_data.variants.iter()
 			.map(|v| (v.ident.clone(), v.discriminant.clone().unwrap().1))
-			.map(|(ident, value)| {
-				let tokens = TokenStream2::from(TokenStream::from(quote! {#value => #enum_name::#ident,}));
-				println!("{:?}", tokens);
-				tokens
+			.map(|(ident, value)| { 
+				TokenStream2::from(TokenStream::from(quote! {#value => #enum_name::#ident,})) 
 			})
 	);
 

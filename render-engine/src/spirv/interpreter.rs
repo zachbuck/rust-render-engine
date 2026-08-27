@@ -1,7 +1,6 @@
 
 use crate::spirv::{
-	compiler::ShaderStage, 
-	enumerations::Instruction,
+	compiler::ShaderStage, enumerations::{ExecutionModel, Instruction, StorageClass},
 };
 
 pub struct Interpreter {}
@@ -14,11 +13,39 @@ struct InstructionIterator<'a> {
 impl Interpreter {
 	pub fn get_shader_stage(binary: &[u32]) -> ShaderStage {
 		let mut iter = InstructionIterator::new(binary);
-		let instruction = iter.next_instruction();
-		while !instruction.is_none() {
-			let (instruction, data) = instruction.unwrap();
+		let mut stage = None;
+
+		while !iter.is_at_end() {
+			let (instruction, data) = iter.next_instruction().unwrap();
+			if !(instruction == Instruction::OpEntryPoint) { continue; }
+
+			stage = Some(ExecutionModel::from(data[0]));
+			break;
 		}
-		todo!()
+
+		stage.unwrap().into()
+	}
+
+	pub fn get_input_output_layout(binary: &[u32]) -> () {
+		let bound = binary[3];
+
+		#[derive(Debug)]
+		enum IdInfo {
+			Variable{ type_id: u32, storage_class: StorageClass },
+		}
+
+		let mut ids = (0..bound).map(|_| None).collect::<Vec<_>>();
+
+		let mut iter = InstructionIterator::new(binary);
+		while !iter.is_at_end() {
+			let (instruction, data) = iter.next_instruction().unwrap();
+			match instruction {
+				Instruction::OpVariable => { ids[data[1] as usize] = Some(IdInfo::Variable { type_id: data[0], storage_class: data[2].into() } ) },
+				_ => ()
+			}
+		}
+
+		println!("{:?}", ids);
 	}
 }
 
@@ -35,7 +62,7 @@ impl<'a> InstructionIterator<'a> {
 
 		let first = self.binary[self.current_word];
 
-		let word_count = (0xFF00 & first >> 16) as u16;
+		let word_count = (first >> 16) as u16;
 		let instruction = (0x00FF & first) as u16;
 
 		let out = Some((Instruction::from(instruction), &self.binary[self.current_word + 1..self.current_word + (word_count as usize)]));
@@ -44,4 +71,6 @@ impl<'a> InstructionIterator<'a> {
 
 		return out;
 	}
+
+	fn is_at_end(&self) -> bool { self.current_word == self.binary.len() }
 }

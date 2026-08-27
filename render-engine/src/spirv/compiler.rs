@@ -7,7 +7,7 @@ use shaderc::{
 	TargetEnv,
 };
 
-use crate::spirv::WarningResult;
+use crate::spirv::{WarningResult, enumerations::ExecutionModel};
 
 pub struct Compiler {
 	compiler: SpirvCompiler,
@@ -19,6 +19,7 @@ pub struct SpirvShader {
 }
 
 #[derive(Clone, Copy)]
+#[derive(Debug)]
 pub enum ShaderStage {
 	Unknown,
 	Vertex,
@@ -86,6 +87,15 @@ impl Into<shaderc::ShaderKind> for ShaderStage {
 			ShaderStage::Unknown	=> shaderc::ShaderKind::DefaultCompute,
 			ShaderStage::Vertex 	=> shaderc::ShaderKind::Vertex,
 			ShaderStage::Fragment 	=> shaderc::ShaderKind::Fragment,
+		}
+	}
+}
+
+impl From<ExecutionModel> for ShaderStage {
+	fn from(value: ExecutionModel) -> Self {
+		match value {
+			ExecutionModel::Vertex 		=> ShaderStage::Vertex,
+			ExecutionModel::Fragment 	=> ShaderStage::Fragment,
 		}
 	}
 }

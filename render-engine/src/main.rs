@@ -28,6 +28,10 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 uv;
 
+layout(set = 0, binding = 0) uniform UBO {
+	mat4 transform;
+};
+
 void main() {
 	gl_Position = vec4(position, 1.0);
 }
@@ -58,5 +62,5 @@ fn main() -> () {
 	let compiler = Compiler::new().unwrap();
 	let vertex_binary = compiler.compile_from_source("vertex.glsl.vert", ShaderStage::Vertex, VERTEX_SOURCE).unwrap();
 	
-	Interpreter::get_shader_stage(&vertex_binary.binary);
+	println!("{:?}", Interpreter::get_input_output_layout(&vertex_binary.binary));
 }
