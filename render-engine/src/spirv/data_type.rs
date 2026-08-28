@@ -1,7 +1,9 @@
 
+#[derive(Clone)]
+#[derive(Debug)]
 pub enum DataType {
 	Array { element_type: Box<DataType>, count: usize },
-	Struct { elements: Box<[DataType]> },
+	Struct { members: Box<[DataType]> },
 
 	Float,
 	Vec2,
