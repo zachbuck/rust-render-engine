@@ -26,7 +26,7 @@ impl Interpreter {
 		stage.unwrap().into()
 	}
 
-	pub fn get_input_output_layout(binary: &[u32]) -> () {
+	pub fn get_variable_layout(binary: &[u32]) -> () {
 		let bound = binary[3];
 
 		#[derive(Debug)]
@@ -176,6 +176,19 @@ impl Interpreter {
 		for (id, value) in id_values.iter().enumerate() {
 			println!("{:2?}: {:?}", id, value);
 		}
+
+		let mut inputs = Vec::new();
+		let mut outputs = Vec::new();
+		for x in &id_values {
+			match x {
+				Some(ID::Variable(data_type, StorageClass::Input)) => inputs.push(data_type.clone()),
+				Some(ID::Variable(data_type, StorageClass::Output)) => outputs.push(data_type.clone()),
+				_ => (),
+			}
+		}
+
+		println!("Input: {:?}", inputs);
+		println!("Output: {:?}", outputs);
 	}
 }
 

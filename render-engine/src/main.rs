@@ -62,5 +62,5 @@ fn main() -> () {
 	let compiler = Compiler::new().unwrap();
 	let vertex_binary = compiler.compile_from_source("vertex.glsl.vert", ShaderStage::Vertex, VERTEX_SOURCE).unwrap();
 	
-	println!("{:?}", Interpreter::get_input_output_layout(&vertex_binary.binary));
+	println!("{:?}", Interpreter::get_variable_layout(&vertex_binary.binary));
 }
