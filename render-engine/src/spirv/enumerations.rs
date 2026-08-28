@@ -11,6 +11,7 @@ pub enum ExecutionModel {
 
 #[derive(Debug)]
 #[derive(Clone, Copy)]
+#[derive(PartialEq, Eq)]
 #[derive(EnumFromBackingType)]
 #[repr(u32)]
 // 3.2.6

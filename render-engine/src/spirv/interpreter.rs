@@ -1,6 +1,6 @@
 
 use crate::spirv::{
-	compiler::ShaderStage, data_type::DataType, enumerations::{ExecutionModel, Instruction, StorageClass},
+	compiler::ShaderStage, data_type::{self, DataType}, enumerations::{ExecutionModel, Instruction, StorageClass},
 };
 
 pub struct Interpreter {}
@@ -43,9 +43,9 @@ impl Interpreter {
 		enum ID {
 			Error,
 			DataType(DataType),
-			Pointer(DataType),
+			Pointer(DataType, StorageClass),
 			Constant(Constant),
-			Variable(StorageClass),
+			Variable(DataType, StorageClass),
 		}
 
 		let mut id_values = (0..bound).map(|_| None).collect::<Box<[_]>>();
@@ -101,6 +101,24 @@ impl Interpreter {
 												
 												_ => ID::Error,
 											}),
+				Instruction::OpTypeArray	=> id_values[data[1] as usize] = Some({
+												let data_type = match &id_values[data[2] as usize] {
+													Some(ID::DataType(data_type)) 	=> Some(data_type.clone()),
+													_											=> None,
+												};
+
+												let length = match &id_values[data[3] as usize] {
+													Some(ID::Constant(Constant::Int(length))) 	=> Some(*length as usize),
+													Some(ID::Constant(Constant::UInt(length))) 	=> Some(*length as usize),
+													_ 													=> None,
+												};
+
+												if data_type.is_none() || length.is_none() {
+													ID::Error
+												} else {
+													ID::DataType(DataType::Array { element_type: Box::new(data_type.unwrap()), count: length.unwrap() })
+												}
+											}),
 				Instruction::OpTypeStruct	=> id_values[data[1] as usize] = Some({
 												let mut data_types = data[2..].iter()
 													.map(|id| {
@@ -112,10 +130,43 @@ impl Interpreter {
 													}).collect::<Box<[_]>>();
 												
 												if data_types.iter().find(|dt| dt.is_none()).is_some() {
-													println!("{:?}", &data[2..]);
 													ID::Error
 												} else {
-													ID::DataType(DataType::Struct { elements: data_types.iter_mut().map(|dt| dt.take().unwrap()).collect() })
+													ID::DataType(DataType::Struct { members: data_types.iter_mut().map(|dt| dt.take().unwrap()).collect() })
+												}
+											}),
+				Instruction::OpTypePointer	=> id_values[data[1] as usize] = Some({
+												let data_type = match &id_values[data[3] as usize] {
+													Some(ID::DataType(data_type)) 	=> Some(data_type.clone()),
+													_ 											=> None,
+												};
+
+												if data_type.is_none() {
+													ID::Error
+												} else {
+													ID::Pointer(data_type.unwrap(), data[2].into())
+												}
+											}),
+				Instruction::OpConstant		=> id_values[data[2] as usize] = Some(match id_values[data[1] as usize] {
+												Some(ID::DataType(DataType::Float)) 	=> ID::Constant(Constant::Float(unsafe { *(data[3..].as_ptr().cast()) })),
+												Some(ID::DataType(DataType::Double)) 	=> ID::Constant(Constant::Double(unsafe { *(data[3..].as_ptr().cast()) })),
+												Some(ID::DataType(DataType::Int)) 		=> ID::Constant(Constant::Int(unsafe { *(data[3..].as_ptr().cast()) })),
+												Some(ID::DataType(DataType::UInt)) 		=> ID::Constant(Constant::UInt(unsafe { *(data[3..].as_ptr().cast()) })),
+												_ 										=> ID::Error
+											}),
+				Instruction::OpVariable		=> id_values[data[2] as usize] = Some({
+												let pointer_data = match &id_values[data[1] as usize] {
+													Some(ID::Pointer(data_type, storage_class)) 	=> Some((data_type.clone(), *storage_class)),
+													_ 																		=> None,
+												};
+
+												if pointer_data.is_none() {
+													ID::Error
+												} else if pointer_data.clone().unwrap().1 != data[3].into() {
+													ID::Error
+												} else {
+													let (data_type, storage_class) = pointer_data.unwrap();
+													ID::Variable(data_type, storage_class)
 												}
 											}),
 				_ 							=> (),
