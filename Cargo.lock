@@ -519,9 +519,8 @@ dependencies = [
 name = "render-engine"
 version = "0.1.0"
 dependencies = [
- "macros",
  "sdl3",
- "shaderc",
+ "spir-v",
  "uuid",
  "vulkano",
 ]
@@ -754,6 +753,14 @@ name = "smallvec"
 version = "1.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
+
+[[package]]
+name = "spir-v"
+version = "0.1.0"
+dependencies = [
+ "macros",
+ "shaderc",
+]
 
 [[package]]
 name = "syn"

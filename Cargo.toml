@@ -1,7 +1,7 @@
 
 [workspace]
 resolver = "3"
-members = ["macros","render-engine"]
+members = ["macros","render-engine", "spir-v"]
 
 [workspace.dependencies]
 uuid = { version = "1.24.0", features = ["v7"] }

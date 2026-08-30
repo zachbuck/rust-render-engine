@@ -7,7 +7,7 @@ use shaderc::{
 	TargetEnv,
 };
 
-use crate::spirv::{
+use crate::{
 	WarningResult, 
 	data_type::DataType, 
 	enumerations::ExecutionModel, 
@@ -22,7 +22,8 @@ pub struct SpirvShader {
 	pub binary: Box<[u32]>,
 	pub shader_stage: ShaderStage,
 	pub inputs:	Box<[DataType]>,
-	pub uniform_layout: Box<[DescriptorSet]>,
+	pub outputs: Box<[DataType]>,
+	pub uniforms: Box<[DescriptorSet]>,
 }
 
 #[derive(Clone, Copy)]
@@ -33,11 +34,13 @@ pub enum ShaderStage {
 	Fragment,
 }
 
+#[derive(Debug)]
 pub struct DescriptorSet {
 	pub set: u32,
 	pub bindings: Box<[DescriptorBinding]>
 }
 
+#[derive(Debug)]
 pub struct DescriptorBinding {
 	pub binding: u32,
 	pub data_type: DataType,
@@ -75,14 +78,14 @@ impl Compiler {
 
 		let binary = artifact.as_binary().to_owned().into_boxed_slice();
 
-		let inputs = Vec::new().into_boxed_slice();
-		let uniform_layout = Vec::new().into_boxed_slice();
+		let (inputs, outputs, uniforms) = Interpreter::get_variable_layout(&binary);
 
 		let shader = SpirvShader {
 			binary: 		binary,
 			shader_stage: 	shader_type,
 			inputs:			inputs,
-			uniform_layout:	uniform_layout,
+			outputs:		outputs,
+			uniforms:		uniforms,
 		};
 
 		let warnings;
@@ -100,14 +103,14 @@ impl SpirvShader {
 	pub unsafe fn from_binary(binary: Box<[u32]>) -> Self {
 		let stage = Interpreter::get_shader_stage(&binary);
 
-		let inputs = Vec::new().into_boxed_slice();
-		let uniform_layout = Vec::new().into_boxed_slice();
+		let (inputs, outputs, uniforms) = Interpreter::get_variable_layout(&binary);
 
 		SpirvShader {
 			binary: 		binary,
 			shader_stage: 	stage,
 			inputs:			inputs,
-			uniform_layout:	uniform_layout,
+			outputs:		outputs,
+			uniforms:		uniforms,
 		}
 	}
 }

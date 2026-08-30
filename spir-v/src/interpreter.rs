@@ -1,6 +1,8 @@
 
-use crate::spirv::{
-	compiler::ShaderStage, data_type::{self, DataType}, enumerations::{ExecutionModel, Instruction, StorageClass},
+use crate::{
+	compiler::{DescriptorBinding, DescriptorSet, ShaderStage}, 
+	data_type::DataType, 
+	enumerations::{Decoration, ExecutionModel, Instruction, StorageClass},
 };
 
 pub struct Interpreter {}
@@ -26,13 +28,15 @@ impl Interpreter {
 		stage.unwrap().into()
 	}
 
-	pub fn get_variable_layout(binary: &[u32]) -> () {
+	pub fn get_variable_layout(binary: &[u32]) -> (Box<[DataType]>, Box<[DataType]>, Box<[DescriptorSet]>) {
 		let bound = binary[3];
 
 		#[derive(Debug)]
 		#[derive(Clone, Copy)]
 		enum Constant {
+			#[expect(unused)]
 			Float(f32),
+			#[expect(unused)]
 			Double(f64),
 			Int(i32),
 			UInt(u32),
@@ -48,11 +52,28 @@ impl Interpreter {
 			Variable(DataType, StorageClass),
 		}
 
+		#[derive(Debug)]
+		#[derive(Default)]
+		struct Decorations {
+			set: 		Option<u32>,
+			binding: 	Option<u32>,
+		}
+
 		let mut id_values = (0..bound).map(|_| None).collect::<Box<[_]>>();
+		let mut decorators = (0..bound).map(|_| None::<Decorations>).collect::<Box<[_]>>();
+
 		let mut iter = InstructionIterator::new(binary);
 		while !(iter.is_at_end()) {
 			let (instruction, data) = iter.next_instruction().unwrap();
 			match instruction {
+				Instruction::OpDecorate		=> {
+					let decorations = decorators[data[1] as usize].get_or_insert_default();
+					match Decoration::from(data[2]) {
+						Decoration::Binding 		=> decorations.binding = Some(data[3]),
+						Decoration::DescriptorSet 	=> decorations.set = Some(data[3]),
+						_							=> (),
+					};
+				},
 				Instruction::OpTypeInt 		=> id_values[data[1] as usize] = Some(match (data[2], data[3] != 0) {
 												(32, true) 	=> ID::DataType(DataType::Int),
 												(32, false)	=> ID::DataType(DataType::UInt),
@@ -173,22 +194,64 @@ impl Interpreter {
 			}
 		}
 
-		for (id, value) in id_values.iter().enumerate() {
-			println!("{:2?}: {:?}", id, value);
-		}
-
 		let mut inputs = Vec::new();
 		let mut outputs = Vec::new();
-		for x in &id_values {
+		let mut uniforms = Vec::new();
+		for (id, x) in id_values.iter().enumerate() {
 			match x {
 				Some(ID::Variable(data_type, StorageClass::Input)) => inputs.push(data_type.clone()),
 				Some(ID::Variable(data_type, StorageClass::Output)) => outputs.push(data_type.clone()),
+				Some(ID::Variable(data_type, StorageClass::Uniform)) => {
+					let decorator = &decorators[id];
+					if decorator.is_none() { () }
+					else {
+
+					let decorator = decorator.as_ref().unwrap();
+					let set = decorator.set;
+					let binding = decorator.binding;
+					if set.is_none() || binding.is_none() { () }
+					else {
+
+					let set = set.unwrap();
+					let binding = binding.unwrap();
+
+					let descriptor_set = uniforms.iter_mut()
+						.find(|(s, _)| *s == set);
+					let descriptor_set = if descriptor_set.is_some() {
+						&mut descriptor_set.unwrap().1
+					} else {
+						uniforms.push((set, Vec::new()));
+						&mut uniforms.last_mut().unwrap().1
+					};
+
+					if descriptor_set.iter().find(|(b, _)| *b == binding).is_some() { () }
+					else {
+					descriptor_set.push((binding, data_type.clone()));
+				}}}},
 				_ => (),
 			}
-		}
+		};
 
-		println!("Input: {:?}", inputs);
-		println!("Output: {:?}", outputs);
+		let inputs = inputs.into_boxed_slice();
+		let outputs = outputs.into_boxed_slice();
+
+		uniforms.iter_mut().for_each(|(_, bindings)| bindings.sort_by_key(|(b, _)| *b));
+		uniforms.sort_by_key(|(s, _)| *s);
+		let uniforms = uniforms.into_iter()
+			.map(|(s, bindings)| {
+				let bindings = bindings.into_iter()
+					.map(|(b, dt)| DescriptorBinding {
+						binding: b,
+						data_type: dt,
+					}).collect::<Box<[_]>>();
+
+				DescriptorSet {
+					set: s,
+					bindings: bindings,
+				}
+			}).collect::<Box<[_]>>();
+
+		(inputs, outputs, uniforms)
 	}
 }
 
