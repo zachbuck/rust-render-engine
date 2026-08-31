@@ -1,7 +1,11 @@
+use crate::enumerations::{Dim, ImageFormat};
+
 
 #[derive(Clone)]
 #[derive(Debug)]
 pub enum DataType {
+	Void,
+
 	Array { element_type: Box<DataType>, count: usize },
 	Struct { members: Box<[DataType]> },
 
@@ -36,4 +40,8 @@ pub enum DataType {
 	UMat2,
 	UMat3,
 	UMat4,
+
+	Image { dimension: Dim, pixel_format: Box<DataType>, texture_format: ImageFormat },
+	Sampler,
+	ImageSampler { dimension: Dim, pixel_format: Box<DataType>, texture_format: ImageFormat },
 }

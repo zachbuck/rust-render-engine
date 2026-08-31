@@ -47,7 +47,6 @@ use crate::{
 pub struct WindowSurface {
 	#[expect(unused)]
 	window:			Window,
-	#[expect(unused)]
 	render_pass:	Arc<RenderPass>,
 	#[expect(unused)]
 	vulkan_surface:	Arc<VSurface>,

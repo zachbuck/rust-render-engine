@@ -36,7 +36,7 @@ layout(location = 2) in vec2 uv;
 
 layout(location = 0) out vec2 uv_out;
 
-layout(set = 0, binding = 0) uniform UBO {
+layout(set = 1, binding = 0) uniform UBO {
 	mat4 transform;
 };
 
@@ -53,8 +53,10 @@ layout(location = 0) in vec2 uv;
 
 layout(location = 0) out vec4 f_color;
 
+layout(set = 0, binding = 0) uniform sampler2D color_tex;
+
 void main() {
-	f_color = vec4(uv, 0.0, 1.0);
+	f_color = vec4(texture(color_tex, uv));
 }
 "#;
 
@@ -77,6 +79,13 @@ fn main() -> () {
 	let compiler = Compiler::new().unwrap();
 	let vertex_shader = compiler.compile_from_source("vertex.glsl.vert", ShaderStage::Vertex, VERTEX_SOURCE).unwrap();
 	let fragment_shader = compiler.compile_from_source("fragment.glsl.frag", ShaderStage::Fragment, FRAGMENT_SOURCE).unwrap();
+
+	println!("{:?}", vertex_shader.inputs);
+	println!("{:?}", vertex_shader.outputs);
+	println!("{:?}", vertex_shader.uniforms);
+	println!("{:?}", fragment_shader.inputs);
+	println!("{:?}", fragment_shader.outputs);
+	println!("{:?}", fragment_shader.uniforms);
 
 	let builder = RenderInstructionBufferBuilder::begin(&window);
 	let instruction_buffer = builder.build();

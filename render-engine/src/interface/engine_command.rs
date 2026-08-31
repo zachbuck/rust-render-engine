@@ -18,7 +18,6 @@ pub enum EngineCommand {
 	},
 	
 	MeshDataCommand(Box<MeshDataCommand>),
-	#[expect(unused)]
 	ShaderCommand(Box<ShaderCommand>),
 	WindowSurfaceCommand(Box<WindowSurfaceCommand>),
 
