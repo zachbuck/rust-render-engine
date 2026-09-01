@@ -1,4 +1,5 @@
 
+use spir_v::shader::SpirvShader;
 use uuid::Uuid;
 
 use crate::{
@@ -53,7 +54,7 @@ impl Into<EngineCommand> for MeshDataCommand {
 #[derive(Debug)]
 pub enum ShaderCommand {
 	CreateShader {
-		source: 	Box<[u32]>,
+		source: 	SpirvShader,
 
 		response:	ChannelEngineResponse<Result<(Uuid,), ()>>
 	},

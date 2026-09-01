@@ -25,7 +25,8 @@ use vulkano::{
 		QueueCreateInfo, 
 		QueueFlags, 
 		physical::{PhysicalDevice, PhysicalDeviceType},
-	}, instance::{Instance, InstanceCreateInfo, InstanceExtensions}, 
+	}, 
+	instance::{Instance, InstanceCreateInfo, InstanceExtensions}, 
 	memory::allocator::StandardMemoryAllocator, 
 	render_pass::RenderPass, 
 	swapchain::Surface as VSurface, 
@@ -40,6 +41,7 @@ use crate::{
 	render_engine::RenderEngineCreateInfo, 
 	vulkan::{
 		mesh_data::MeshData, 
+		shader::ShaderModule, 
 		surface::Surface,
 	},
 };
@@ -49,8 +51,7 @@ pub struct RenderThread {
 	should_close:			bool,
 
 	pub mesh_data:			HashMap<Uuid, MeshData>,
-	#[expect(unused)]
-	pub shader_modules:		HashMap<Uuid, ()>,
+	pub shader_modules:		HashMap<Uuid, ShaderModule>,
 	#[expect(unused)]
 	pub pipelines:			HashMap<Uuid, ()>,
 
@@ -154,7 +155,7 @@ impl RenderThread {
 			match command {
 				EngineCommand::ProcessRenderInstructionBuffer { instructions, response } => response.send(self.process_render_instruction_buffer(instructions)),
 				EngineCommand::MeshDataCommand(command) => self.process_mesh_data_command(command),
-				EngineCommand::ShaderCommand(_command) => todo!(),
+				EngineCommand::ShaderCommand(command) => self.process_shader_command(command),
 				EngineCommand::WindowSurfaceCommand(command) => self.process_window_surface_command(command),
 				EngineCommand::DropRenderThread => { self.should_close = true; }
 			}

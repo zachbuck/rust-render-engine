@@ -5,6 +5,7 @@ pub mod compiler;
 pub mod data_type;
 mod enumerations;
 pub mod interpreter;
+pub mod shader;
 
 pub struct WarningResult<T, W, E> {
 	pub result: Result<T, E>,

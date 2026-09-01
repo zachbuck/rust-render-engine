@@ -5,17 +5,12 @@ use std::{
 };
 
 use render_engine::{
-	data_formats::Vertex3D, 
-	engine_future::EngineFuture, 
-	mesh_data::MeshData, 
-	render_engine::{RenderEngine, RenderEngineBackend, RenderEngineCreateInfo}, 
-	render_instruction_buffer::RenderInstructionBufferBuilder, 
-	surface::{
+	data_formats::Vertex3D, engine_future::EngineFuture, mesh_data::MeshData, render_engine::{RenderEngine, RenderEngineBackend, RenderEngineCreateInfo}, render_instruction_buffer::RenderInstructionBufferBuilder, shader::Shader, surface::{
 		RenderPassCreateInfo, 
 		window_surface::{WindowSurface, WindowSurfaceCreateInfo},
 	},
 };
-use spir_v::compiler::{Compiler, ShaderStage};
+use spir_v::{compiler::Compiler, shader::ShaderStage};
 
 const VERTICES: [Vertex3D; 3] = [
 	Vertex3D { position: [ 0.5,-0.5, 0.5], normal: [ 0.0, 0.0, 0.0], uv: [ 0.0, 0.0] },
@@ -77,15 +72,10 @@ fn main() -> () {
 	let _mesh_data = MeshData::new(&render_engine, vertices, indices).wait().unwrap();
 
 	let compiler = Compiler::new().unwrap();
-	let vertex_shader = compiler.compile_from_source("vertex.glsl.vert", ShaderStage::Vertex, VERTEX_SOURCE).unwrap();
-	let fragment_shader = compiler.compile_from_source("fragment.glsl.frag", ShaderStage::Fragment, FRAGMENT_SOURCE).unwrap();
-
-	println!("{:?}", vertex_shader.inputs);
-	println!("{:?}", vertex_shader.outputs);
-	println!("{:?}", vertex_shader.uniforms);
-	println!("{:?}", fragment_shader.inputs);
-	println!("{:?}", fragment_shader.outputs);
-	println!("{:?}", fragment_shader.uniforms);
+	let vertex_binary = compiler.compile_from_source("vertex.glsl.vert", ShaderStage::Vertex, VERTEX_SOURCE).unwrap();
+	let vertex_shader = Shader::new(&render_engine, vertex_binary).wait().unwrap();
+	let fragment_binary = compiler.compile_from_source("fragment.glsl.frag", ShaderStage::Fragment, FRAGMENT_SOURCE).unwrap();
+	let fragment_shader = Shader::new(&render_engine, fragment_binary);
 
 	let builder = RenderInstructionBufferBuilder::begin(&window);
 	let instruction_buffer = builder.build();

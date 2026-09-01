@@ -1,6 +1,6 @@
 
 use crate::{
-	compiler::{DescriptorBinding, DescriptorSet, ShaderStage}, data_type::DataType, enumerations::{Decoration, Dim, ExecutionModel, ImageFormat, Instruction, StorageClass},
+	data_type::DataType, enumerations::{Decoration, Dim, ExecutionModel, ImageFormat, Instruction, StorageClass}, shader::{DescriptorBinding, DescriptorSet, ShaderStage},
 };
 
 pub struct Interpreter {}
@@ -224,10 +224,6 @@ impl Interpreter {
 												}),
 				_ 								=> (),
 			}
-		}
-
-		for x in 1..id_values.len() {
-			println!("{}:\n\t{:?}\n\t{:?}", x, id_values[x], decorators[x]);
 		}
 
 		let mut inputs = Vec::new();

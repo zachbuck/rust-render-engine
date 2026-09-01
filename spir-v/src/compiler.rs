@@ -9,41 +9,11 @@ use shaderc::{
 
 use crate::{
 	WarningResult, 
-	data_type::DataType, 
-	enumerations::ExecutionModel, 
-	interpreter::Interpreter,
+	shader::{ShaderStage, SpirvShader},
 };
 
 pub struct Compiler {
 	compiler: SpirvCompiler,
-}
-
-pub struct SpirvShader {
-	pub binary: Box<[u32]>,
-	pub shader_stage: ShaderStage,
-	pub inputs:	Box<[DataType]>,
-	pub outputs: Box<[DataType]>,
-	pub uniforms: Box<[DescriptorSet]>,
-}
-
-#[derive(Clone, Copy)]
-#[derive(Debug)]
-pub enum ShaderStage {
-	Unknown,
-	Vertex,
-	Fragment,
-}
-
-#[derive(Debug)]
-pub struct DescriptorSet {
-	pub set: u32,
-	pub bindings: Box<[DescriptorBinding]>
-}
-
-#[derive(Debug)]
-pub struct DescriptorBinding {
-	pub binding: u32,
-	pub data_type: DataType,
 }
 
 impl Compiler {
@@ -78,15 +48,7 @@ impl Compiler {
 
 		let binary = artifact.as_binary().to_owned().into_boxed_slice();
 
-		let (inputs, outputs, uniforms) = Interpreter::get_variable_layout(&binary);
-
-		let shader = SpirvShader {
-			binary: 		binary,
-			shader_stage: 	shader_type,
-			inputs:			inputs,
-			outputs:		outputs,
-			uniforms:		uniforms,
-		};
+		let shader = unsafe { SpirvShader::from_binary(binary) };
 
 		let warnings;
 		if artifact.get_num_warnings() == 0 {
@@ -96,40 +58,5 @@ impl Compiler {
 		}
 
 		WarningResult::new(Ok(shader), warnings)
-	}
-}
-
-impl SpirvShader {
-	pub unsafe fn from_binary(binary: Box<[u32]>) -> Self {
-		let stage = Interpreter::get_shader_stage(&binary);
-
-		let (inputs, outputs, uniforms) = Interpreter::get_variable_layout(&binary);
-
-		SpirvShader {
-			binary: 		binary,
-			shader_stage: 	stage,
-			inputs:			inputs,
-			outputs:		outputs,
-			uniforms:		uniforms,
-		}
-	}
-}
-
-impl Into<shaderc::ShaderKind> for ShaderStage {
-	fn into(self) -> shaderc::ShaderKind {
-		match self {
-			ShaderStage::Unknown	=> shaderc::ShaderKind::DefaultCompute,
-			ShaderStage::Vertex 	=> shaderc::ShaderKind::Vertex,
-			ShaderStage::Fragment 	=> shaderc::ShaderKind::Fragment,
-		}
-	}
-}
-
-impl From<ExecutionModel> for ShaderStage {
-	fn from(value: ExecutionModel) -> Self {
-		match value {
-			ExecutionModel::Vertex 		=> ShaderStage::Vertex,
-			ExecutionModel::Fragment 	=> ShaderStage::Fragment,
-		}
 	}
 }
