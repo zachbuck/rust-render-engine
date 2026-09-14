@@ -1,5 +1,5 @@
-use crate::enumerations::{Dim, ImageFormat};
 
+use crate::spir_v::enumerations::{Dim, ImageFormat};
 
 #[derive(Clone)]
 #[derive(Debug)]

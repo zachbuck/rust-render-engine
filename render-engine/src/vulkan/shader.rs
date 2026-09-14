@@ -1,5 +1,5 @@
 
-use spir_v::shader::{SpirvShader, SpirvShaderInfo};
+use parsing::spir_v::shader::{SpirvShader, SpirvShaderInfo};
 use uuid::Uuid;
 use vulkano::shader::{EntryPoint, ShaderModuleCreateInfo};
 

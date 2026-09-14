@@ -1,5 +1,5 @@
 
-use crate::{
+use crate::spir_v::{
 	data_type::DataType, 
 	enumerations::{Decoration, Dim, ExecutionModel, ImageFormat, Instruction, StorageClass}, 
 	shader::{DescriptorBinding, DescriptorCollection, DescriptorSet, ShaderStage},

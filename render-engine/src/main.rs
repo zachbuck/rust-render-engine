@@ -5,12 +5,22 @@ use std::{
 };
 
 use render_engine::{
-	data_formats::Vertex3D, engine_future::EngineFuture, mesh_data::MeshData, pipeline::{Pipeline, PipelineCreateInfo}, render_engine::{RenderEngine, RenderEngineBackend, RenderEngineCreateInfo}, render_instruction_buffer::RenderInstructionBufferBuilder, shader::Shader, surface::{
+	data_formats::Vertex3D, 
+	engine_future::EngineFuture, 
+	mesh_data::MeshData, 
+	pipeline::{Pipeline, PipelineCreateInfo}, 
+	render_engine::{RenderEngine, RenderEngineBackend, RenderEngineCreateInfo}, 
+	render_instruction_buffer::RenderInstructionBufferBuilder, 
+	shader::Shader, 
+	surface::{
 		RenderPassCreateInfo, 
 		window_surface::{WindowSurface, WindowSurfaceCreateInfo},
 	},
 };
-use spir_v::{compiler::Compiler, shader::ShaderStage};
+use parsing::spir_v::{
+	compiler::Compiler, 
+	shader::ShaderStage,
+};
 
 const VERTICES: [Vertex3D; 3] = [
 	Vertex3D { position: [ 0.5,-0.5, 0.5], normal: [ 0.0, 0.0, 0.0], uv: [ 0.0, 0.0] },
@@ -76,7 +86,7 @@ fn main() -> () {
 	let vertex_shader = Shader::new(&render_engine, vertex_binary).wait().unwrap();
 	let fragment_binary = compiler.compile_from_source("fragment.glsl.frag", ShaderStage::Fragment, FRAGMENT_SOURCE).unwrap();
 	let fragment_shader = Shader::new(&render_engine, fragment_binary).wait().unwrap();
-	let pipeline = Pipeline::new(
+	let _pipeline = Pipeline::new(
 		&render_engine,
 		PipelineCreateInfo {
 			vertex_shader: vertex_shader,

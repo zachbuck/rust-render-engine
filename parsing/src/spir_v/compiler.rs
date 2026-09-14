@@ -8,7 +8,11 @@ use shaderc::{
 };
 
 use crate::{
-	WarningResult, macros::error_to_unit_type, shader::{ShaderStage, SpirvShader},
+	macros::error_to_unit_type,
+	spir_v::{
+		WarningResult, 
+		shader::{ShaderStage, SpirvShader},
+	}
 };
 
 pub struct Compiler {

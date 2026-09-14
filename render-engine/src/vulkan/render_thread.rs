@@ -3,7 +3,6 @@ use std::{
 	collections::{HashMap, HashSet}, 
 	sync::{
 		Arc, 
-		Weak, 
 		mpsc::{Receiver, TryRecvError},
 	},
 };
@@ -37,7 +36,10 @@ use vulkano::{
 };
 
 use crate::{
-	engine_command::{EngineCommand, RenderInstruction}, macros::error_to_unit_type, render_engine::RenderEngineCreateInfo, vulkan::{
+	engine_command::{EngineCommand, RenderInstruction}, 
+	macros::error_to_unit_type, 
+	render_engine::RenderEngineCreateInfo, 
+	vulkan::{
 		mesh_data::MeshData, 
 		pipeline::{Pipeline, ShaderCollection}, 
 		shader::ShaderModule, 

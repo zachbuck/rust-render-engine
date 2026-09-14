@@ -1,15 +1,47 @@
 
 use std::{
-	collections::{BTreeMap, HashMap, HashSet}, sync::Arc,
+	collections::{BTreeMap, HashMap, HashSet}, 
+	sync::Arc,
 };
 
 use foldhash::fast::RandomState;
-use spir_v::shader::DescriptorCollection;
+use parsing::spir_v::{
+	data_type::DataType, 
+	shader::DescriptorCollection,
+};
 use uuid::Uuid;
-use vulkano::{descriptor_set::layout::{DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateInfo, DescriptorType}, device::Device, pipeline::{DynamicState, GraphicsPipeline, PipelineLayout, PipelineShaderStageCreateInfo, graphics::{GraphicsPipelineCreateInfo, color_blend::{ColorBlendAttachmentState, ColorBlendState}, input_assembly::InputAssemblyState, multisample::MultisampleState, rasterization::RasterizationState, vertex_input::{Vertex, VertexDefinition, VertexInputState}, viewport::{Viewport, ViewportState}}, layout::PipelineLayoutCreateInfo}, render_pass::RenderPass, shader::ShaderStages};
+use vulkano::{
+	descriptor_set::layout::{DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateInfo, DescriptorType}, 
+	device::Device, 
+	pipeline::{
+		DynamicState, 
+		GraphicsPipeline, 
+		PipelineLayout, 
+		PipelineShaderStageCreateInfo, 
+		graphics::{
+			GraphicsPipelineCreateInfo, 
+			color_blend::{ColorBlendAttachmentState, ColorBlendState}, 
+			input_assembly::InputAssemblyState, 
+			multisample::MultisampleState, 
+			rasterization::RasterizationState, 
+			vertex_input::{Vertex, VertexDefinition}, 
+			viewport::ViewportState,
+		}, 
+		layout::PipelineLayoutCreateInfo,
+	}, 
+	render_pass::RenderPass, 
+	shader::ShaderStages,
+};
 
 use crate::{
-	data_formats::Vertex3D, engine_command::PipelineCommand, macros::error_to_unit_type, shader::Shader, vulkan::{render_thread::RenderThread, shader::ShaderModule},
+	data_formats::Vertex3D, 
+	engine_command::PipelineCommand, 
+	macros::error_to_unit_type, 
+	shader::Shader, 
+	vulkan::{
+		render_thread::RenderThread, 
+		shader::ShaderModule,
+	},
 };
 
 pub struct ShaderCollection {
@@ -20,6 +52,7 @@ pub struct ShaderCollection {
 }
 
 pub struct Pipeline {
+	#[expect(unused)]
 	pipeline: Arc<GraphicsPipeline>,
 }
 
@@ -95,9 +128,9 @@ impl RenderThread {
 				ds.bindings.iter()
 					.for_each(|db| {
 						let descriptor_type = match &db.data_type {
-								spir_v::data_type::DataType::Image { dimension: _, pixel_format: _, texture_format: _ } => DescriptorType::StorageImage,
-								spir_v::data_type::DataType::Sampler => DescriptorType::Sampler,
-								spir_v::data_type::DataType::ImageSampler { dimension: _, pixel_format: _, texture_format: _ } => DescriptorType::CombinedImageSampler,
+								DataType::Image { dimension: _, pixel_format: _, texture_format: _ } => DescriptorType::StorageImage,
+								DataType::Sampler => DescriptorType::Sampler,
+								DataType::ImageSampler { dimension: _, pixel_format: _, texture_format: _ } => DescriptorType::CombinedImageSampler,
 								_ => DescriptorType::StorageBuffer,
 							};
 						

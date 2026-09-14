@@ -17,6 +17,7 @@ V: From<RawObjVertex> {
 	pub fn get_indices(&self) -> &Box<[u32]> { &self.indices }
 
 	pub fn parse(obj_file: &str) -> Self {
+		todo!()
 		/*
 			Procedure
 			- First pass

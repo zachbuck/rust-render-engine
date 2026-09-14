@@ -4,7 +4,7 @@ use std::sync::{
 	mpsc::Sender,
 };
 
-use spir_v::{
+use parsing::spir_v::{
 	data_type::DataType, 
 	shader::{DescriptorCollection, ShaderStage, SpirvShader, SpirvShaderInfo},
 };

@@ -4,7 +4,7 @@ use std::sync::{
 	mpsc::Sender,
 };
 
-use spir_v::shader::ShaderStage;
+use parsing::spir_v::shader::ShaderStage;
 use uuid::Uuid;
 
 use crate::{
@@ -21,11 +21,11 @@ use crate::{
 };
 
 pub struct Pipeline {
-	uuid:				Uuid,
-	command_channel:	Sender<EngineCommand>,
+	uuid:					Uuid,
+	command_channel:		Sender<EngineCommand>,
 
-	vertex_shader: 		Arc<Shader>,
-	fragment_shader: 	Arc<Shader>,
+	pub vertex_shader: 		Arc<Shader>,
+	pub fragment_shader: 	Arc<Shader>,
 }
 
 #[derive(Clone)]
@@ -76,5 +76,11 @@ impl Pipeline {
 		}.into());
 
 		return Box::new(future) as Box<dyn EngineFuture<_>>;
+	}
+}
+
+impl Drop for Pipeline {
+	fn drop(&mut self) {
+		let _ = self.command_channel.send(PipelineCommand::DropPipeline { uuid: self.uuid }.into());
 	}
 }

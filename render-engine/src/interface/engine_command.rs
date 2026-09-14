@@ -1,7 +1,7 @@
 
 use std::sync::Arc;
 
-use spir_v::shader::SpirvShader;
+use parsing::spir_v::shader::SpirvShader;
 use uuid::Uuid;
 
 use crate::{
