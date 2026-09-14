@@ -28,6 +28,7 @@ pub enum StorageClass {
 #[derive(Debug)]
 #[derive(Clone, Copy)]
 #[derive(EnumFromBackingType)]
+#[derive(PartialEq, Eq)]
 #[repr(u32)]
 // 3.2.7
 pub enum Dim {
@@ -43,6 +44,7 @@ pub enum Dim {
 #[derive(Debug)]
 #[derive(Clone, Copy)]
 #[derive(EnumFromBackingType)]
+#[derive(PartialEq, Eq)]
 #[repr(u32)]
 // 3.2.10
 pub enum ImageFormat {

@@ -1,6 +1,8 @@
 
 use crate::{
-	data_type::DataType, enumerations::{Decoration, Dim, ExecutionModel, ImageFormat, Instruction, StorageClass}, shader::{DescriptorBinding, DescriptorSet, ShaderStage},
+	data_type::DataType, 
+	enumerations::{Decoration, Dim, ExecutionModel, ImageFormat, Instruction, StorageClass}, 
+	shader::{DescriptorBinding, DescriptorCollection, DescriptorSet, ShaderStage},
 };
 
 pub struct Interpreter {}
@@ -26,7 +28,7 @@ impl Interpreter {
 		stage.unwrap().into()
 	}
 
-	pub fn get_variable_layout(binary: &[u32]) -> (Box<[DataType]>, Box<[DataType]>, Box<[DescriptorSet]>) {
+	pub fn get_variable_layout(binary: &[u32]) -> (Box<[DataType]>, Box<[DataType]>, DescriptorCollection) {
 		let bound = binary[3];
 
 		#[derive(Debug)]
@@ -194,7 +196,6 @@ impl Interpreter {
 													};
 
 													if data_type.is_none() {
-														println!("{}", data[1]);
 														ID::Error
 													} else {
 														ID::Pointer(data_type.unwrap(), data[2].into())
@@ -302,13 +303,14 @@ impl Interpreter {
 					.map(|(b, dt)| DescriptorBinding {
 						binding: b,
 						data_type: dt,
-					}).collect::<Box<[_]>>();
+					}).collect::<Vec<_>>();
 
 				DescriptorSet {
 					set: s,
 					bindings: bindings,
 				}
-			}).collect::<Box<[_]>>();
+			}).collect::<Vec<_>>();
+		let uniforms = DescriptorCollection { descriptors: uniforms };
 
 		(inputs, outputs, uniforms)
 	}

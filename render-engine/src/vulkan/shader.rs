@@ -5,12 +5,12 @@ use vulkano::shader::{EntryPoint, ShaderModuleCreateInfo};
 
 use crate::{
 	engine_command::ShaderCommand, 
+	macros::error_to_unit_type, 
 	vulkan::render_thread::RenderThread,
 };
 
 pub struct ShaderModule {
-	#[expect(unused)]
-	entry_point: EntryPoint,
+	pub entry_point: EntryPoint,
 	#[expect(unused)]
 	shader_info: SpirvShaderInfo,
 }
@@ -29,7 +29,7 @@ impl RenderThread {
 		let module = unsafe { vulkano::shader::ShaderModule::new(
 			self.device.clone(), 
 			ShaderModuleCreateInfo::new(source.get_binary()),
-		) }.map_err(|_| ())?;
+		) }.map_err(error_to_unit_type!())?;
 
 		let entry_point = module.entry_point("main").ok_or(())?;
 

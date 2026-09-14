@@ -14,6 +14,6 @@ pub struct Vertex3D {
 	#[format(R32G32B32_SFLOAT)]
 	pub normal:		[f32; 3],
 
-	#[format(R32G32B32_SFLOAT)]
+	#[format(R32G32_SFLOAT)]
 	pub uv:			[f32; 2],
 }

@@ -519,6 +519,7 @@ dependencies = [
 name = "render-engine"
 version = "0.1.0"
 dependencies = [
+ "foldhash",
  "sdl3",
  "spir-v",
  "uuid",

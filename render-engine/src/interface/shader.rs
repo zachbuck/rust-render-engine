@@ -4,7 +4,10 @@ use std::sync::{
 	mpsc::Sender,
 };
 
-use spir_v::shader::{ShaderStage, SpirvShader};
+use spir_v::{
+	data_type::DataType, 
+	shader::{DescriptorCollection, ShaderStage, SpirvShader, SpirvShaderInfo},
+};
 use uuid::Uuid;
 
 use crate::{
@@ -17,24 +20,24 @@ use crate::{
 	render_engine::RenderEngine, 
 };
 
+#[derive(Debug)]
 pub struct Shader {
-	pub stage:			ShaderStage,
-
 	uuid: 				Uuid,
 	command_channel: 	Sender<EngineCommand>,
+	shader_info:		SpirvShaderInfo,
 }
 
 impl Shader {
 	pub fn new(render_engine: &Arc<RenderEngine>, shader: SpirvShader) -> impl EngineFuture<Result<Arc<Shader>, ()>> {
 		let command_channel = render_engine.command_channel.clone();
-		let stage = *shader.get_stage();
+		let shader_info = shader.get_info();
 		let (future, response) = ThenTransformFuture::new(
 			ChannelEngineFuture::new(), 
 			Box::new(move |result: Result<_, _>| result.map(
 				|(uuid,)| Arc::new(Shader {
-					stage: stage,
-					uuid: uuid,
-					command_channel: command_channel,
+					uuid: 				uuid,
+					command_channel: 	command_channel,
+					shader_info:		shader_info,
 				})
 			))
 		);
@@ -46,6 +49,13 @@ impl Shader {
 
 		return future;
 	}
+
+	pub(crate) fn get_uuid(&self) -> &Uuid { &self.uuid }
+
+	pub fn get_stage(&self) -> &ShaderStage { self.shader_info.get_stage() }
+	pub(crate) fn get_inputs(&self) -> &[DataType] { self.shader_info.get_inputs() }
+	pub(crate) fn get_outputs(&self) -> &[DataType] { self.shader_info.get_outputs() }
+	pub(crate) fn get_uniforms(&self) -> &DescriptorCollection { self.shader_info.get_uniforms() }
 }
 
 impl Drop for Shader {

@@ -7,3 +7,15 @@ pub trait EngineFuture<T> {
 	fn wait(self) -> T;
 	fn try_wait(&mut self) -> Option<T>;
 }
+
+impl<T> EngineFuture<T> for Box<dyn EngineFuture<T>> {
+	fn wait(mut self) -> T {
+		loop {
+			let result = self.try_wait();
+			if result.is_some() {
+				return result.unwrap();
+			}
+		}
+	}
+	fn try_wait(&mut self) -> Option<T> { self.as_mut().try_wait() }
+}
