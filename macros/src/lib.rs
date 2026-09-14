@@ -59,3 +59,4 @@ pub fn derive_enum_from_backing_type(tokens: TokenStream) -> TokenStream {
 
 	TokenStream::from(expanded)
 }
+

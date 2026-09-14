@@ -37,10 +37,9 @@ use vulkano::{
 };
 
 use crate::{
-	engine_command::{EngineCommand, RenderInstruction}, 
-	render_engine::RenderEngineCreateInfo, 
-	vulkan::{
+	engine_command::{EngineCommand, RenderInstruction}, macros::error_to_unit_type, render_engine::RenderEngineCreateInfo, vulkan::{
 		mesh_data::MeshData, 
+		pipeline::{Pipeline, ShaderCollection}, 
 		shader::ShaderModule, 
 		surface::Surface,
 	},
@@ -52,13 +51,10 @@ pub struct RenderThread {
 
 	pub mesh_data:			HashMap<Uuid, MeshData>,
 	pub shader_modules:		HashMap<Uuid, ShaderModule>,
-	#[expect(unused)]
-	pub pipelines:			HashMap<Uuid, ()>,
+	pub pipelines:			HashMap<Uuid, ShaderCollection>,
 
-	#[expect(unused)]
-	pub render_passes: 		Vec<(Weak<RenderPass>, Uuid)>,
-	#[expect(unused)]
-	pub linked_pipelines:	HashMap<Uuid, HashMap<Uuid, ()>>,
+	pub render_passes: 		HashMap<Uuid, Arc<RenderPass>>,
+	pub linked_pipelines:	HashMap<Uuid, HashMap<Uuid, Pipeline>>,
 
 	pub surfaces:			HashMap<Uuid, Box<dyn Surface>>,
 
@@ -90,10 +86,10 @@ pub enum OperationType {
 
 impl RenderThread {
 	pub fn new(create_info: RenderEngineCreateInfo, command_channel: Receiver<EngineCommand>) -> Result<Self, ()> {
-		let sdl = sdl3::init().map_err(|_| ())?;
-		let video = sdl.video().map_err(|_| ())?;
+		let sdl = sdl3::init().map_err(error_to_unit_type!())?;
+		let video = sdl.video().map_err(error_to_unit_type!())?;
 
-		let library = VulkanLibrary::new().map_err(|_| ())?;
+		let library = VulkanLibrary::new().map_err(error_to_unit_type!())?;
 
 		let instance = Instance::new(
 			library, 
@@ -105,7 +101,7 @@ impl RenderThread {
 				enabled_extensions: create_info.generate_instance_extensions(&video)?,
 				..Default::default()
 			}
-		).map_err(|_| ())?;
+		).map_err(error_to_unit_type!())?;
 
 		let device_extensions = create_info.generate_device_extensions();
 		let device_features = create_info.generate_device_features();
@@ -125,7 +121,7 @@ impl RenderThread {
 			shader_modules:		HashMap::new(),
 			pipelines:			HashMap::new(),
 			
-			render_passes:		Vec::new(),
+			render_passes:		HashMap::new(),
 			linked_pipelines:	HashMap::new(),
 
 			surfaces:			HashMap::new(),
@@ -155,6 +151,7 @@ impl RenderThread {
 			match command {
 				EngineCommand::ProcessRenderInstructionBuffer { instructions, response } => response.send(self.process_render_instruction_buffer(instructions)),
 				EngineCommand::MeshDataCommand(command) => self.process_mesh_data_command(command),
+				EngineCommand::PipelineCommand(command) => self.process_pipeline_command(command),
 				EngineCommand::ShaderCommand(command) => self.process_shader_command(command),
 				EngineCommand::WindowSurfaceCommand(command) => self.process_window_surface_command(command),
 				EngineCommand::DropRenderThread => { self.should_close = true; }
@@ -181,7 +178,7 @@ impl RenderThread {
 	}
 
 	fn select_physical_device(instance: Arc<Instance>, device_extensions: DeviceExtensions, device_features: DeviceFeatures) -> Result<Arc<PhysicalDevice>, ()> {
-		Ok(instance.enumerate_physical_devices().map_err(|_| ())?
+		Ok(instance.enumerate_physical_devices().map_err(error_to_unit_type!())?
 			.filter(|pd| pd.supported_extensions().intersection(&device_extensions) == device_extensions)
 			.filter(|pd| pd.supported_features().intersection(&device_features) == device_features)
 			.map(|pd| {
@@ -237,7 +234,7 @@ impl RenderThread {
 				enabled_features: device_features,
 				..Default::default()
 			}
-		).map_err(|_| ())?;
+		).map_err(error_to_unit_type!())?;
 		
 		let mut queue_set = HashMap::new();
 		for queue in queues {
@@ -306,8 +303,8 @@ impl RenderEngineCreateInfo {
 		let window = WindowBuilder::new(video, "", 1, 1)
 			.hidden()
 			.build()
-			.map_err(|_| ())?;
-		let required_surface_extensions = VSurface::required_extensions(&window).map_err(|_| ())?;
+			.map_err(error_to_unit_type!())?;
+		let required_surface_extensions = VSurface::required_extensions(&window).map_err(error_to_unit_type!())?;
 
 		let instance_extensions = InstanceExtensions {
 			khr_surface: true,

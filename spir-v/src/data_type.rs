@@ -3,6 +3,7 @@ use crate::enumerations::{Dim, ImageFormat};
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq, Eq)]
 pub enum DataType {
 	Void,
 

@@ -5,7 +5,7 @@ use std::{
 };
 
 use render_engine::{
-	data_formats::Vertex3D, engine_future::EngineFuture, mesh_data::MeshData, render_engine::{RenderEngine, RenderEngineBackend, RenderEngineCreateInfo}, render_instruction_buffer::RenderInstructionBufferBuilder, shader::Shader, surface::{
+	data_formats::Vertex3D, engine_future::EngineFuture, mesh_data::MeshData, pipeline::{Pipeline, PipelineCreateInfo}, render_engine::{RenderEngine, RenderEngineBackend, RenderEngineCreateInfo}, render_instruction_buffer::RenderInstructionBufferBuilder, shader::Shader, surface::{
 		RenderPassCreateInfo, 
 		window_surface::{WindowSurface, WindowSurfaceCreateInfo},
 	},
@@ -75,7 +75,15 @@ fn main() -> () {
 	let vertex_binary = compiler.compile_from_source("vertex.glsl.vert", ShaderStage::Vertex, VERTEX_SOURCE).unwrap();
 	let vertex_shader = Shader::new(&render_engine, vertex_binary).wait().unwrap();
 	let fragment_binary = compiler.compile_from_source("fragment.glsl.frag", ShaderStage::Fragment, FRAGMENT_SOURCE).unwrap();
-	let fragment_shader = Shader::new(&render_engine, fragment_binary);
+	let fragment_shader = Shader::new(&render_engine, fragment_binary).wait().unwrap();
+	let pipeline = Pipeline::new(
+		&render_engine,
+		PipelineCreateInfo {
+			vertex_shader: vertex_shader,
+			fragment_shader: fragment_shader,
+			surfaces: &[&window]
+		}
+	).wait().unwrap();
 
 	let builder = RenderInstructionBufferBuilder::begin(&window);
 	let instruction_buffer = builder.build();

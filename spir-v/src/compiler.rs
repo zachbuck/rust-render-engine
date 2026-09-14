@@ -8,8 +8,7 @@ use shaderc::{
 };
 
 use crate::{
-	WarningResult, 
-	shader::{ShaderStage, SpirvShader},
+	WarningResult, macros::error_to_unit_type, shader::{ShaderStage, SpirvShader},
 };
 
 pub struct Compiler {
@@ -18,7 +17,7 @@ pub struct Compiler {
 
 impl Compiler {
 	pub fn new() -> Result<Self, ()> {
-		let compiler = SpirvCompiler::new().map_err(|_| ())?;
+		let compiler = SpirvCompiler::new().map_err(error_to_unit_type!())?;
 
 		Ok(Compiler {
 			compiler: compiler,
@@ -29,7 +28,7 @@ impl Compiler {
 	/// - Allow setting target Vulkan Version
 	/// - Allow setting source language
 	pub fn compile_from_source(&self, shader_name: &str, shader_type: ShaderStage, source: &str) -> WarningResult<SpirvShader, String, ()> {
-		let result = CompileOptions::new().map_err(|_| ());
+		let result = CompileOptions::new().map_err(error_to_unit_type!());
 		if result.is_err() { return WarningResult::new(Err(unsafe { result.unwrap_err_unchecked() }), Vec::new()) }
 		let mut options = result.unwrap();
 
@@ -42,7 +41,7 @@ impl Compiler {
 			shader_name, 
 			"main", 
 			Some(&options),
-		).map_err(|_| ());
+		).map_err(error_to_unit_type!());
 		if result.is_err() { return WarningResult::new(Err(unsafe { result.unwrap_err_unchecked() }), Vec::new()) }
 		let artifact = result.unwrap();
 

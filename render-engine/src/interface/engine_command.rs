@@ -1,11 +1,11 @@
 
+use std::sync::Arc;
+
 use spir_v::shader::SpirvShader;
 use uuid::Uuid;
 
 use crate::{
-	data_formats::Vertex3D, 
-	engine_future::channel_engine_future::ChannelEngineResponse, 
-	surface::{
+	data_formats::Vertex3D, engine_future::channel_engine_future::ChannelEngineResponse, shader::Shader, surface::{
 		RenderPassCreateInfo, 
 		window_surface::WindowSurfaceCreateInfo,
 	},
@@ -19,6 +19,7 @@ pub enum EngineCommand {
 	},
 	
 	MeshDataCommand(Box<MeshDataCommand>),
+	PipelineCommand(Box<PipelineCommand>),
 	ShaderCommand(Box<ShaderCommand>),
 	WindowSurfaceCommand(Box<WindowSurfaceCommand>),
 
@@ -52,6 +53,26 @@ impl Into<EngineCommand> for MeshDataCommand {
 }
 
 #[derive(Debug)]
+pub enum PipelineCommand {
+	CreatePipeline {
+		vertex_shader: 		Arc<Shader>,
+		fragment_shader: 	Arc<Shader>,
+
+		surfaces:			Box<[Uuid]>,
+
+		response:			ChannelEngineResponse<Result<(Uuid,), ()>>,
+	},
+
+	DropPipeline {
+		uuid: 				Uuid,
+	}
+}
+
+impl Into<EngineCommand> for PipelineCommand {
+	fn into(self) -> EngineCommand { EngineCommand::PipelineCommand(Box::new(self)) }
+}
+
+#[derive(Debug)]
 pub enum ShaderCommand {
 	CreateShader {
 		source: 	SpirvShader,
@@ -72,7 +93,6 @@ impl Into<EngineCommand> for ShaderCommand {
 pub enum WindowSurfaceCommand {
 	CreateWindowSurface {
 		create_info: 		WindowSurfaceCreateInfo,
-		#[expect(unused)]
 		render_pass_info: 	RenderPassCreateInfo,
 
 		response:			ChannelEngineResponse<Result<(Uuid,), ()>>,

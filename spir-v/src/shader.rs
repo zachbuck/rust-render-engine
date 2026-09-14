@@ -11,30 +11,40 @@ pub struct SpirvShader {
 	shader_stage: 		ShaderStage,
 	inputs:				Box<[DataType]>,
 	outputs: 			Box<[DataType]>,
-	uniforms: 			Box<[DescriptorSet]>,
+	uniforms: 			DescriptorCollection,
 }
 
+#[derive(Debug)]
 pub struct SpirvShaderInfo {
 	shader_stage: 		ShaderStage,
 	inputs:				Box<[DataType]>,
 	outputs:			Box<[DataType]>,
-	uniforms:			Box<[DescriptorSet]>,
+	uniforms:			DescriptorCollection,
 }
 
 #[derive(Clone, Copy)]
 #[derive(Debug)]
+#[derive(PartialEq, Eq)]
 pub enum ShaderStage {
 	Unknown,
 	Vertex,
 	Fragment,
 }
 
+#[derive(Clone)]
+#[derive(Debug)]
+pub struct DescriptorCollection {
+	pub descriptors: Vec<DescriptorSet>,
+}
+
+#[derive(Clone)]
 #[derive(Debug)]
 pub struct DescriptorSet {
 	pub set: u32,
-	pub bindings: Box<[DescriptorBinding]>
+	pub bindings: Vec<DescriptorBinding>
 }
 
+#[derive(Clone)]
 #[derive(Debug)]
 pub struct DescriptorBinding {
 	pub binding: u32,
@@ -65,18 +75,27 @@ impl SpirvShader {
 		}
 	}
 
+	pub fn get_info(&self) -> SpirvShaderInfo {
+		SpirvShaderInfo {
+			shader_stage:	self.shader_stage,
+			inputs:			self.inputs.clone(),
+			outputs:		self.outputs.clone(),
+			uniforms:		self.uniforms.clone(),
+		}
+	}
+
 	pub fn get_binary(&self) -> &[u32] { &self.binary }
 	pub fn get_stage(&self) -> &ShaderStage { &self.shader_stage }
 	pub fn get_inputs(&self) -> &[DataType] { &self.inputs }
 	pub fn get_outputs(&self) -> &[DataType] { &self.outputs }
-	pub fn get_uniforms(&self) -> &[DescriptorSet] { &self.uniforms }
+	pub fn get_uniforms(&self) -> &DescriptorCollection { &self.uniforms }
 }
 
 impl SpirvShaderInfo {
 	pub fn get_stage(&self) -> &ShaderStage { &self.shader_stage }
 	pub fn get_inputs(&self) -> &[DataType] { &self.inputs }
 	pub fn get_outputs(&self) -> &[DataType] { &self.outputs }
-	pub fn get_uniforms(&self) -> &[DescriptorSet] { &self.uniforms }
+	pub fn get_uniforms(&self) -> &DescriptorCollection { &self.uniforms }
 }
 
 impl Into<shaderc::ShaderKind> for ShaderStage {
@@ -95,5 +114,37 @@ impl From<ExecutionModel> for ShaderStage {
 			ExecutionModel::Vertex 		=> ShaderStage::Vertex,
 			ExecutionModel::Fragment 	=> ShaderStage::Fragment,
 		}
+	}
+}
+
+impl DescriptorCollection {
+	pub fn empty() -> Self {
+		DescriptorCollection {
+			descriptors: Vec::new(),
+		}
+	}
+
+	pub fn merge_with(mut self, other: Self) -> Result<Self, ()> {
+		for set in other.descriptors {
+			let descriptor_set;
+			let result = self.descriptors.binary_search_by_key(&set.set, |s| s.set);
+			if result.is_ok() {
+				descriptor_set = &mut self.descriptors[result.unwrap()];
+			} else {
+				self.descriptors.insert(result.unwrap_err(), DescriptorSet { set: set.set, bindings: Vec::new() });
+				descriptor_set = &mut self.descriptors[result.unwrap_err()];
+			}
+
+			for binding in set.bindings {
+				let result = descriptor_set.bindings.binary_search_by_key(&binding.binding, |b| b.binding);
+				if result.is_ok() {
+					if binding.data_type != descriptor_set.bindings[result.unwrap()].data_type { return Err(()) }
+				} else {
+					descriptor_set.bindings.insert(result.unwrap_err(), binding);
+				}
+			}
+		}
+
+		return Ok(self)
 	}
 }

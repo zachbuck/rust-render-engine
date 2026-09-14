@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+foldhash = "0.1.5"
 sdl3 = { version = "0.18.4", features = ["raw-window-handle", "build-from-source"] }
 spir-v = { path = "../spir-v" }
 uuid.workspace = true

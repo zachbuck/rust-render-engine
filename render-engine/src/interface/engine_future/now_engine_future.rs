@@ -6,7 +6,6 @@ pub struct NowEngineFuture<T> {
 }
 
 impl<T> NowEngineFuture<T> {
-	#[expect(unused)]
 	pub fn new(data: T) -> Self {
 		NowEngineFuture { data: Some(data) }
 	}
