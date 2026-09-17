@@ -6,7 +6,7 @@ members = ["macros", "parsing","render-engine"]
 [workspace.dependencies]
 foldhash = "0.1.5" # Can't be updated for compatibility with vulkano
 macros = { path = "./macros/" }
-shaderc = "0.10"
+shaderc = { version = "0.10", features = ["build-from-source"] }
 sdl3 = { version = "0.20", features = ["raw-window-handle", "build-from-source"] }
 syn = { version = "3" }
 parsing = { path = "./parsing/" }
