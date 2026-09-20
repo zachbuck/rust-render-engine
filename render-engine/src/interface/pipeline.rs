@@ -21,7 +21,7 @@ use crate::{
 };
 
 pub struct Pipeline {
-	uuid:					Uuid,
+	pub(crate) uuid:		Uuid,
 	command_channel:		Sender<EngineCommand>,
 
 	pub vertex_shader: 		Arc<Shader>,

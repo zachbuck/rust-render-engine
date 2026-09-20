@@ -21,8 +21,8 @@ use crate::{
 };
 
 pub struct MeshData {
-	uuid: Uuid,
-	command_channel: Sender<EngineCommand>,
+	pub(crate) uuid: 	Uuid,
+	command_channel: 	Sender<EngineCommand>,
 
 	pub vertex_format: 	PhantomData<Vertex3D>,
 	pub index_format: 	PhantomData<u32>,

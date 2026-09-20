@@ -11,7 +11,7 @@ use vulkano::{
 };
 
 use crate::{
-	macros::error_to_unit_type, surface::RenderPassCreateInfo as RenderPassInfo, vulkan::render_thread::{Operation, RenderThread},
+	macros::error_to_unit_type, surface::RenderPassCreateInfo as RenderPassInfo, vulkan::{render_object::RenderObject, render_thread::{Operation, RenderResources, RenderThread}},
 };
 
 pub mod window_surface;
@@ -19,6 +19,8 @@ pub mod window_surface;
 pub trait Surface {
 	fn begin_rendering(&mut self, allocator: &Arc<StandardCommandBufferAllocator>, graphics_queue: &Arc<Queue>) -> Result<(), ()>;
 	fn end_rendering(&mut self, graphics_queue: &Arc<Queue>, previous_operation: Operation) -> Result<Operation, ()>;
+
+	fn render_object(&mut self, render_object: &RenderObject, render_resources: &mut RenderResources) -> Result<(), ()>;
 
 	fn get_renderpass(&self) -> &Uuid;
 }

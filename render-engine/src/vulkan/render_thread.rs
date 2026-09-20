@@ -42,6 +42,7 @@ use crate::{
 	vulkan::{
 		mesh_data::MeshData, 
 		pipeline::{Pipeline, ShaderCollection}, 
+		render_object::RenderObject, 
 		shader::ShaderModule, 
 		surface::Surface,
 	},
@@ -59,6 +60,7 @@ pub struct RenderThread {
 	pub linked_pipelines:	HashMap<Uuid, HashMap<Uuid, Pipeline>>,
 
 	pub surfaces:			HashMap<Uuid, Box<dyn Surface>>,
+	pub render_objects:		HashMap<Uuid, RenderObject>,
 
 	pub video:				VideoSubsystem,
 
@@ -84,6 +86,11 @@ pub struct Operation {
 pub enum OperationType {
 	Graphics,
 	Transfer,
+}
+
+pub struct RenderResources<'a> {
+	pub mesh_data: &'a mut HashMap<Uuid, MeshData>,
+	pub pipelines: &'a mut HashMap<Uuid, HashMap<Uuid, Pipeline>>,
 }
 
 impl RenderThread {
@@ -127,6 +134,7 @@ impl RenderThread {
 			linked_pipelines:	HashMap::new(),
 
 			surfaces:			HashMap::new(),
+			render_objects:		HashMap::new(),
 
 			video:				video,
 
@@ -154,6 +162,7 @@ impl RenderThread {
 				EngineCommand::ProcessRenderInstructionBuffer { instructions, response } => response.send(self.process_render_instruction_buffer(instructions)),
 				EngineCommand::MeshDataCommand(command) => self.process_mesh_data_command(command),
 				EngineCommand::PipelineCommand(command) => self.process_pipeline_command(command),
+				EngineCommand::RenderObjectCommand(command) => self.process_render_object_command(command),
 				EngineCommand::ShaderCommand(command) => self.process_shader_command(command),
 				EngineCommand::WindowSurfaceCommand(command) => self.process_window_surface_command(command),
 				EngineCommand::DropRenderThread => { self.should_close = true; }
@@ -163,6 +172,10 @@ impl RenderThread {
 
 	fn process_render_instruction_buffer(&mut self, instructions: Box<[RenderInstruction]>) -> Result<(), ()> {
 		let mut active_surface = None;
+		let mut render_resources = RenderResources {
+			mesh_data: &mut self.mesh_data,
+			pipelines: &mut self.linked_pipelines,
+		};
 
 		for instruction in instructions {
 			match instruction {
@@ -173,6 +186,11 @@ impl RenderThread {
 				RenderInstruction::EndRendering => {
 					self.graphics_operation = active_surface.as_mut().unwrap().end_rendering(&self.graphics_queue, self.graphics_operation.clone())?;
 				},
+
+				RenderInstruction::RenderObject { uuid } => {
+					let render_object = self.render_objects.get(&uuid).unwrap();
+					active_surface.as_mut().unwrap().render_object(render_object, &mut render_resources)?;
+				}
 			}
 		}
 

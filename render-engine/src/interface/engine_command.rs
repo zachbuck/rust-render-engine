@@ -5,7 +5,10 @@ use parsing::spir_v::shader::SpirvShader;
 use uuid::Uuid;
 
 use crate::{
-	data_formats::Vertex3D, engine_future::channel_engine_future::ChannelEngineResponse, shader::Shader, surface::{
+	data_formats::Vertex3D, 
+	engine_future::channel_engine_future::ChannelEngineResponse, 
+	shader::Shader, 
+	surface::{
 		RenderPassCreateInfo, 
 		window_surface::WindowSurfaceCreateInfo,
 	},
@@ -20,6 +23,7 @@ pub enum EngineCommand {
 	
 	MeshDataCommand(Box<MeshDataCommand>),
 	PipelineCommand(Box<PipelineCommand>),
+	RenderObjectCommand(Box<RenderObjectCommand>),
 	ShaderCommand(Box<ShaderCommand>),
 	WindowSurfaceCommand(Box<WindowSurfaceCommand>),
 
@@ -32,6 +36,10 @@ pub enum RenderInstruction {
 		uuid: Uuid,
 	},
 	EndRendering,
+
+	RenderObject {
+		uuid: Uuid,
+	}
 }
 
 #[derive(Debug)]
@@ -70,6 +78,24 @@ pub enum PipelineCommand {
 
 impl Into<EngineCommand> for PipelineCommand {
 	fn into(self) -> EngineCommand { EngineCommand::PipelineCommand(Box::new(self)) }
+}
+
+#[derive(Debug)]
+pub enum RenderObjectCommand {
+	CreateRenderObject {
+		mesh_data: Uuid,
+		pipeline: Uuid,
+
+		response: ChannelEngineResponse<Result<(Uuid,), ()>>,
+	},
+
+	DropRenderObject {
+		uuid: Uuid,
+	},
+}
+
+impl Into<EngineCommand> for RenderObjectCommand {
+	fn into(self) -> EngineCommand { EngineCommand::RenderObjectCommand(Box::new(self)) }
 }
 
 #[derive(Debug)]

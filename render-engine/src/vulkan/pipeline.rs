@@ -52,8 +52,7 @@ pub struct ShaderCollection {
 }
 
 pub struct Pipeline {
-	#[expect(unused)]
-	pipeline: Arc<GraphicsPipeline>,
+	pub pipeline: Arc<GraphicsPipeline>,
 }
 
 impl RenderThread {
@@ -133,8 +132,6 @@ impl RenderThread {
 								DataType::ImageSampler { dimension: _, pixel_format: _, texture_format: _ } => DescriptorType::CombinedImageSampler,
 								_ => DescriptorType::StorageBuffer,
 							};
-						
-						println!("{:?}: {:?}", db.data_type, descriptor_type);
 
 						bindings.insert(db.binding, DescriptorSetLayoutBinding {
 							stages: ShaderStages::all_graphics(),

@@ -14,14 +14,13 @@ use crate::{
 };
 
 pub struct MeshData {
-	vertices: 	Subbuffer<[Vertex3D]>,
-	indices:	Subbuffer<[u32]>,
+	pub vertices: 	Subbuffer<[Vertex3D]>,
+	pub indices:	Subbuffer<[u32]>,
 
 	transfer_complete: Option<Operation>
 }
 
 impl MeshData {
-	#[expect(unused)]
 	pub fn bind<'a>(&mut self, builder: &'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) -> Result<&'a mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>, ()> {
 		if self.transfer_complete.is_some() {
 			let mut future = self.transfer_complete.take().unwrap();

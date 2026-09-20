@@ -12,15 +12,10 @@ use vulkano::{
 		SubpassBeginInfo, 
 		SubpassEndInfo, 
 		allocator::StandardCommandBufferAllocator,
-	}, 
-	device::Queue, 
-	format::{ClearValue, Format}, 
-	image::{
+	}, device::Queue, format::{ClearValue, Format}, image::{
 		ImageUsage, 
 		view::ImageView,
-	}, 
-	render_pass::{Framebuffer, FramebufferCreateInfo}, 
-	swapchain::{
+	}, pipeline::graphics::viewport::Viewport, render_pass::{Framebuffer, FramebufferCreateInfo}, swapchain::{
 		ColorSpace, 
 		PresentMode, 
 		Surface as VSurface, 
@@ -29,14 +24,12 @@ use vulkano::{
 		SwapchainCreateInfo, 
 		SwapchainPresentInfo, 
 		acquire_next_image,
-	}, 
-	sync::GpuFuture,
+	}, sync::GpuFuture,
 };
 
 use crate::{
 	engine_command::WindowSurfaceCommand, macros::error_to_unit_type, surface::{RenderPassCreateInfo, window_surface::WindowSurfaceCreateInfo}, vulkan::{
-		render_thread::{Operation, OperationType, RenderThread}, 
-		surface::Surface
+		render_object::RenderObject, render_thread::{Operation, OperationType, RenderResources, RenderThread}, surface::Surface
 	},
 };
 
@@ -89,6 +82,11 @@ impl Surface for WindowSurface {
 				SubpassBeginInfo::default()
 			).map_err(error_to_unit_type!())?;
 
+		builder.set_viewport(0, vec![Viewport {
+			offset: [0.0, 0.0],
+			extent: [framebuffer.extent()[0] as f32, framebuffer.extent()[1] as f32],
+			depth_range: 0.0..=1.0
+		}].into()).map_err(error_to_unit_type!())?;
 		self.builder = Some(builder);
 
 		Ok(())
@@ -141,6 +139,25 @@ impl Surface for WindowSurface {
 		*frame_operation = Operation::graphics(future);
 
 		return Ok(frame_operation.clone());
+	}
+
+	fn render_object(&mut self, render_object: &RenderObject, render_resources: &mut RenderResources) -> Result<(), ()> {
+		let mut builder = self.builder.take().unwrap();
+		
+		let mesh_data = render_resources.mesh_data.get_mut(&render_object.mesh_data).unwrap();
+		mesh_data.bind(&mut builder)?;
+
+		let pipeline = render_resources.pipelines.get(self.get_renderpass()).unwrap().get(&render_object.pipeline).unwrap();
+		builder
+			.bind_pipeline_graphics(pipeline.pipeline.clone()).map_err(error_to_unit_type!())?;
+
+		unsafe { builder
+			.draw_indexed(mesh_data.indices.len() as u32, 1, 0, 0, 0).map_err(error_to_unit_type!())?;
+		}
+
+		self.builder = Some(builder);
+
+		Ok(())
 	}
 
 	fn get_renderpass(&self) -> &Uuid { &self.render_pass }
