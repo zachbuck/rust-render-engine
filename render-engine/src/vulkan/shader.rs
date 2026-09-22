@@ -5,7 +5,7 @@ use vulkano::shader::{EntryPoint, ShaderModuleCreateInfo};
 
 use crate::{
 	engine_command::ShaderCommand, 
-	macros::error_to_unit_type, 
+	macros::{error_to_unit_type, none_to_unit_type}, 
 	vulkan::render_thread::RenderThread,
 };
 
@@ -31,7 +31,7 @@ impl RenderThread {
 			ShaderModuleCreateInfo::new(source.get_binary()),
 		) }.map_err(error_to_unit_type!())?;
 
-		let entry_point = module.entry_point("main").ok_or(())?;
+		let entry_point = module.entry_point("main").ok_or(none_to_unit_type!())?;
 
 		let shader_info = source.discard_binary();
 

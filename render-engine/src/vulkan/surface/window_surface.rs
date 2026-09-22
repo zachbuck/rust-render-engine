@@ -12,10 +12,16 @@ use vulkano::{
 		SubpassBeginInfo, 
 		SubpassEndInfo, 
 		allocator::StandardCommandBufferAllocator,
-	}, device::Queue, format::{ClearValue, Format}, image::{
+	}, 
+	device::Queue, 
+	format::{ClearValue, Format}, 
+	image::{
 		ImageUsage, 
 		view::ImageView,
-	}, pipeline::graphics::viewport::Viewport, render_pass::{Framebuffer, FramebufferCreateInfo}, swapchain::{
+	}, 
+	pipeline::graphics::viewport::Viewport, 
+	render_pass::{Framebuffer, FramebufferCreateInfo}, 
+	swapchain::{
 		ColorSpace, 
 		PresentMode, 
 		Surface as VSurface, 
@@ -24,12 +30,21 @@ use vulkano::{
 		SwapchainCreateInfo, 
 		SwapchainPresentInfo, 
 		acquire_next_image,
-	}, sync::GpuFuture,
+	}, 
+	sync::GpuFuture,
 };
 
 use crate::{
-	engine_command::WindowSurfaceCommand, macros::error_to_unit_type, surface::{RenderPassCreateInfo, window_surface::WindowSurfaceCreateInfo}, vulkan::{
-		render_object::RenderObject, render_thread::{Operation, OperationType, RenderResources, RenderThread}, surface::Surface
+	engine_command::WindowSurfaceCommand, 
+	macros::{error_to_unit_type, none_to_unit_type}, 
+	surface::{
+		RenderPassCreateInfo, 
+		window_surface::WindowSurfaceCreateInfo,
+	}, 
+	vulkan::{
+		render_object::RenderObject, 
+		render_thread::{Operation, OperationType, RenderResources, RenderThread}, 
+		surface::Surface
 	},
 };
 
@@ -192,7 +207,7 @@ impl RenderThread {
 		let (format, color_space) = surface_formats
 			.iter()
 			.find(|(f, cs)| *f == Format::R8G8B8A8_UNORM && *cs == ColorSpace::SrgbNonLinear)
-			.ok_or(())?;
+			.ok_or(none_to_unit_type!())?;
 
 		let render_pass_uuid = self.get_renderpass(render_pass_info)?;
 		let render_pass = self.render_passes.get(&render_pass_uuid).unwrap();

@@ -1,7 +1,7 @@
 
 use std::collections::HashMap;
 
-use crate::macros::error_to_unit_type;
+use crate::macros::{error_to_unit_type, none_to_unit_type};
 
 #[derive(Debug)]
 pub struct RawObjVertex {
@@ -61,9 +61,9 @@ V: From<RawObjVertex> {
 					.collect::<Vec<_>>();
 
 				position_data.push([
-					*line.get(0).ok_or(())?.as_ref().map_err(error_to_unit_type!())?,
-					*line.get(1).ok_or(())?.as_ref().map_err(error_to_unit_type!())?,
-					*line.get(2).ok_or(())?.as_ref().map_err(error_to_unit_type!())?,
+					*line.get(0).ok_or(none_to_unit_type!())?.as_ref().map_err(error_to_unit_type!())?,
+					*line.get(1).ok_or(none_to_unit_type!())?.as_ref().map_err(error_to_unit_type!())?,
+					*line.get(2).ok_or(none_to_unit_type!())?.as_ref().map_err(error_to_unit_type!())?,
 					*line.get(3).unwrap_or(&Ok(1.0)).as_ref().map_err(error_to_unit_type!())?,
 				]);
 				continue;
@@ -73,7 +73,7 @@ V: From<RawObjVertex> {
 					.collect::<Vec<_>>();
 
 				texture_data.push([
-					*line.get(0).ok_or(())?.as_ref().map_err(error_to_unit_type!())?,
+					*line.get(0).ok_or(none_to_unit_type!())?.as_ref().map_err(error_to_unit_type!())?,
 					*line.get(1).unwrap_or(&Ok(0.0)).as_ref().map_err(error_to_unit_type!())?,
 					*line.get(2).unwrap_or(&Ok(0.0)).as_ref().map_err(error_to_unit_type!())?,
 				]);
@@ -84,9 +84,9 @@ V: From<RawObjVertex> {
 					.collect::<Vec<_>>();
 
 				normal_data.push([
-					*line.get(0).ok_or(())?.as_ref().map_err(error_to_unit_type!())?,
-					*line.get(1).ok_or(())?.as_ref().map_err(error_to_unit_type!())?,
-					*line.get(2).ok_or(())?.as_ref().map_err(error_to_unit_type!())?,
+					*line.get(0).ok_or(none_to_unit_type!())?.as_ref().map_err(error_to_unit_type!())?,
+					*line.get(1).ok_or(none_to_unit_type!())?.as_ref().map_err(error_to_unit_type!())?,
+					*line.get(2).ok_or(none_to_unit_type!())?.as_ref().map_err(error_to_unit_type!())?,
 				]);
 				continue;
 			} else if line.starts_with("o ") {
@@ -124,7 +124,7 @@ V: From<RawObjVertex> {
 						($vertex: expr) => {
 							{
 								let vertex = (
-									*$vertex.get(0).ok_or(())?.as_ref().map_err(error_to_unit_type!())?,
+									*$vertex.get(0).ok_or(none_to_unit_type!())?.as_ref().map_err(error_to_unit_type!())?,
 									$vertex.get(1).map_or(None, |r| r.as_ref().ok()).map(|i| *i),
 									$vertex.get(2).map_or(None, |r| r.as_ref().ok()).map(|i| *i),
 								);

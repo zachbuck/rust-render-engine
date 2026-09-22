@@ -37,7 +37,7 @@ use vulkano::{
 
 use crate::{
 	engine_command::{EngineCommand, RenderInstruction}, 
-	macros::error_to_unit_type, 
+	macros::{error_to_unit_type, none_to_unit_type}, 
 	render_engine::RenderEngineCreateInfo, 
 	vulkan::{
 		mesh_data::MeshData, 
@@ -220,7 +220,7 @@ impl RenderThread {
 				}
 			})
 			.map(|(pd, _)| pd)
-			.ok_or(())?)
+			.ok_or(none_to_unit_type!())?)
 	}
 
 	fn select_queues(physical_device: Arc<PhysicalDevice>, device_extensions: DeviceExtensions, device_features: DeviceFeatures) -> Result<(Arc<Device>, (Arc<Queue>, Arc<Queue>)), ()> {
@@ -231,7 +231,7 @@ impl RenderThread {
 			.filter(|(_, qfp)| qfp.queue_flags.contains(QueueFlags::GRAPHICS))
 			.max_by_key(|(_, qfp)| qfp.queue_count)
 			.map(|(i, _)| (i as u32, 0u32))
-			.ok_or(())?;
+			.ok_or(none_to_unit_type!())?;
 		queue_set.insert((graphics_queue_family, graphics_queue_index));
 
 		let (transfer_queue_family, transfer_queue_index) = physical_device.queue_family_properties().iter()
