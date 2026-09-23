@@ -1,4 +1,6 @@
 
+use std::sync::Arc;
+
 use crate::spir_v::{
 	data_type::DataType, 
 	enumerations::{Decoration, Dim, ExecutionModel, ImageFormat, Instruction, StorageClass}, 
@@ -28,7 +30,7 @@ impl Interpreter {
 		stage.unwrap().into()
 	}
 
-	pub fn get_variable_layout(binary: &[u32]) -> (Box<[DataType]>, Box<[DataType]>, DescriptorCollection) {
+	pub fn get_variable_layout(binary: &[u32]) -> (Arc<[DataType]>, Arc<[DataType]>, DescriptorCollection) {
 		let bound = binary[3];
 
 		#[derive(Debug)]
@@ -292,8 +294,8 @@ impl Interpreter {
 			}
 		};
 
-		let inputs = inputs.into_boxed_slice();
-		let outputs = outputs.into_boxed_slice();
+		let inputs = inputs.into();
+		let outputs = outputs.into();
 
 		uniforms.iter_mut().for_each(|(_, bindings)| bindings.sort_by_key(|(b, _)| *b));
 		uniforms.sort_by_key(|(s, _)| *s);

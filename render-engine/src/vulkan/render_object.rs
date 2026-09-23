@@ -2,7 +2,7 @@
 use uuid::Uuid;
 
 use crate::{
-	engine_command::RenderObjectCommand, 
+	engine_command::render_object_command::RenderObjectCommand, 
 	vulkan::render_thread::RenderThread,
 };
 

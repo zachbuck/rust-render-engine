@@ -36,7 +36,10 @@ use vulkano::{
 };
 
 use crate::{
-	engine_command::{EngineCommand, RenderInstruction}, 
+	engine_command::{
+		EngineCommand, 
+		render_instruction::RenderInstruction,
+	}, 
 	macros::{debug_error, debug_none}, 
 	render_engine::RenderEngineCreateInfo, 
 	vulkan::{
@@ -170,14 +173,14 @@ impl RenderThread {
 		}
 	}
 
-	fn process_render_instruction_buffer(&mut self, instructions: Box<[RenderInstruction]>) -> Result<(), ()> {
+	fn process_render_instruction_buffer(&mut self, instructions: Arc<[RenderInstruction]>) -> Result<(), ()> {
 		let mut active_surface = None;
 		let mut render_resources = RenderResources {
 			mesh_data: &mut self.mesh_data,
 			pipelines: &mut self.linked_pipelines,
 		};
 
-		for instruction in instructions {
+		for instruction in instructions.iter() {
 			match instruction {
 				RenderInstruction::BeginRendering { uuid } => {
 					active_surface = self.surfaces.get_mut(&uuid);

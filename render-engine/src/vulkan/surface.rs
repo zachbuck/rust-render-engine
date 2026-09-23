@@ -11,7 +11,12 @@ use vulkano::{
 };
 
 use crate::{
-	macros::debug_error, surface::RenderPassCreateInfo as RenderPassInfo, vulkan::{render_object::RenderObject, render_thread::{Operation, RenderResources, RenderThread}},
+	macros::debug_error, 
+	surface::RenderPassCreateInfo as RenderPassInfo, 
+	vulkan::{
+		render_object::RenderObject, 
+		render_thread::{Operation, RenderResources, RenderThread},
+	},
 };
 
 pub mod window_surface;

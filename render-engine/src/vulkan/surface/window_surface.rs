@@ -35,7 +35,7 @@ use vulkano::{
 };
 
 use crate::{
-	engine_command::WindowSurfaceCommand, 
+	engine_command::window_surface_command::WindowSurfaceCommand, 
 	macros::{debug_error, debug_none}, 
 	surface::{
 		RenderPassCreateInfo, 
@@ -48,7 +48,9 @@ use crate::{
 	},
 };
 
-// TODO: Add viewports
+/* TODO 
+	- [ ] Add viewports
+*/
 pub struct WindowSurface {
 	#[expect(unused)]
 	window:			Window,

@@ -7,7 +7,10 @@ use std::sync::{
 use uuid::Uuid;
 
 use crate::{
-	engine_command::{EngineCommand, WindowSurfaceCommand}, 
+	engine_command::{
+		EngineCommand, 
+		window_surface_command::WindowSurfaceCommand
+	}, 
 	engine_future::{
 		EngineFuture, 
 		channel_engine_future::ChannelEngineFuture, 
@@ -17,6 +20,12 @@ use crate::{
 	surface::{RenderPassCreateInfo, Surface, SurfaceInfo},
 };
 
+/* TODO
+	- [ ] Add subpasses
+	- [ ] Depth Testing
+	- [ ] clear values per texture
+	- [ ] access to properties of the window on the system
+ */
 pub struct WindowSurface {
 	uuid: 				Uuid,
 	command_channel: 	Sender<EngineCommand>,

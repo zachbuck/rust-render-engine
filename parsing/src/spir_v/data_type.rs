@@ -1,6 +1,9 @@
 
 use crate::spir_v::enumerations::{Dim, ImageFormat};
 
+/* TODO
+	- [ ] Add Runtime Arrays
+ */
 #[derive(Clone)]
 #[derive(Debug)]
 #[derive(PartialEq, Eq)]

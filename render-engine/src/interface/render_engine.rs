@@ -8,10 +8,14 @@ use std::{
 };
 
 use crate::{
-	engine_command::EngineCommand, engine_future::{
+	engine_command::EngineCommand, 
+	engine_future::{
 		EngineFuture, 
 		channel_engine_future::ChannelEngineFuture,
-	}, macros::debug_error, render_instruction_buffer::RenderInstructionBuffer, vulkan::render_thread::start_vulkan_render_thread,
+	}, 
+	macros::debug_error, 
+	render_instruction_buffer::RenderInstructionBuffer, 
+	vulkan::render_thread::start_vulkan_render_thread,
 };
 
 pub struct RenderEngine {
@@ -47,11 +51,11 @@ impl RenderEngine {
 		}))
 	}
 
-	pub fn submit_render_instructions(&self, buffer: RenderInstructionBuffer) -> impl EngineFuture<Result<(), ()>> {
+	pub fn submit_render_instructions(&self, buffer: &RenderInstructionBuffer) -> impl EngineFuture<Result<(), ()>> {
 		let (future, response) = ChannelEngineFuture::new();
 
 		let _ = self.command_channel.send(EngineCommand::ProcessRenderInstructionBuffer { 
-			instructions: 	buffer.buffer, 
+			instructions: 	buffer.buffer.clone(), 
 			response: 		response,
 		});
 

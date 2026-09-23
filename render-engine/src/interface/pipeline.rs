@@ -8,7 +8,10 @@ use parsing::spir_v::shader::ShaderStage;
 use uuid::Uuid;
 
 use crate::{
-	engine_command::{EngineCommand, PipelineCommand}, 
+	engine_command::{
+		EngineCommand, 
+		pipeline_command::PipelineCommand,
+	}, 
 	engine_future::{
 		EngineFuture, 
 		channel_engine_future::ChannelEngineFuture, 

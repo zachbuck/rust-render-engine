@@ -35,7 +35,7 @@ use vulkano::{
 
 use crate::{
 	data_formats::Vertex3D, 
-	engine_command::PipelineCommand, 
+	engine_command::pipeline_command::PipelineCommand, 
 	macros::debug_error, 
 	shader::Shader, 
 	vulkan::{

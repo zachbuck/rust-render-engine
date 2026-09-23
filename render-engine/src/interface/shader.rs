@@ -11,7 +11,10 @@ use parsing::spir_v::{
 use uuid::Uuid;
 
 use crate::{
-	engine_command::{EngineCommand, ShaderCommand}, 
+	engine_command::{
+		EngineCommand, 
+		shader_command::ShaderCommand,
+	}, 
 	engine_future::{
 		EngineFuture, 
 		channel_engine_future::ChannelEngineFuture, 
@@ -20,6 +23,9 @@ use crate::{
 	render_engine::RenderEngine, 
 };
 
+/* TODO
+	- [ ] Add support for more than Vertex and Fragment shaders
+ */
 #[derive(Debug)]
 pub struct Shader {
 	uuid: 				Uuid,

@@ -1,4 +1,6 @@
 
+use std::sync::Arc;
+
 use crate::spir_v::{
 	data_type::DataType, 
 	enumerations::ExecutionModel, 
@@ -7,18 +9,18 @@ use crate::spir_v::{
 
 #[derive(Debug)]
 pub struct SpirvShader {
-	binary: 			Box<[u32]>,
+	binary: 			Arc<[u32]>,
 	shader_stage: 		ShaderStage,
-	inputs:				Box<[DataType]>,
-	outputs: 			Box<[DataType]>,
+	inputs:				Arc<[DataType]>,
+	outputs: 			Arc<[DataType]>,
 	uniforms: 			DescriptorCollection,
 }
 
 #[derive(Debug)]
 pub struct SpirvShaderInfo {
 	shader_stage: 		ShaderStage,
-	inputs:				Box<[DataType]>,
-	outputs:			Box<[DataType]>,
+	inputs:				Arc<[DataType]>,
+	outputs:			Arc<[DataType]>,
 	uniforms:			DescriptorCollection,
 }
 
@@ -52,7 +54,7 @@ pub struct DescriptorBinding {
 }
 
 impl SpirvShader {
-	pub unsafe fn from_binary(binary: Box<[u32]>) -> Self {
+	pub unsafe fn from_binary(binary: Arc<[u32]>) -> Self {
 		let stage = Interpreter::get_shader_stage(&binary);
 
 		let (inputs, outputs, uniforms) = Interpreter::get_variable_layout(&binary);

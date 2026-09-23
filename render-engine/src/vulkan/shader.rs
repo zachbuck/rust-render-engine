@@ -4,7 +4,7 @@ use uuid::Uuid;
 use vulkano::shader::{EntryPoint, ShaderModuleCreateInfo};
 
 use crate::{
-	engine_command::ShaderCommand, 
+	engine_command::shader_command::ShaderCommand, 
 	macros::{debug_error, debug_none}, 
 	vulkan::render_thread::RenderThread,
 };

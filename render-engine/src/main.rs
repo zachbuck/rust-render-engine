@@ -83,7 +83,7 @@ fn main() -> () {
 	builder
 		.render_object(&render_object);
 	let instruction_buffer = builder.build();
-	render_engine.submit_render_instructions(instruction_buffer).wait().unwrap();
+	render_engine.submit_render_instructions(&instruction_buffer).wait().unwrap();
 
 	thread::sleep(Duration::from_secs(5));
 }

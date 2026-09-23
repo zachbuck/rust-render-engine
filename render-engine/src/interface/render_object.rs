@@ -7,13 +7,23 @@ use std::sync::{
 use uuid::Uuid;
 
 use crate::{
-	engine_command::{EngineCommand, RenderObjectCommand}, engine_future::{
+	engine_command::{
+		EngineCommand, 
+		render_object_command::RenderObjectCommand,
+	}, 
+	engine_future::{
 		EngineFuture, 
 		channel_engine_future::ChannelEngineFuture, 
 		then_transform_future::ThenTransformFuture,
-	}, mesh_data::MeshData, pipeline::Pipeline, render_engine::RenderEngine,
+	}, 
+	mesh_data::MeshData, 
+	pipeline::Pipeline, 
+	render_engine::RenderEngine,
 };
 
+/* TODO
+	- [ ] Add descriptors
+ */
 pub struct RenderObject {
 	pub(crate) uuid: Uuid,
 	command_channel: Sender<EngineCommand>,
@@ -23,8 +33,9 @@ pub struct RenderObject {
 }
 
 impl RenderObject {
-	// TODO
-	// - Check mesh compatibility with pipeline input
+	/* TODO
+	- [ ] Check `mesh_data.vertex_format` against `pipeline.inputs`
+	 */
 	pub fn new(render_engine: &Arc<RenderEngine>, mesh_data: Arc<MeshData>, pipeline: Arc<Pipeline>) -> impl EngineFuture<Result<Arc<Self>, ()>> {
 		let command_channel = render_engine.command_channel.clone();
 		

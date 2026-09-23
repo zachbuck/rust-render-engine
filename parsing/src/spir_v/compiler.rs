@@ -1,4 +1,6 @@
 
+use std::sync::Arc;
+
 use shaderc::{
 	CompileOptions, 
 	Compiler as SpirvCompiler, 
@@ -28,9 +30,11 @@ impl Compiler {
 		})
 	}
 
-	/// TODO
-	/// - Allow setting target Vulkan Version
-	/// - Allow setting source language
+	/* TODO
+	- [ ] allow setting target version
+	- [ ] allow setting source language
+	- [ ] allow specifying includes
+	 */
 	pub fn compile_from_source(&self, shader_name: &str, shader_type: ShaderStage, source: &str) -> WarningResult<SpirvShader, String, ()> {
 		let result = CompileOptions::new().map_err(debug_error!());
 		if result.is_err() { return WarningResult::new(Err(unsafe { result.unwrap_err_unchecked() }), Vec::new()) }
@@ -49,7 +53,7 @@ impl Compiler {
 		if result.is_err() { return WarningResult::new(Err(unsafe { result.unwrap_err_unchecked() }), Vec::new()) }
 		let artifact = result.unwrap();
 
-		let binary = artifact.as_binary().to_owned().into_boxed_slice();
+		let binary = artifact.as_binary().iter().map(|w| *w).collect::<Arc<[_]>>();
 
 		let shader = unsafe { SpirvShader::from_binary(binary) };
 

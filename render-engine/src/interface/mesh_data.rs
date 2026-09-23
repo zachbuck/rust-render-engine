@@ -11,7 +11,10 @@ use uuid::Uuid;
 
 use crate::{
 	data_formats::Vertex3D, 
-	engine_command::{EngineCommand, MeshDataCommand}, 
+	engine_command::{
+		EngineCommand, 
+		mesh_data_command::MeshDataCommand,
+	}, 
 	engine_future::{
 		EngineFuture, 
 		channel_engine_future::ChannelEngineFuture, 
@@ -20,6 +23,10 @@ use crate::{
 	render_engine::RenderEngine,
 };
 
+/* TODO
+	- [ ] Other Vertices
+	- [ ] Other index lengths
+ */
 pub struct MeshData {
 	pub(crate) uuid: 	Uuid,
 	command_channel: 	Sender<EngineCommand>,

@@ -8,6 +8,9 @@ pub trait EngineFuture<T> {
 	fn try_wait(&mut self) -> Option<T>;
 }
 
+/* TODO
+	- [ ] I feel like there's a better way to be able to return `dyn EngineFuture<_>` from a function
+*/
 impl<T> EngineFuture<T> for Box<dyn EngineFuture<T>> {
 	fn wait(mut self) -> T {
 		loop {
@@ -17,5 +20,7 @@ impl<T> EngineFuture<T> for Box<dyn EngineFuture<T>> {
 			}
 		}
 	}
-	fn try_wait(&mut self) -> Option<T> { self.as_mut().try_wait() }
+	fn try_wait(&mut self) -> Option<T> { 
+		self.as_mut().try_wait() 
+	}
 }

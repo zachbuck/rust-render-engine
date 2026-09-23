@@ -2,13 +2,13 @@
 use std::sync::Arc;
 
 use crate::{
-	engine_command::RenderInstruction, 
+	engine_command::render_instruction::RenderInstruction, 
 	render_object::RenderObject, 
 	surface::Surface,
 };
 
 pub struct RenderInstructionBuffer {
-	pub(crate) buffer: Box<[RenderInstruction]>
+	pub(crate) buffer: Arc<[RenderInstruction]>
 }
 
 pub struct RenderInstructionBufferBuilder {
@@ -42,7 +42,7 @@ impl RenderInstructionBufferBuilder {
 	pub fn build(mut self) -> RenderInstructionBuffer {
 		self.buffer.push(RenderInstruction::EndRendering);
 
-		let buffer = self.buffer.into_boxed_slice();
+		let buffer = self.buffer.into_iter().collect::<Arc<[_]>>();
 
 		RenderInstructionBuffer { buffer }
 	}
