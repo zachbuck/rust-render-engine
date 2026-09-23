@@ -5,7 +5,7 @@ use vulkano::shader::{EntryPoint, ShaderModuleCreateInfo};
 
 use crate::{
 	engine_command::ShaderCommand, 
-	macros::{error_to_unit_type, none_to_unit_type}, 
+	macros::{debug_error, debug_none}, 
 	vulkan::render_thread::RenderThread,
 };
 
@@ -29,9 +29,9 @@ impl RenderThread {
 		let module = unsafe { vulkano::shader::ShaderModule::new(
 			self.device.clone(), 
 			ShaderModuleCreateInfo::new(source.get_binary()),
-		) }.map_err(error_to_unit_type!())?;
+		) }.map_err(debug_error!())?;
 
-		let entry_point = module.entry_point("main").ok_or(none_to_unit_type!())?;
+		let entry_point = module.entry_point("main").ok_or_else(debug_none!())?;
 
 		let shader_info = source.discard_binary();
 

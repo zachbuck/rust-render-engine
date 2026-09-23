@@ -11,7 +11,7 @@ use vulkano::{
 };
 
 use crate::{
-	macros::error_to_unit_type, surface::RenderPassCreateInfo as RenderPassInfo, vulkan::{render_object::RenderObject, render_thread::{Operation, RenderResources, RenderThread}},
+	macros::debug_error, surface::RenderPassCreateInfo as RenderPassInfo, vulkan::{render_object::RenderObject, render_thread::{Operation, RenderResources, RenderThread}},
 };
 
 pub mod window_surface;
@@ -60,7 +60,7 @@ impl RenderThread {
 				],
 				..Default::default()
 			}
-		).map_err(error_to_unit_type!())?;
+		).map_err(debug_error!())?;
 
 		self.render_passes.insert(uuid, renderpass);
 

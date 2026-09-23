@@ -10,7 +10,7 @@ use vulkano::{
 };
 
 use crate::{
-	data_formats::Vertex3D, engine_command::MeshDataCommand, macros::error_to_unit_type, vulkan::render_thread::{Operation, RenderThread},
+	data_formats::Vertex3D, engine_command::MeshDataCommand, macros::debug_error, vulkan::render_thread::{Operation, RenderThread},
 };
 
 pub struct MeshData {
@@ -29,8 +29,8 @@ impl MeshData {
 		}
 
 		builder
-			.bind_vertex_buffers(0, self.vertices.clone()).map_err(error_to_unit_type!())?
-			.bind_index_buffer(self.indices.clone()).map_err(error_to_unit_type!())?;
+			.bind_vertex_buffers(0, self.vertices.clone()).map_err(debug_error!())?
+			.bind_index_buffer(self.indices.clone()).map_err(debug_error!())?;
 
 		Ok(builder)
 	}
@@ -51,7 +51,7 @@ impl RenderThread {
 			self.command_allocator.clone(), 
 			self.transfer_queue.queue_family_index(), 
 			CommandBufferUsage::OneTimeSubmit,
-		).map_err(error_to_unit_type!())?;
+		).map_err(debug_error!())?;
 
 		let vertex_final = Buffer::new_slice(
 			self.buffer_allocator.clone(), 
@@ -64,7 +64,7 @@ impl RenderThread {
 				..Default::default()
 			},
 			(vertices.len() * size_of::<Vertex3D>()) as u64,
-		).map_err(error_to_unit_type!())?;
+		).map_err(debug_error!())?;
 
 		let vertex_initial = Buffer::from_iter(
 			self.buffer_allocator.clone(), 
@@ -77,9 +77,9 @@ impl RenderThread {
 				..Default::default()
 			}, 
 			vertices
-		).map_err(error_to_unit_type!())?;
+		).map_err(debug_error!())?;
 
-		builder.copy_buffer(CopyBufferInfo::buffers(vertex_initial, vertex_final.clone())).map_err(error_to_unit_type!())?;
+		builder.copy_buffer(CopyBufferInfo::buffers(vertex_initial, vertex_final.clone())).map_err(debug_error!())?;
 
 		let index_final = Buffer::new_slice(
 			self.buffer_allocator.clone(), 
@@ -92,7 +92,7 @@ impl RenderThread {
 				..Default::default()
 			}, 
 		(indices.len() * size_of::<u32>()) as u64,
-		).map_err(error_to_unit_type!())?;
+		).map_err(debug_error!())?;
 
 		let index_initial = Buffer::from_iter(
 			self.buffer_allocator.clone(), 
@@ -105,21 +105,21 @@ impl RenderThread {
 				..Default::default()
 			}, 
 			indices
-		).map_err(error_to_unit_type!())?;
+		).map_err(debug_error!())?;
 
-		builder.copy_buffer(CopyBufferInfo::buffers(index_initial, index_final.clone())).map_err(error_to_unit_type!())?;
+		builder.copy_buffer(CopyBufferInfo::buffers(index_initial, index_final.clone())).map_err(debug_error!())?;
 
-		let command_buffer = builder.build().map_err(error_to_unit_type!())?;
+		let command_buffer = builder.build().map_err(debug_error!())?;
 
 		let future;
 		if self.transfer_operation.future.is_some() {
 			future = Arc::new(self.transfer_operation.future.take().unwrap()
-				.then_execute(self.transfer_queue.clone(), command_buffer).map_err(error_to_unit_type!())?.boxed_send()
-				.then_signal_fence_and_flush().map_err(error_to_unit_type!())?)
+				.then_execute(self.transfer_queue.clone(), command_buffer).map_err(debug_error!())?.boxed_send()
+				.then_signal_fence_and_flush().map_err(debug_error!())?)
 		} else {
 			future = Arc::new(sync::now(self.device.clone())
-				.then_execute(self.transfer_queue.clone(), command_buffer).map_err(error_to_unit_type!())?.boxed_send()
-				.then_signal_fence_and_flush().map_err(error_to_unit_type!())?)
+				.then_execute(self.transfer_queue.clone(), command_buffer).map_err(debug_error!())?.boxed_send()
+				.then_signal_fence_and_flush().map_err(debug_error!())?)
 		}
 		let operation = Operation::transfer(future);
 		self.transfer_operation = operation.clone();

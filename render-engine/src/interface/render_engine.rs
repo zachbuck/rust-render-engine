@@ -11,7 +11,7 @@ use crate::{
 	engine_command::EngineCommand, engine_future::{
 		EngineFuture, 
 		channel_engine_future::ChannelEngineFuture,
-	}, macros::error_to_unit_type, render_instruction_buffer::RenderInstructionBuffer, vulkan::render_thread::start_vulkan_render_thread,
+	}, macros::debug_error, render_instruction_buffer::RenderInstructionBuffer, vulkan::render_thread::start_vulkan_render_thread,
 };
 
 pub struct RenderEngine {
@@ -37,7 +37,7 @@ impl RenderEngine {
 		let _ = ThreadBuilder::new()
 			.name("Render Thread".to_string())
 			.spawn(move || start_vulkan_render_thread!(create_info, receiver, response))
-			.map_err(error_to_unit_type!())?;
+			.map_err(debug_error!())?;
 
 		let result = future.wait();
 		if let Err(e) = result { return Err(e) }

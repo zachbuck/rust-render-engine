@@ -36,7 +36,7 @@ use vulkano::{
 
 use crate::{
 	engine_command::WindowSurfaceCommand, 
-	macros::{error_to_unit_type, none_to_unit_type}, 
+	macros::{debug_error, debug_none}, 
 	surface::{
 		RenderPassCreateInfo, 
 		window_surface::WindowSurfaceCreateInfo,
@@ -74,11 +74,11 @@ impl Surface for WindowSurface {
 			allocator.clone(), 
 			graphics_queue.queue_family_index(), 
 			CommandBufferUsage::OneTimeSubmit,
-		).map_err(error_to_unit_type!())?;
+		).map_err(debug_error!())?;
 
 		if self.recreate_swapchain { todo!() /* Recreate swapchain */ }
 
-		let (index, suboptimal, acquire_future) = acquire_next_image(self.swapchain.clone(), None).map_err(error_to_unit_type!())?;
+		let (index, suboptimal, acquire_future) = acquire_next_image(self.swapchain.clone(), None).map_err(debug_error!())?;
 		self.index = Some(index);
 		self.recreate_swapchain = suboptimal;
 		self.acquire_future = Some(acquire_future);
@@ -95,13 +95,13 @@ impl Surface for WindowSurface {
 					..RenderPassBeginInfo::framebuffer(framebuffer.clone())
 				},
 				SubpassBeginInfo::default()
-			).map_err(error_to_unit_type!())?;
+			).map_err(debug_error!())?;
 
 		builder.set_viewport(0, vec![Viewport {
 			offset: [0.0, 0.0],
 			extent: [framebuffer.extent()[0] as f32, framebuffer.extent()[1] as f32],
 			depth_range: 0.0..=1.0
-		}].into()).map_err(error_to_unit_type!())?;
+		}].into()).map_err(debug_error!())?;
 		self.builder = Some(builder);
 
 		Ok(())
@@ -114,11 +114,11 @@ impl Surface for WindowSurface {
 		builder
 			.end_render_pass(
 				SubpassEndInfo::default()
-			).map_err(error_to_unit_type!())?;
+			).map_err(debug_error!())?;
 
 		let command_buffer = builder
 			.build()
-			.map_err(error_to_unit_type!())?;
+			.map_err(debug_error!())?;
 
 		let frame_operation = &mut self.futures[index];
 
@@ -147,9 +147,9 @@ impl Surface for WindowSurface {
 		let future = future.unwrap(); 
 
 		let future = Arc::new(future
-			.then_execute(graphics_queue.clone(), command_buffer).map_err(error_to_unit_type!())?
+			.then_execute(graphics_queue.clone(), command_buffer).map_err(debug_error!())?
 			.then_swapchain_present(graphics_queue.clone(), SwapchainPresentInfo::swapchain_image_index(self.swapchain.clone(), self.index.unwrap())).boxed_send()
-			.then_signal_fence_and_flush().map_err(error_to_unit_type!())?);
+			.then_signal_fence_and_flush().map_err(debug_error!())?);
 
 		*frame_operation = Operation::graphics(future);
 
@@ -164,10 +164,10 @@ impl Surface for WindowSurface {
 
 		let pipeline = render_resources.pipelines.get(self.get_renderpass()).unwrap().get(&render_object.pipeline).unwrap();
 		builder
-			.bind_pipeline_graphics(pipeline.pipeline.clone()).map_err(error_to_unit_type!())?;
+			.bind_pipeline_graphics(pipeline.pipeline.clone()).map_err(debug_error!())?;
 
 		unsafe { builder
-			.draw_indexed(mesh_data.indices.len() as u32, 1, 0, 0, 0).map_err(error_to_unit_type!())?;
+			.draw_indexed(mesh_data.indices.len() as u32, 1, 0, 0, 0).map_err(debug_error!())?;
 		}
 
 		self.builder = Some(builder);
@@ -190,24 +190,24 @@ impl RenderThread {
 		let uuid = Uuid::now_v7();
 
 		let window = WindowBuilder::new(&self.video, &create_info.title, create_info.dimensions[0], create_info.dimensions[1])
-			.build().map_err(error_to_unit_type!())?;
+			.build().map_err(debug_error!())?;
 
-		let vulkan_surface = unsafe { VSurface::from_window_ref(self.instance.clone(), &window).map_err(error_to_unit_type!())? };
+		let vulkan_surface = unsafe { VSurface::from_window_ref(self.instance.clone(), &window).map_err(debug_error!())? };
 
 		let surface_capabilities = self.device
 			.physical_device()
 			.surface_capabilities(&vulkan_surface, Default::default())
-			.map_err(error_to_unit_type!())?;
+			.map_err(debug_error!())?;
 
 		let surface_formats = self.device
 			.physical_device()
 			.surface_formats(&vulkan_surface, Default::default())
-			.map_err(error_to_unit_type!())?;
+			.map_err(debug_error!())?;
 
 		let (format, color_space) = surface_formats
 			.iter()
 			.find(|(f, cs)| *f == Format::R8G8B8A8_UNORM && *cs == ColorSpace::SrgbNonLinear)
-			.ok_or(none_to_unit_type!())?;
+			.ok_or_else(debug_none!())?;
 
 		let render_pass_uuid = self.get_renderpass(render_pass_info)?;
 		let render_pass = self.render_passes.get(&render_pass_uuid).unwrap();
@@ -224,11 +224,11 @@ impl RenderThread {
 				present_mode: PresentMode::Fifo,
 				..Default::default()
 			},
-		).map_err(error_to_unit_type!())?;
+		).map_err(debug_error!())?;
 
 		let mut framebuffers = Vec::with_capacity(images.len());
 		for x in 0..images.len() {
-			let output = ImageView::new_default(images[x].clone()).map_err(error_to_unit_type!())?;
+			let output = ImageView::new_default(images[x].clone()).map_err(debug_error!())?;
 
 			framebuffers.push(Framebuffer::new(
 				render_pass.clone(), 
@@ -239,7 +239,7 @@ impl RenderThread {
 					extent: [window.size().0, window.size().1],
 					..Default::default()
 				},
-			).map_err(error_to_unit_type!())?);
+			).map_err(debug_error!())?);
 		}
 		let framebuffers = framebuffers.into_boxed_slice();
 

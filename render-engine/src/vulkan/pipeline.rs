@@ -36,7 +36,7 @@ use vulkano::{
 use crate::{
 	data_formats::Vertex3D, 
 	engine_command::PipelineCommand, 
-	macros::error_to_unit_type, 
+	macros::debug_error, 
 	shader::Shader, 
 	vulkan::{
 		render_thread::RenderThread, 
@@ -176,7 +176,7 @@ impl RenderThread {
 				subpass:				Some(render_pass.first_subpass().into()),
 				..GraphicsPipelineCreateInfo::layout(layout)
 			}
-		).map_err(error_to_unit_type!()).unwrap();
+		).map_err(debug_error!()).unwrap();
 
 		Pipeline {
 			pipeline: internal,

@@ -37,7 +37,7 @@ use vulkano::{
 
 use crate::{
 	engine_command::{EngineCommand, RenderInstruction}, 
-	macros::{error_to_unit_type, none_to_unit_type}, 
+	macros::{debug_error, debug_none}, 
 	render_engine::RenderEngineCreateInfo, 
 	vulkan::{
 		mesh_data::MeshData, 
@@ -95,10 +95,10 @@ pub struct RenderResources<'a> {
 
 impl RenderThread {
 	pub fn new(create_info: RenderEngineCreateInfo, command_channel: Receiver<EngineCommand>) -> Result<Self, ()> {
-		let sdl = sdl3::init().map_err(error_to_unit_type!())?;
-		let video = sdl.video().map_err(error_to_unit_type!())?;
+		let sdl = sdl3::init().map_err(debug_error!())?;
+		let video = sdl.video().map_err(debug_error!())?;
 
-		let library = VulkanLibrary::new().map_err(error_to_unit_type!())?;
+		let library = VulkanLibrary::new().map_err(debug_error!())?;
 
 		let instance = Instance::new(
 			library, 
@@ -110,7 +110,7 @@ impl RenderThread {
 				enabled_extensions: create_info.generate_instance_extensions(&video)?,
 				..Default::default()
 			}
-		).map_err(error_to_unit_type!())?;
+		).map_err(debug_error!())?;
 
 		let device_extensions = create_info.generate_device_extensions();
 		let device_features = create_info.generate_device_features();
@@ -198,7 +198,7 @@ impl RenderThread {
 	}
 
 	fn select_physical_device(instance: Arc<Instance>, device_extensions: DeviceExtensions, device_features: DeviceFeatures) -> Result<Arc<PhysicalDevice>, ()> {
-		Ok(instance.enumerate_physical_devices().map_err(error_to_unit_type!())?
+		Ok(instance.enumerate_physical_devices().map_err(debug_error!())?
 			.filter(|pd| pd.supported_extensions().intersection(&device_extensions) == device_extensions)
 			.filter(|pd| pd.supported_features().intersection(&device_features) == device_features)
 			.map(|pd| {
@@ -220,7 +220,7 @@ impl RenderThread {
 				}
 			})
 			.map(|(pd, _)| pd)
-			.ok_or(none_to_unit_type!())?)
+			.ok_or_else(debug_none!())?)
 	}
 
 	fn select_queues(physical_device: Arc<PhysicalDevice>, device_extensions: DeviceExtensions, device_features: DeviceFeatures) -> Result<(Arc<Device>, (Arc<Queue>, Arc<Queue>)), ()> {
@@ -231,7 +231,7 @@ impl RenderThread {
 			.filter(|(_, qfp)| qfp.queue_flags.contains(QueueFlags::GRAPHICS))
 			.max_by_key(|(_, qfp)| qfp.queue_count)
 			.map(|(i, _)| (i as u32, 0u32))
-			.ok_or(none_to_unit_type!())?;
+			.ok_or_else(debug_none!())?;
 		queue_set.insert((graphics_queue_family, graphics_queue_index));
 
 		let (transfer_queue_family, transfer_queue_index) = physical_device.queue_family_properties().iter()
@@ -254,7 +254,7 @@ impl RenderThread {
 				enabled_features: device_features,
 				..Default::default()
 			}
-		).map_err(error_to_unit_type!())?;
+		).map_err(debug_error!())?;
 		
 		let mut queue_set = HashMap::new();
 		for queue in queues {
@@ -323,8 +323,8 @@ impl RenderEngineCreateInfo {
 		let window = WindowBuilder::new(video, "", 1, 1)
 			.hidden()
 			.build()
-			.map_err(error_to_unit_type!())?;
-		let required_surface_extensions = VSurface::required_extensions(&window).map_err(error_to_unit_type!())?;
+			.map_err(debug_error!())?;
+		let required_surface_extensions = VSurface::required_extensions(&window).map_err(debug_error!())?;
 
 		let instance_extensions = InstanceExtensions {
 			khr_surface: true,

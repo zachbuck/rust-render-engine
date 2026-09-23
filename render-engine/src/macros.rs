@@ -1,34 +1,42 @@
 
-macro_rules! error_to_unit_type {
+macro_rules! debug_error {
 	() => {
+		debug_error!(())
+	};
+
+	($error: expr) => {
 		{
 			#[cfg(not(debug_assertions))]
-			{ |_| { () } }
+			{ |_| { $error } }
 
 			#[cfg(debug_assertions)]
 			{ |e| {
 				println!("{:?}", e);
 				println!("\tat {}:{}:{}:", file!(), line!(), column!());
-				()
+				$error
 			} }
 		}
-	};
+	}
 }
-pub(crate) use error_to_unit_type;
+pub(crate) use debug_error;
 
-macro_rules! none_to_unit_type {
+macro_rules! debug_none {
 	() => {
+		debug_none!(())
+	};
+
+	($error: expr) => {
 		{
 			#[cfg(not(debug_assertions))]
-			{ () }
+			{ || { $error } }
 
 			#[cfg(debug_assertions)]
-			{
+			{ || {
 				println!("None Variant unwrapped");
 				println!("\tat {}:{}:{}:", file!(), line!(), column!());
-				()
-			}
+				$error
+			} }
 		}
-	};
+	}
 }
-pub(crate) use none_to_unit_type;
+pub(crate) use debug_none;
