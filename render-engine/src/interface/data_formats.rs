@@ -1,12 +1,22 @@
 
-use parsing::meshes::obj::RawObjVertex;
+use parsing::{
+	meshes::obj::RawObjVertex, 
+	spir_v::data_type::DataType,
+};
 use vulkano::{
 	buffer::BufferContents,
-	pipeline::graphics::vertex_input::Vertex,
+	pipeline::graphics::vertex_input::Vertex as VulkanoVertex,
 };
 
+/* TODO
+	- [ ] derive vulkano::pipeline::graphics::vertex_input::Vertex for V: crate::data_formats::Vertex
+*/
+pub trait Vertex {
+	const VERTEX_FORMAT: &'static[DataType];
+}
+
 #[repr(C)]
-#[derive(BufferContents, Vertex)]
+#[derive(BufferContents, VulkanoVertex)]
 #[derive(Debug)]
 pub struct Vertex3D {
 	#[format(R32G32B32_SFLOAT)]
@@ -30,4 +40,8 @@ impl From<RawObjVertex> for Vertex3D {
 			uv: [texture[0], texture[1]],
 		}
 	}
+}
+
+impl Vertex for Vertex3D {
+	const VERTEX_FORMAT: &'static[DataType] = &[DataType::Vec3, DataType::Vec3, DataType::Vec2];
 }

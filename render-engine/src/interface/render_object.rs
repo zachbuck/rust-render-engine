@@ -7,6 +7,7 @@ use std::sync::{
 use uuid::Uuid;
 
 use crate::{
+	data_formats::{Vertex, Vertex3D}, 
 	engine_command::{
 		EngineCommand, 
 		render_object_command::RenderObjectCommand,
@@ -14,6 +15,7 @@ use crate::{
 	engine_future::{
 		EngineFuture, 
 		channel_engine_future::ChannelEngineFuture, 
+		now_engine_future::NowEngineFuture, 
 		then_transform_future::ThenTransformFuture,
 	}, 
 	mesh_data::MeshData, 
@@ -33,12 +35,16 @@ pub struct RenderObject {
 }
 
 impl RenderObject {
-	/* TODO
-	- [ ] Check `mesh_data.vertex_format` against `pipeline.inputs`
-	 */
 	pub fn new(render_engine: &Arc<RenderEngine>, mesh_data: Arc<MeshData>, pipeline: Arc<Pipeline>) -> impl EngineFuture<Result<Arc<Self>, ()>> {
 		let command_channel = render_engine.command_channel.clone();
-		
+
+		let vertex_format = Vertex3D::VERTEX_FORMAT;
+		let pipeline_input = pipeline.vertex_shader.get_inputs();
+		if !(vertex_format.len() == pipeline_input.len()) { return Box::new(NowEngineFuture::new(Err(()))) as Box<dyn EngineFuture<_>> }
+		for i in 0..vertex_format.len() {
+			if !(vertex_format[i] == pipeline_input[i]) { return Box::new(NowEngineFuture::new(Err(()))) as Box<dyn EngineFuture<_>> }
+		}
+
 		let mesh_uuid = mesh_data.uuid;
 		let pipeline_uuid = pipeline.uuid;
 
@@ -60,7 +66,7 @@ impl RenderObject {
 			response,
 		}.into());
 
-		future
+		Box::new(future) as Box<dyn EngineFuture<_>>
 	}
 }
 
