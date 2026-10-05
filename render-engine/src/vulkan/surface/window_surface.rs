@@ -48,9 +48,6 @@ use crate::{
 	},
 };
 
-/* TODO 
-	- [ ] Add viewports
-*/
 pub struct WindowSurface {
 	#[expect(unused)]
 	window:			Window,
@@ -93,7 +90,7 @@ impl Surface for WindowSurface {
 				RenderPassBeginInfo {
 					clear_values: vec![
 						Some(ClearValue::Float(self.clear_color)),
-					], // TODO: Add Clear Values
+					],
 					..RenderPassBeginInfo::framebuffer(framebuffer.clone())
 				},
 				SubpassBeginInfo::default()

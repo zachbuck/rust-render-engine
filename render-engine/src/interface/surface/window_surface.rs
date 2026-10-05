@@ -25,6 +25,7 @@ use crate::{
 	- [ ] Depth Testing
 	- [ ] clear values per texture
 	- [ ] access to properties of the window on the system
+	- [ ] viewports
  */
 pub struct WindowSurface {
 	uuid: 				Uuid,
