@@ -7,7 +7,7 @@ use std::sync::{
 use uuid::Uuid;
 
 use crate::{
-	data_formats::{Vertex, Vertex3D}, 
+	data_formats::vertex::{Vertex, Vertex3D}, 
 	engine_command::{
 		EngineCommand, 
 		render_object_command::RenderObjectCommand,

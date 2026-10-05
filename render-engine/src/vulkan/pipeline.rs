@@ -34,7 +34,7 @@ use vulkano::{
 };
 
 use crate::{
-	data_formats::Vertex3D, 
+	data_formats::vertex::Vertex3D, 
 	engine_command::pipeline_command::PipelineCommand, 
 	macros::debug_error, 
 	shader::Shader, 
@@ -45,10 +45,11 @@ use crate::{
 };
 
 pub struct ShaderCollection {
-	vertex_shader: 		Arc<Shader>,
-	fragment_shader: 	Arc<Shader>,
+	vertex_shader: 			Arc<Shader>,
+	fragment_shader: 		Arc<Shader>,
 
-	descriptors:		DescriptorCollection,
+	pub descriptors:		DescriptorCollection,
+	pub descriptor_layouts: 	Box<[(u32, Arc<DescriptorSetLayout>)]>,
 }
 
 pub struct Pipeline {
@@ -79,12 +80,49 @@ impl RenderThread {
 
 		let mut descriptors = vertex_shader.get_uniforms().clone();
 		descriptors = descriptors.merge_with(fragment_shader.get_uniforms().clone())?;
+		
+		let set_layouts = descriptors.descriptors.iter()
+			.map(|ds| {
+				let mut bindings = BTreeMap::new();
+				ds.bindings.iter()
+					.for_each(|db| {
+						let descriptor_type = match &db.data_type {
+								DataType::Struct { members: _ } => DescriptorType::UniformBuffer,
+								DataType::Image { dimension: _, pixel_format: _, texture_format: _ } => DescriptorType::SampledImage,
+								DataType::Sampler => DescriptorType::Sampler,
+								DataType::ImageSampler { dimension: _, pixel_format: _, texture_format: _ } => DescriptorType::CombinedImageSampler,
+								_ => todo!()
+							};
+						
+						let descriptor_count = match &db.data_type {
+							DataType::Array { element_type: _, count } => *count as u32,
+							_ => 1,
+						};
+
+						bindings.insert(db.binding, DescriptorSetLayoutBinding {
+							descriptor_count,
+							stages: ShaderStages::all_graphics(),
+							..DescriptorSetLayoutBinding::descriptor_type(descriptor_type)
+						});
+					});
+
+				let layout = DescriptorSetLayout::new(
+					self.device.clone(), 
+					DescriptorSetLayoutCreateInfo {
+						bindings: bindings,
+						..Default::default()
+					},
+				).unwrap();
+
+				(ds.set, layout)
+			}).collect::<Box<[_]>>();
 
 		let shader_collection = ShaderCollection {
 			vertex_shader: 		vertex_shader,
 			fragment_shader: 	fragment_shader,
 
 			descriptors:		descriptors,
+			descriptor_layouts: 	set_layouts,
 		};
 
 		self.pipelines.insert(uuid, shader_collection);
@@ -121,37 +159,10 @@ impl RenderThread {
 			dynamic_state.insert(ds);
 		}
 
-		let set_layouts = shader_collection.descriptors.descriptors.iter()
-			.map(|ds| {
-				let mut bindings = BTreeMap::new();
-				ds.bindings.iter()
-					.for_each(|db| {
-						let descriptor_type = match &db.data_type {
-								DataType::Image { dimension: _, pixel_format: _, texture_format: _ } => DescriptorType::StorageImage,
-								DataType::Sampler => DescriptorType::Sampler,
-								DataType::ImageSampler { dimension: _, pixel_format: _, texture_format: _ } => DescriptorType::CombinedImageSampler,
-								_ => DescriptorType::StorageBuffer,
-							};
-
-						bindings.insert(db.binding, DescriptorSetLayoutBinding {
-							stages: ShaderStages::all_graphics(),
-							..DescriptorSetLayoutBinding::descriptor_type(descriptor_type)
-						});
-					});
-
-				DescriptorSetLayout::new(
-					device.clone(), 
-					DescriptorSetLayoutCreateInfo {
-						bindings: bindings,
-						..Default::default()
-					},
-				).unwrap()
-			}).collect::<Vec<_>>();
-
 		let layout = PipelineLayout::new(
 			device.clone(), 
 			PipelineLayoutCreateInfo {
-				set_layouts,
+				set_layouts: shader_collection.descriptor_layouts.iter().map(|(_, ds)| ds.clone()).collect(),
 				..Default::default()
 			}
 		).unwrap();

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 foldhash.workspace = true
+glam.workspace = true
 sdl3.workspace = true
 parsing.workspace = true
 uuid.workspace = true

@@ -2,7 +2,7 @@
 use uuid::Uuid;
 
 use crate::{
-	data_formats::Vertex3D, 
+	data_formats::vertex::Vertex3D, 
 	engine_command::EngineCommand,
 	engine_future::channel_engine_future::ChannelEngineResponse,
 };

@@ -10,7 +10,7 @@ use std::{
 use uuid::Uuid;
 
 use crate::{
-	data_formats::Vertex3D, 
+	data_formats::vertex::Vertex3D, 
 	engine_command::{
 		EngineCommand, 
 		mesh_data_command::MeshDataCommand,

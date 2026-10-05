@@ -149,4 +149,14 @@ impl DescriptorCollection {
 
 		return Ok(self)
 	}
+
+	pub fn get_size(&self) -> usize { self.descriptors.iter().map(|ds| ds.get_size()).sum() }
+}
+
+impl DescriptorSet {
+	pub fn get_size(&self) -> usize { self.bindings.iter().map(|db| db.get_size()).sum() }
+}
+
+impl DescriptorBinding {
+	pub fn get_size(&self) -> usize { return self.data_type.get_size() }
 }

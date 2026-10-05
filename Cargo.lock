@@ -187,6 +187,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "glam"
+version = "0.34.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eece6af6447501f08d55ff4f6aed8a2753e4224e51899bccf3d5ae3d2de564b1"
+
+[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -528,6 +534,7 @@ name = "render-engine"
 version = "0.1.0"
 dependencies = [
  "foldhash",
+ "glam",
  "parsing",
  "sdl3",
  "uuid",

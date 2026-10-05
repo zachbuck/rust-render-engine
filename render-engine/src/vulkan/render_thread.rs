@@ -1,9 +1,7 @@
 
 use std::{
-	collections::{HashMap, HashSet}, 
-	sync::{
-		Arc, 
-		mpsc::{Receiver, TryRecvError},
+	collections::{HashMap, HashSet}, sync::{
+		Arc, mpsc::{Receiver, TryRecvError},
 	},
 };
 
@@ -13,9 +11,7 @@ use sdl3::{
 };
 use uuid::Uuid;
 use vulkano::{
-	Version, VulkanLibrary, 
-	command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo}, 
-	device::{
+	Version, VulkanLibrary, command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo}, descriptor_set::allocator::StandardDescriptorSetAllocator, device::{
 		Device, 
 		DeviceCreateInfo, 
 		DeviceExtensions, 
@@ -24,12 +20,7 @@ use vulkano::{
 		QueueCreateInfo, 
 		QueueFlags, 
 		physical::{PhysicalDevice, PhysicalDeviceType},
-	}, 
-	instance::{Instance, InstanceCreateInfo, InstanceExtensions}, 
-	memory::allocator::StandardMemoryAllocator, 
-	render_pass::RenderPass, 
-	swapchain::Surface as VSurface, 
-	sync::{
+	}, instance::{Instance, InstanceCreateInfo, InstanceExtensions}, memory::allocator::StandardMemoryAllocator, render_pass::RenderPass, swapchain::Surface as VSurface, sync::{
 		GpuFuture, 
 		future::FenceSignalFuture, 
 	},
@@ -43,6 +34,7 @@ use crate::{
 	macros::{debug_error, debug_none}, 
 	render_engine::RenderEngineCreateInfo, 
 	vulkan::{
+		descriptors::DescriptorSet, 
 		mesh_data::MeshData, 
 		pipeline::{Pipeline, ShaderCollection}, 
 		render_object::RenderObject, 
@@ -52,30 +44,32 @@ use crate::{
 };
 
 pub struct RenderThread {
-	command_channel: 		Receiver<EngineCommand>,
-	should_close:			bool,
+	command_channel: 			Receiver<EngineCommand>,
+	should_close:				bool,
 
-	pub mesh_data:			HashMap<Uuid, MeshData>,
-	pub shader_modules:		HashMap<Uuid, ShaderModule>,
-	pub pipelines:			HashMap<Uuid, ShaderCollection>,
+	pub mesh_data:				HashMap<Uuid, MeshData>,
+	pub shader_modules:			HashMap<Uuid, ShaderModule>,
+	pub pipelines:				HashMap<Uuid, ShaderCollection>,
 
-	pub render_passes: 		HashMap<Uuid, Arc<RenderPass>>,
-	pub linked_pipelines:	HashMap<Uuid, HashMap<Uuid, Pipeline>>,
+	pub render_passes: 			HashMap<Uuid, Arc<RenderPass>>,
+	pub linked_pipelines:		HashMap<Uuid, HashMap<Uuid, Pipeline>>,
 
-	pub surfaces:			HashMap<Uuid, Box<dyn Surface>>,
-	pub render_objects:		HashMap<Uuid, RenderObject>,
+	pub surfaces:				HashMap<Uuid, Box<dyn Surface>>,
+	pub render_objects:			HashMap<Uuid, RenderObject>,
+	pub descriptor_sets:		HashMap<Uuid, DescriptorSet>,
 
-	pub video:				VideoSubsystem,
+	pub video:					VideoSubsystem,
 
-	pub instance:			Arc<Instance>,
-	pub device:				Arc<Device>,
-	pub graphics_queue: 	Arc<Queue>,
-	pub graphics_operation: Operation,
-	pub transfer_queue: 	Arc<Queue>,
-	pub transfer_operation: Operation,
+	pub instance:				Arc<Instance>,
+	pub device:					Arc<Device>,
+	pub graphics_queue: 		Arc<Queue>,
+	pub graphics_operation: 	Operation,
+	pub transfer_queue: 		Arc<Queue>,
+	pub transfer_operation: 	Operation,
 
-	pub buffer_allocator:	Arc<StandardMemoryAllocator>,
-	pub command_allocator:	Arc<StandardCommandBufferAllocator>,
+	pub buffer_allocator:		Arc<StandardMemoryAllocator>,
+	pub command_allocator:		Arc<StandardCommandBufferAllocator>,
+	pub descriptor_allocator: 	Arc<StandardDescriptorSetAllocator>,
 }
 
 #[derive(Clone)]
@@ -124,32 +118,35 @@ impl RenderThread {
 
 		let buffer_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
 		let command_allocator = Arc::new(StandardCommandBufferAllocator::new(device.clone(), StandardCommandBufferAllocatorCreateInfo::default()));
+		let descriptor_allocator = Arc::new(StandardDescriptorSetAllocator::new(device.clone(), Default::default()));
 
 		Ok(RenderThread {
-			command_channel: 	command_channel,
-			should_close:		false,
+			command_channel: 		command_channel,
+			should_close:			false,
 
-			mesh_data:			HashMap::new(),
-			shader_modules:		HashMap::new(),
-			pipelines:			HashMap::new(),
+			mesh_data:				HashMap::new(),
+			shader_modules:			HashMap::new(),
+			pipelines:				HashMap::new(),
 			
-			render_passes:		HashMap::new(),
-			linked_pipelines:	HashMap::new(),
+			render_passes:			HashMap::new(),
+			linked_pipelines:		HashMap::new(),
 
-			surfaces:			HashMap::new(),
-			render_objects:		HashMap::new(),
+			surfaces:				HashMap::new(),
+			render_objects:			HashMap::new(),
+			descriptor_sets:		HashMap::new(),
 
-			video:				video,
+			video:					video,
 
-			instance:			instance,
-			device:				device,
-			graphics_queue: 	graphics_queue,
-			graphics_operation:	Operation { future: None, operation_type: OperationType::Graphics },
-			transfer_queue: 	transfer_queue,
-			transfer_operation:	Operation { future: None, operation_type: OperationType::Transfer },
+			instance:				instance,
+			device:					device,
+			graphics_queue: 		graphics_queue,
+			graphics_operation:		Operation { future: None, operation_type: OperationType::Graphics },
+			transfer_queue: 		transfer_queue,
+			transfer_operation:		Operation { future: None, operation_type: OperationType::Transfer },
 
-			buffer_allocator:	buffer_allocator,
-			command_allocator:	command_allocator,
+			buffer_allocator:		buffer_allocator,
+			command_allocator:		command_allocator,
+			descriptor_allocator: 	descriptor_allocator,
 		})
 	}
 

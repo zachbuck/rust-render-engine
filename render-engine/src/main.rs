@@ -5,7 +5,15 @@ use std::{
 };
 
 use render_engine::{
-	data_formats::Vertex3D, engine_future::EngineFuture, mesh_data::MeshData, pipeline::{Pipeline, PipelineCreateInfo}, render_engine::{RenderEngine, RenderEngineBackend, RenderEngineCreateInfo}, render_instruction_buffer::RenderInstructionBufferBuilder, render_object::RenderObject, shader::Shader, surface::{
+	data_formats::vertex::Vertex3D, 
+	engine_future::EngineFuture, 
+	mesh_data::MeshData, 
+	pipeline::{Pipeline, PipelineCreateInfo}, 
+	render_engine::{RenderEngine, RenderEngineBackend, RenderEngineCreateInfo}, 
+	render_instruction_buffer::RenderInstructionBufferBuilder, 
+	render_object::RenderObject, 
+	shader::Shader, 
+	surface::{
 		RenderPassCreateInfo, 
 		window_surface::{WindowSurface, WindowSurfaceCreateInfo},
 	},
@@ -32,8 +40,12 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 uv;
 
+layout(set = 0, binding = 0) uniform UniformBufferObject {
+	mat4 transform;
+};
+
 void main() {
-	gl_Position = vec4(position, 1.0);
+	gl_Position = transform * vec4(position, 1.0);
 }
 "#;
 

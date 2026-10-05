@@ -10,7 +10,7 @@ use vulkano::{
 };
 
 use crate::{
-	data_formats::Vertex3D, 
+	data_formats::vertex::Vertex3D, 
 	engine_command::mesh_data_command::MeshDataCommand, 
 	macros::debug_error, 
 	vulkan::render_thread::{Operation, RenderThread},

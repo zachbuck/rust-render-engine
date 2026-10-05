@@ -12,16 +12,10 @@ use vulkano::{
 		SubpassBeginInfo, 
 		SubpassEndInfo, 
 		allocator::StandardCommandBufferAllocator,
-	}, 
-	device::Queue, 
-	format::{ClearValue, Format}, 
-	image::{
+	}, device::Queue, format::{ClearValue, Format}, image::{
 		ImageUsage, 
 		view::ImageView,
-	}, 
-	pipeline::graphics::viewport::Viewport, 
-	render_pass::{Framebuffer, FramebufferCreateInfo}, 
-	swapchain::{
+	}, pipeline::{Pipeline, PipelineBindPoint, graphics::viewport::Viewport}, render_pass::{Framebuffer, FramebufferCreateInfo}, swapchain::{
 		ColorSpace, 
 		PresentMode, 
 		Surface as VSurface, 
@@ -30,8 +24,7 @@ use vulkano::{
 		SwapchainCreateInfo, 
 		SwapchainPresentInfo, 
 		acquire_next_image,
-	}, 
-	sync::GpuFuture,
+	}, sync::GpuFuture,
 };
 
 use crate::{
