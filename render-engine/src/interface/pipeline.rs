@@ -31,6 +31,9 @@ pub struct Pipeline {
 	pub fragment_shader: 	Arc<Shader>,
 }
 
+/* TODO 
+	- [ ] add Default support
+ */
 #[derive(Clone)]
 pub struct PipelineCreateInfo<'a> {
 	pub vertex_shader: 		Arc<Shader>,
