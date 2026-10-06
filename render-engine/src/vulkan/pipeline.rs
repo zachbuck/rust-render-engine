@@ -49,7 +49,7 @@ pub struct ShaderCollection {
 	fragment_shader: 		Arc<Shader>,
 
 	pub descriptors:		DescriptorCollection,
-	pub descriptor_layouts: 	Box<[(u32, Arc<DescriptorSetLayout>)]>,
+	pub descriptor_layouts: Box<[(u32, Arc<DescriptorSetLayout>)]>,
 }
 
 pub struct Pipeline {

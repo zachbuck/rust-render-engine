@@ -23,6 +23,8 @@ use crate::{
 	surface::Surface,
 };
 
+pub mod descriptor_set;
+
 pub struct Pipeline {
 	pub(crate) uuid:		Uuid,
 	command_channel:		Sender<EngineCommand>,

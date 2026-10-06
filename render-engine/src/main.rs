@@ -40,7 +40,7 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 uv;
 
-layout(set = 0, binding = 0) uniform UniformBufferObject {
+layout(set = 1, binding = 0) uniform UniformBufferObject {
 	mat4 transform;
 };
 
@@ -89,6 +89,7 @@ fn main() -> () {
 		}
 	).wait().unwrap();
 
+	let uniform_set = pipeline.get_descriptor_set(1).wait().unwrap();
 	let render_object = RenderObject::new(&render_engine, mesh_data, pipeline).wait().unwrap();
 
 	let mut builder = RenderInstructionBufferBuilder::begin(&window);

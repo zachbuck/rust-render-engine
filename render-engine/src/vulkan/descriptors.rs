@@ -1,7 +1,7 @@
 
 use std::sync::Arc;
 
-use parsing::spir_v::data_type::DataType;
+use parsing::spir_v::{data_type::DataType, shader::DescriptorBinding};
 use uuid::Uuid;
 use vulkano::{
 	buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer}, 
@@ -13,17 +13,22 @@ use vulkano::{
 	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter}
 };
 
-use crate::{macros::debug_error, vulkan::render_thread::RenderThread};
+use crate::{
+	macros::debug_error, 
+	vulkan::render_thread::RenderThread,
+};
 
 /* TODO
-- [ ] Add writeable uniform/image support
+- [ ] Add Image support
+- [ ] Add writeable (by the shader) uniform/image support
 */
 pub struct DescriptorSet {
 	set: u32,
+	types: Vec<DescriptorBinding>,
+
 	internal: Arc<VulkanDescriptorSet>,
 	buffer: Subbuffer<[u8]>,
 }
-
 
 impl RenderThread {
 	fn create_descriptor_set(&mut self, set: u32, pipeline: Uuid) -> Result<(Uuid,), ()> {
@@ -80,6 +85,7 @@ impl RenderThread {
 		let descriptor_set = DescriptorSet {
 			set,
 			internal,
+			types: descriptor_set_types.bindings.clone(),
 			buffer,
 		};
 
@@ -88,10 +94,27 @@ impl RenderThread {
 		Ok((uuid,))
 	}
 
-	fn set_descriptor_set_binding(&mut self, descriptor_set: Uuid, binding: u32, data: Box<[u8]>) {
+	fn set_descriptor_set_binding(&mut self, descriptor_set: Uuid, binding: u32, data: Box<[u8]>) -> Result<(), ()> {
 		let descriptor_set = self.descriptor_sets.get_mut(&descriptor_set).unwrap();
 
-		let offset = 0;
-		for binding in descriptor_set.internal;
+		let mut offset = 0;
+		let mut descriptor_size = None;
+		for descriptor_binding in &descriptor_set.types {
+			if descriptor_binding.binding == binding { 
+				descriptor_size = Some(descriptor_binding.data_type.get_size());
+				break; 
+			}
+			offset += descriptor_binding.data_type.get_size();
+		}
+		let descriptor_size = descriptor_size.ok_or(())?;
+
+		let mut buffer = descriptor_set.buffer.write().map_err(debug_error!())?;
+		buffer[offset..(offset+descriptor_size)].copy_from_slice(&data);
+
+		Ok(())
+	}
+
+	fn drop_descriptor_set(&mut self, uuid: Uuid) {
+		self.descriptor_sets.remove(&uuid);
 	}
 }
